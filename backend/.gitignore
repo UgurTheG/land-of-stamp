@@ -1,5 +1,11 @@
 # Local dev files
 .jwt-secret
 *.db
+
+# Compiled binaries
 land-of-stamp-backend
 stempelkarte-backend
+stempelkarte-server
+
+# Bazel
+bazel-*
