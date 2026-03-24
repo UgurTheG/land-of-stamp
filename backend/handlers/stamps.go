@@ -278,6 +278,16 @@ func RedeemCard(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "failed to redeem card", http.StatusInternalServerError)
 		return
 	}
+
+	// Auto-create a fresh card so the user can keep collecting stamps at this shop.
+	newCardID := uuid.New().String()
+	if _, err := db.DB.ExecContext(ctx,
+		"INSERT OR IGNORE INTO stamp_cards (id, user_id, shop_id, stamps, redeemed) VALUES (?, ?, ?, 0, FALSE)",
+		newCardID, claims.UserID, shopID,
+	); err != nil {
+		slog.WarnContext(ctx, "stamps: failed to create fresh card after redeem", "user", claims.UserID, "shop", shopID, "error", err)
+	}
+
 	slog.InfoContext(ctx, "card redeemed", "card", cardID, "user", claims.UserID, "shop", shopID)
 	writeProto(w, http.StatusOK, &pb.StatusResponse{Status: "redeemed"})
 }

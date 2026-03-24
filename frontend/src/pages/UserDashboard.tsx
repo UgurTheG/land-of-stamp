@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../hooks/useAuth';
 import { toast } from 'sonner';
@@ -11,7 +11,7 @@ import {
   type StampCard as StampCardType,
 } from '../lib/api';
 import StampCard from '../components/stamps/StampCard';
-import { Stamp, Star, Gift, TrendingUp, ScanLine } from 'lucide-react';
+import { Stamp, Star, Gift, TrendingUp, ScanLine, History, ChevronDown } from 'lucide-react';
 
 export default function UserDashboard() {
   const { user } = useAuth();
@@ -57,11 +57,14 @@ export default function UserDashboard() {
   };
 
   const totalStamps = cards.reduce((sum, c) => sum + c.stamps, 0);
-  const completedCards = cards.filter((c) => {
+  const activeCards = cards.filter((c) => !c.redeemed);
+  const redeemedCardsList = cards.filter((c) => c.redeemed);
+  const completedCards = activeCards.filter((c) => {
     const shop = shops.find((s) => s.id === c.shopId);
     return shop && c.stamps >= shop.stampsRequired;
   }).length;
-  const redeemedCards = cards.filter((c) => c.redeemed).length;
+  const redeemedCards = redeemedCardsList.length;
+  const [showHistory, setShowHistory] = useState(false);
 
   return (
     <div className="min-h-screen bg-surface pt-20 pb-12">
@@ -117,7 +120,7 @@ export default function UserDashboard() {
           ))}
         </motion.div>
 
-        {/* Cards grid */}
+        {/* Active Cards */}
         {shops.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
@@ -131,8 +134,7 @@ export default function UserDashboard() {
         ) : (
           <div className="grid sm:grid-cols-2 gap-6">
             {shops.map((shop, i) => {
-              const card = cards.find((c) => c.shopId === shop.id && !c.redeemed) ||
-                cards.find((c) => c.shopId === shop.id);
+              const card = activeCards.find((c) => c.shopId === shop.id);
               if (!card) return null;
               return (
                 <motion.div
@@ -150,6 +152,67 @@ export default function UserDashboard() {
               );
             })}
           </div>
+        )}
+
+        {/* Redeemed History */}
+        {redeemedCardsList.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="mt-10"
+          >
+            <button
+              onClick={() => setShowHistory((v) => !v)}
+              className="flex items-center gap-2 text-indigo-300 hover:text-white transition-colors mb-4 cursor-pointer"
+            >
+              <History className="w-5 h-5" />
+              <span className="font-semibold">Redeemed Rewards ({redeemedCardsList.length})</span>
+              <motion.div animate={{ rotate: showHistory ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                <ChevronDown className="w-4 h-4" />
+              </motion.div>
+            </button>
+
+            <AnimatePresence>
+              {showHistory && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {redeemedCardsList.map((card) => {
+                      const shop = shops.find((s) => s.id === card.shopId);
+                      if (!shop) return null;
+                      return (
+                        <div
+                          key={card.id}
+                          className="relative rounded-2xl bg-white/5 border border-white/10 p-4 opacity-60"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="text-sm font-bold text-white">{shop.name}</h4>
+                              <p className="text-xs text-indigo-400 mt-0.5">{shop.rewardDescription}</p>
+                            </div>
+                            <div className="bg-green-500/20 text-green-400 text-xs font-bold px-2.5 py-1 rounded-full border border-green-500/30">
+                              ✓ Redeemed
+                            </div>
+                          </div>
+                          {card.createdAt && (
+                            <p className="text-xs text-indigo-500 mt-2">
+                              {new Date(card.createdAt).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         )}
       </div>
     </div>
