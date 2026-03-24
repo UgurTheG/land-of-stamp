@@ -1,5 +1,5 @@
-import { createContext, useState, type ReactNode } from 'react';
-import { type User, apiLogin, apiRegister, apiLogout, clearSession } from '../lib/api';
+import { createContext, useState, useEffect, type ReactNode } from 'react';
+import { type User, apiLogin, apiRegister, apiLogout, apiGetMe, clearSession } from '../lib/api';
 import { toast } from 'sonner';
 
 interface AuthContextType {
@@ -24,6 +24,21 @@ function getInitialUser(): User | null {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(getInitialUser);
+
+  // Verify the session is still valid on mount. If the backend restarted
+  // with a new JWT secret the cookie token is stale and /api/auth/me will
+  // return 401 — in that case clear the local state so the UI reflects it.
+  useEffect(() => {
+    if (!user) return;
+    apiGetMe()
+      .then((freshUser) => setUser(freshUser))
+      .catch(() => {
+        setUser(null);
+        clearSession();
+      });
+    // Only run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const login = async (username: string, password: string): Promise<User> => {
     const u = await apiLogin(username, password);

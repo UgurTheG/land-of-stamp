@@ -1,0 +1,722 @@
+openapi: "3.1.0"
+
+info:
+  title: Länd of Stamp API
+  version: 1.0.0
+  description: |
+    Digital stamp‑card platform — collect stamps at local shops, redeem rewards.
+
+    ### Authentication
+    Most endpoints require an **HttpOnly cookie** (`__token`) containing a JWT.  
+    Login / Register use **HTTP Basic** auth (`Authorization: Basic base64(user:pass)`).
+
+    ### Roles
+    | Role | Capabilities |
+    |------|-------------|
+    | `user` | View shops, collect stamps, redeem rewards |
+    | `admin` | Create/manage shops, grant stamps, generate QR codes |
+  contact:
+    name: UgurTheG
+    url: https://github.com/UgurTheG/land-of-stamp
+  license:
+    name: MIT
+    identifier: MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+tags:
+  - name: Auth
+    description: Registration, login, logout, session
+  - name: Shops
+    description: Shop listing and management
+  - name: Stamps
+    description: Stamp cards, granting, redeeming
+  - name: QR
+    description: QR‑code token flow for contactless stamp collection
+  - name: Users
+    description: User/customer queries
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  PATHS
+# ═════════════════════════════════════════════════════════════════════════════
+
+paths:
+  # ── Auth ────────────────────────────────────────────────────────────────
+  /api/auth/register:
+    post:
+      operationId: register
+      tags: [Auth]
+      summary: Register a new user
+      description: |
+        Credentials are sent via `Authorization: Basic` header.  
+        The optional JSON body specifies the role (defaults to `user`).
+      security:
+        - basicAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User created
+          headers:
+            Set-Cookie:
+              description: HttpOnly JWT cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: Username already taken
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/login:
+    post:
+      operationId: login
+      tags: [Auth]
+      summary: Log in
+      description: "Credentials via `Authorization: Basic` header. Returns JWT cookie."
+      security:
+        - basicAuth: []
+      responses:
+        "200":
+          description: Logged in
+          headers:
+            Set-Cookie:
+              description: HttpOnly JWT cookie
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/auth/logout:
+    post:
+      operationId: logout
+      tags: [Auth]
+      summary: Log out
+      description: Clears the JWT cookie.
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+
+  /api/auth/me:
+    get:
+      operationId: getMe
+      tags: [Auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  # ── Shops ───────────────────────────────────────────────────────────────
+  /api/shops:
+    get:
+      operationId: listShops
+      tags: [Shops]
+      summary: List all shops
+      description: Public endpoint — no authentication required.
+      responses:
+        "200":
+          description: Array of shops
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Shop"
+    post:
+      operationId: createShop
+      tags: [Shops]
+      summary: Create a shop
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateShopRequest"
+      responses:
+        "201":
+          description: Shop created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shop"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Shop name already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/shops/mine:
+    get:
+      operationId: getMyShops
+      tags: [Shops]
+      summary: Get shops owned by current admin
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Array of shops
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Shop"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/shops/{id}:
+    put:
+      operationId: updateShop
+      tags: [Shops]
+      summary: Update a shop
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShopId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateShopRequest"
+      responses:
+        "200":
+          description: Shop updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shop"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── Stamps ──────────────────────────────────────────────────────────────
+  /api/users/me/cards:
+    get:
+      operationId: getMyCards
+      tags: [Stamps]
+      summary: Get stamp cards for current user
+      description: Auto-creates a card for each shop if one doesn't exist yet.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Array of stamp cards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StampCard"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/shops/{id}/cards:
+    get:
+      operationId: getShopCards
+      tags: [Stamps]
+      summary: Get all stamp cards for a shop
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShopId"
+      responses:
+        "200":
+          description: Array of stamp cards
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StampCard"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/shops/{id}/stamps:
+    post:
+      operationId: grantStamp
+      tags: [Stamps]
+      summary: Grant a stamp to a user
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShopId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GrantStampRequest"
+      responses:
+        "200":
+          description: Updated stamp card
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StampCard"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      operationId: updateStampCount
+      tags: [Stamps]
+      summary: Set stamp count on a user's card
+      description: Admin can increase or decrease stamp count. Value is clamped to `[0, stampsRequired]`.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShopId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStampCountRequest"
+      responses:
+        "200":
+          description: Updated stamp card
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StampCard"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/cards/{id}/redeem:
+    post:
+      operationId: redeemCard
+      tags: [Stamps]
+      summary: Redeem a completed stamp card
+      description: Marks the card as redeemed. Requires all stamps to be collected.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Stamp card ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Card redeemed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResponse"
+        "400":
+          description: Not enough stamps
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ── QR ──────────────────────────────────────────────────────────────────
+  /api/shops/{id}/stamp-token:
+    post:
+      operationId: createStampToken
+      tags: [QR]
+      summary: Generate a QR stamp token
+      description: |
+        Creates a short-lived token (60 s) for the shop.  
+        Any authenticated **user** can claim it once via `/api/stamps/claim`.  
+        Previous tokens for the shop are invalidated.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ShopId"
+      responses:
+        "201":
+          description: Token created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StampToken"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/stamps/claim:
+    post:
+      operationId: claimStamp
+      tags: [QR]
+      summary: Claim a stamp via QR token
+      description: |
+        User scans the shop's QR code and sends the token here.  
+        Each user can claim a given token only once.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClaimStampRequest"
+      responses:
+        "200":
+          description: Stamp claimed (or already claimed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClaimStampResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Only users (not admins) can claim
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "410":
+          description: Token expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ── Users ───────────────────────────────────────────────────────────────
+  /api/users/customers:
+    get:
+      operationId: listCustomers
+      tags: [Users]
+      summary: List all customers
+      description: Returns all users with role `user`. Admin only.
+      security:
+        - bearerAuth: []
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Array of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+# ═════════════════════════════════════════════════════════════════════════════
+#  COMPONENTS
+# ═════════════════════════════════════════════════════════════════════════════
+
+components:
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+      description: Username + password for register/login only
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "JWT token — paste the value from the `__token` cookie or login response"
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: __token
+      description: HttpOnly JWT cookie set by login/register
+
+  parameters:
+    ShopId:
+      name: id
+      in: path
+      required: true
+      description: Shop UUID
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Not authenticated
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+  schemas:
+    # ── Entities ──
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        username:
+          type: string
+          example: "coffeelover"
+        role:
+          type: string
+          enum: [user, admin]
+          example: "user"
+        shopId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Linked shop (admin only)
+      required: [id, username, role]
+
+    Shop:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Bean There Coffee"
+        description:
+          type: string
+          example: "Best espresso in town"
+        rewardDescription:
+          type: string
+          example: "Free latte after 8 stamps"
+        stampsRequired:
+          type: integer
+          minimum: 2
+          maximum: 20
+          example: 8
+        color:
+          type: string
+          pattern: "^#[0-9a-fA-F]{6}$"
+          example: "#6366f1"
+        ownerId:
+          type: string
+          format: uuid
+      required: [id, name, rewardDescription, stampsRequired, color, ownerId]
+
+    StampCard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        shopId:
+          type: string
+          format: uuid
+        stamps:
+          type: integer
+          example: 3
+        redeemed:
+          type: boolean
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, userId, shopId, stamps, redeemed]
+
+    StampToken:
+      type: object
+      properties:
+        token:
+          type: string
+          example: "a3f8c0de91b7e524..."
+        expiresAt:
+          type: string
+          format: date-time
+        shopId:
+          type: string
+          format: uuid
+      required: [token, expiresAt, shopId]
+
+    # ── Requests ──
+    RegisterRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, admin]
+          default: "user"
+
+    CreateShopRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Bean There Coffee"
+        description:
+          type: string
+          example: "Best espresso in town"
+        rewardDescription:
+          type: string
+          example: "Free latte after 8 stamps"
+        stampsRequired:
+          type: integer
+          minimum: 2
+          maximum: 20
+          default: 8
+        color:
+          type: string
+          default: "#6366f1"
+      required: [name, rewardDescription]
+
+    GrantStampRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+      required: [userId]
+
+    UpdateStampCountRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        stamps:
+          type: integer
+          minimum: 0
+      required: [userId, stamps]
+
+    ClaimStampRequest:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+
+    # ── Responses ──
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+
+    ClaimStampResponse:
+      type: object
+      properties:
+        shopName:
+          type: string
+        stamps:
+          type: integer
+        stampsRequired:
+          type: integer
+        message:
+          type: string
+          example: "Stamp collected! 🎉"
+
+    StatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "redeemed"
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "unauthorized"
+

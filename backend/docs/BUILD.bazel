@@ -1,0 +1,10 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "docs",
+    srcs = ["docs.go"],
+    embedsrcs = ["openapi.yaml"],
+    importpath = "land-of-stamp-backend/docs",
+    visibility = ["//:__subpackages__"],
+)
+

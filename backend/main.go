@@ -10,6 +10,7 @@ import (
 
 	"land-of-stamp-backend/auth"
 	"land-of-stamp-backend/db"
+	"land-of-stamp-backend/docs"
 	"land-of-stamp-backend/handlers"
 	"land-of-stamp-backend/middleware"
 )
@@ -34,25 +35,13 @@ func main() {
 	// ── JWT secret ──
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		// Try to read a previously-generated secret from a local file so that
-		// tokens survive backend restarts during development.
-		const secretFile = ".jwt-secret"
-		if data, err := os.ReadFile(secretFile); err == nil && len(data) > 0 {
-			secret = string(data)
-			slog.InfoContext(ctx, "loaded JWT secret from file", "file", secretFile)
-		} else {
-			b := make([]byte, 32)
-			if _, err := rand.Read(b); err != nil {
-				slog.ErrorContext(ctx, "failed to generate random JWT secret", "error", err)
-				os.Exit(1)
-			}
-			secret = hex.EncodeToString(b)
-			if err := os.WriteFile(secretFile, []byte(secret), 0600); err == nil {
-				slog.InfoContext(ctx, "generated and saved JWT secret", "file", secretFile)
-			} else {
-				slog.WarnContext(ctx, "generated random JWT secret (could not persist)", "error", err)
-			}
+		b := make([]byte, 32)
+		if _, err := rand.Read(b); err != nil {
+			slog.ErrorContext(ctx, "failed to generate random JWT secret", "error", err)
+			os.Exit(1)
 		}
+		secret = hex.EncodeToString(b)
+		slog.InfoContext(ctx, "generated random JWT secret (set JWT_SECRET env var to persist across restarts)")
 	}
 	auth.Init(secret)
 
@@ -71,6 +60,9 @@ func main() {
 	mux.HandleFunc("POST /api/auth/login", handlers.Login)
 	mux.HandleFunc("POST /api/auth/logout", handlers.Logout)
 	mux.HandleFunc("GET /api/shops", handlers.ListShops)
+
+	// ── API Documentation (Scalar UI) ──
+	docs.Register(mux)
 
 	// ── Authenticated routes ──
 	authed := http.NewServeMux()

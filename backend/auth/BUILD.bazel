@@ -3,8 +3,8 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "auth",
     srcs = ["jwt.go"],
-    importpath = "stempelkarte-backend/auth",
-    visibility = ["//backend:__subpackages__"],
+    importpath = "land-of-stamp-backend/auth",
+    visibility = ["//:__subpackages__"],
     deps = ["@com_github_golang_jwt_jwt_v5//:jwt"],
 )
 

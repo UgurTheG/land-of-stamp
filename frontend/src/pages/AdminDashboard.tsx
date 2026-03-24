@@ -61,7 +61,7 @@ export default function AdminDashboard() {
   const [stampsRequired, setStampsRequired] = useState(8);
   const [color, setColor] = useState('#6366f1');
 
-  const populateForm = useCallback((shop: Shop | null) => {
+  const populateForm = (shop: Shop | null) => {
     if (shop) {
       setName(shop.name);
       setDescription(shop.description);
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
       setStampsRequired(8);
       setColor('#6366f1');
     }
-  }, []);
+  };
 
   const loadCardsForShop = useCallback(async (shopId: string) => {
     try {
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
       }
     })();
     return () => { cancelled = true; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSelectShop = (shop: Shop) => {
     setSelectedShopId(shop.id);

@@ -3,8 +3,11 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "middleware",
     srcs = ["middleware.go"],
-    importpath = "stempelkarte-backend/middleware",
-    visibility = ["//backend:__subpackages__"],
-    deps = ["//backend/auth"],
+    importpath = "land-of-stamp-backend/middleware",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//auth",
+        "@com_github_google_uuid//:uuid",
+    ],
 )
 

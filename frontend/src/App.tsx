@@ -1,14 +1,16 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router';
 import { AuthProvider } from './context/AuthContext';
 import { Toaster } from 'sonner';
 import Navbar from './components/layout/Navbar';
 import ProtectedRoute from './components/layout/ProtectedRoute';
-import LandingPage from './pages/LandingPage';
-import LoginPage from './pages/LoginPage';
-import UserDashboard from './pages/UserDashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import ScanPage from './pages/ScanPage';
-import ClaimPage from './pages/ClaimPage';
+
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const UserDashboard = lazy(() => import('./pages/UserDashboard'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const ScanPage = lazy(() => import('./pages/ScanPage'));
+const ClaimPage = lazy(() => import('./pages/ClaimPage'));
 
 function App() {
   return (
@@ -17,7 +19,8 @@ function App() {
         <Toaster theme="dark" position="top-right" richColors closeButton />
         <div className="min-h-screen bg-surface text-white">
           <Navbar />
-          <Routes>
+          <Suspense fallback={<div className="flex items-center justify-center h-[60vh] text-zinc-400">Loading…</div>}>
+            <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route
@@ -53,6 +56,7 @@ function App() {
               }
             />
           </Routes>
+          </Suspense>
         </div>
       </AuthProvider>
     </BrowserRouter>

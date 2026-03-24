@@ -4,17 +4,21 @@ go_library(
     name = "handlers",
     srcs = [
         "auth.go",
+        "qr.go",
         "shops.go",
         "stamps.go",
     ],
-    importpath = "stempelkarte-backend/handlers",
-    visibility = ["//backend:__subpackages__"],
+    importpath = "land-of-stamp-backend/handlers",
+    visibility = ["//:__subpackages__"],
     deps = [
-        "//backend/auth",
-        "//backend/db",
-        "//backend/middleware",
+        "//auth",
+        "//db",
+        "//gen/pb",
+        "//middleware",
         "@com_github_google_uuid//:uuid",
         "@org_golang_x_crypto//bcrypt",
+        "@org_golang_google_protobuf//encoding/protojson",
+        "@org_golang_google_protobuf//proto",
     ],
 )
 

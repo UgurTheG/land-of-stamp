@@ -6,7 +6,7 @@
  * This avoids React 19 form-action timing issues in controlled components.
  */
 
-import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -87,16 +87,6 @@ async function logoutViaUI(page: Page) {
   await expect(page).toHaveURL(/^\/$|\/login/, { timeout: 5_000 });
 }
 
-/**
- * Fill the login/register form and submit via the UI.
- * Used ONLY for tests that specifically validate the login/register UI.
- */
-async function fillAndSubmitForm(page: Page, username: string, password: string) {
-  await page.getByPlaceholder('Enter your username').fill(username);
-  await page.getByPlaceholder('Enter your password').fill(password);
-  // Type into password then press Enter for native form submission
-  await page.getByPlaceholder('Enter your password').press('Enter');
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  LANDING PAGE

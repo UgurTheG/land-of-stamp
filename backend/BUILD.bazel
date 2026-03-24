@@ -3,13 +3,14 @@ load("@rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "backend_lib",
     srcs = ["main.go"],
-    importpath = "stempelkarte-backend",
+    importpath = "land-of-stamp-backend",
     visibility = ["//visibility:private"],
     deps = [
-        "//backend/auth",
-        "//backend/db",
-        "//backend/handlers",
-        "//backend/middleware",
+        "//auth",
+        "//db",
+        "//docs",
+        "//handlers",
+        "//middleware",
     ],
 )
 
