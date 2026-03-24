@@ -1,0 +1,21 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "backend_lib",
+    srcs = ["main.go"],
+    importpath = "stempelkarte-backend",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//backend/auth",
+        "//backend/db",
+        "//backend/handlers",
+        "//backend/middleware",
+    ],
+)
+
+go_binary(
+    name = "server",
+    embed = [":backend_lib"],
+    visibility = ["//visibility:public"],
+)
+

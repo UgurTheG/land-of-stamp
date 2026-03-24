@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "handlers",
+    srcs = [
+        "auth.go",
+        "shops.go",
+        "stamps.go",
+    ],
+    importpath = "stempelkarte-backend/handlers",
+    visibility = ["//backend:__subpackages__"],
+    deps = [
+        "//backend/auth",
+        "//backend/db",
+        "//backend/middleware",
+        "@com_github_google_uuid//:uuid",
+        "@org_golang_x_crypto//bcrypt",
+    ],
+)
+

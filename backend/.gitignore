@@ -1,0 +1,5 @@
+# Local dev files
+.jwt-secret
+*.db
+land-of-stamp-backend
+stempelkarte-backend
