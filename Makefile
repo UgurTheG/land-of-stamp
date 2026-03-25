@@ -31,8 +31,8 @@ deps-npm:
 ## ─────────────────────────────────────────────────────────
 deps-bazel:
 	@echo "⬆️  Regenerating Bazel BUILD files …"
-	cd backend && bazelisk run //:gazelle -- update 2>/dev/null || \
-		echo "   ⚠️  bazelisk not found — skipping Bazel update."
+	cd backend && bazel run //:gazelle -- update || \
+		echo "   ⚠️  bazel/gazelle failed — skipping Bazel update."
 	@echo "   BUILD files regenerated."
 
 ## ─────────────────────────────────────────────────────────
