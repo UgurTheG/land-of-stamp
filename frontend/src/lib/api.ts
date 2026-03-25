@@ -4,6 +4,11 @@ const API_BASE = import.meta.env.VITE_API_URL ?? '';
 export type { User, Shop, StampCard, StampToken, ClaimStampResponse } from '../gen/proto/stempelkarte';
 import type { User, Shop, StampCard, StampToken, ClaimStampResponse, AuthResponse } from '../gen/proto/stempelkarte';
 
+export interface StampTokenStatus {
+  active: boolean;
+  expiresAt?: string;
+}
+
 // ── Session storage (user info only — JWT is in HttpOnly cookie) ──
 
 export function clearSession(): void {
@@ -150,6 +155,10 @@ export async function apiCreateStampToken(shopId: string): Promise<StampToken> {
   return request<StampToken>(`/api/shops/${shopId}/stamp-token`, {
     method: 'POST',
   });
+}
+
+export async function apiGetStampTokenStatus(shopId: string): Promise<StampTokenStatus> {
+  return request<StampTokenStatus>(`/api/shops/${shopId}/stamp-token/status`);
 }
 
 export async function apiClaimStamp(token: string): Promise<ClaimStampResponse> {

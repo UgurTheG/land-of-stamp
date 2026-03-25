@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -76,6 +78,50 @@ func CreateStampToken(w http.ResponseWriter, r *http.Request) {
 		Token:     token,
 		ExpiresAt: expiresAt.Format(time.RFC3339),
 		ShopId:    shopID,
+	})
+}
+
+// GetStampTokenStatus returns whether the current shop has an active QR token.
+func GetStampTokenStatus(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	shopID, _ := verifyShopOwner(ctx, w, r)
+	if shopID == "" {
+		return
+	}
+
+	var expiresAtStr string
+	err := db.DB.QueryRowContext(ctx,
+		"SELECT expires_at FROM stamp_tokens WHERE shop_id = ? LIMIT 1",
+		shopID,
+	).Scan(&expiresAtStr)
+	if errors.Is(err, sql.ErrNoRows) {
+		writeJSON(ctx, w, http.StatusOK, map[string]any{"active": false})
+		return
+	}
+	if err != nil {
+		slog.ErrorContext(ctx, "qr: failed to fetch token status", "shop", shopID, "error", err)
+		jsonError(ctx, w, "failed to load token status", http.StatusInternalServerError)
+		return
+	}
+
+	expiresAt, err := time.Parse(time.RFC3339, expiresAtStr)
+	if err != nil || time.Now().UTC().After(expiresAt) {
+		if _, cleanupErr := db.DB.ExecContext(ctx,
+			"DELETE FROM stamp_token_claims WHERE token_id IN (SELECT id FROM stamp_tokens WHERE shop_id = ?)",
+			shopID,
+		); cleanupErr != nil {
+			slog.WarnContext(ctx, "qr: failed to cleanup token claims during status check", "shop", shopID, "error", cleanupErr)
+		}
+		if _, cleanupErr := db.DB.ExecContext(ctx, "DELETE FROM stamp_tokens WHERE shop_id = ?", shopID); cleanupErr != nil {
+			slog.WarnContext(ctx, "qr: failed to cleanup tokens during status check", "shop", shopID, "error", cleanupErr)
+		}
+		writeJSON(ctx, w, http.StatusOK, map[string]any{"active": false})
+		return
+	}
+
+	writeJSON(ctx, w, http.StatusOK, map[string]any{
+		"active":    true,
+		"expiresAt": expiresAtStr,
 	})
 }
 
@@ -208,6 +254,15 @@ func ClaimStamp(w http.ResponseWriter, r *http.Request) {
 		slog.ErrorContext(ctx, "qr: failed to update stamp count", "card", cardID, "error", err)
 		jsonError(ctx, w, "failed to update stamp count", http.StatusInternalServerError)
 		return
+	}
+	if _, err := db.DB.ExecContext(ctx,
+		"DELETE FROM stamp_token_claims WHERE token_id = ?",
+		tokenID,
+	); err != nil {
+		slog.WarnContext(ctx, "qr: failed to cleanup token claims after claim", "token_id", tokenID, "error", err)
+	}
+	if _, err := db.DB.ExecContext(ctx, "DELETE FROM stamp_tokens WHERE id = ?", tokenID); err != nil {
+		slog.WarnContext(ctx, "qr: failed to invalidate token after claim", "token_id", tokenID, "error", err)
 	}
 	slog.InfoContext(ctx, "stamp claimed via QR", "card", cardID, "user", claims.UserID, "shop", shopID, "stamps", stamps)
 

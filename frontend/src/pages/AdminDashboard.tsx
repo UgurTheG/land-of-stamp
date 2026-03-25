@@ -34,6 +34,13 @@ import {
 } from 'lucide-react';
 import QRCodeDisplay from '../components/stamps/QRCodeDisplay';
 
+// Helper function to get progress bar color based on progress percentage
+const getProgressColor = (progress: number): string => {
+  if (progress < 33) return '#ef4444'; // Red for 0-33%
+  if (progress < 66) return '#f59e0b'; // Orange for 33-66%
+  return '#10b981'; // Green for 66-100%
+};
+
 type Tab = 'shop' | 'stamps' | 'qr' | 'stats';
 
 export default function AdminDashboard() {
@@ -530,7 +537,7 @@ export default function AdminDashboard() {
                                     className="h-full rounded-full transition-all duration-500"
                                     style={{
                                       width: `${Math.min(progress, 100)}%`,
-                                      backgroundColor: selectedShop.color,
+                                      backgroundColor: getProgressColor(progress),
                                     }}
                                   />
                                 </div>
@@ -704,7 +711,7 @@ export default function AdminDashboard() {
                                       animate={{ width: `${Math.min(progress, 100)}%` }}
                                       transition={{ duration: 0.8, ease: 'easeOut' }}
                                       className="h-full rounded-full"
-                                      style={{ backgroundColor: selectedShop.color }}
+                                      style={{ backgroundColor: getProgressColor(progress) }}
                                     />
                                   </div>
                                 </div>

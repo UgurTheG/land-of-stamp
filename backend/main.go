@@ -107,6 +107,7 @@ func buildMux() *http.ServeMux {
 	admin.HandleFunc("POST /api/shops/{id}/stamps", handlers.GrantStamp)
 	admin.HandleFunc("PATCH /api/shops/{id}/stamps", handlers.UpdateStampCount)
 	admin.HandleFunc("POST /api/shops/{id}/stamp-token", handlers.CreateStampToken)
+	admin.HandleFunc("GET /api/shops/{id}/stamp-token/status", handlers.GetStampTokenStatus)
 	admin.HandleFunc("GET /api/users/customers", handlers.ListCustomers)
 
 	// ── Mount with middleware ──

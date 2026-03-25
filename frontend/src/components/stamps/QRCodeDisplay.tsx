@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
 import { RefreshCw, QrCode, Clock, Sparkles } from 'lucide-react';
 import { useLocale } from '../../hooks/useLocale';
-import { apiCreateStampToken } from '../../lib/api';
+import { apiCreateStampToken, apiGetStampTokenStatus } from '../../lib/api';
 import { toast } from 'sonner';
 
 interface Props {
@@ -20,6 +20,12 @@ export default function QRCodeDisplay({ shopId, shopColor, shopName }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+
+  const clearActiveQr = useCallback(() => {
+    setToken(null);
+    setExpiresAt(null);
+    setSecondsLeft(0);
+  }, []);
 
   const generateToken = useCallback(async () => {
     setLoading(true);
@@ -53,14 +59,50 @@ export default function QRCodeDisplay({ shopId, shopColor, shopName }: Props) {
       const diff = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
       setSecondsLeft(diff);
       if (diff <= 0) {
-        setToken(null);
-        setExpiresAt(null);
+        clearActiveQr();
       }
     };
     update();
     timerRef.current = setInterval(update, 1000);
     return () => clearInterval(timerRef.current);
-  }, [expiresAt]);
+  }, [clearActiveQr, expiresAt]);
+
+  // Poll token status so the admin UI resets immediately after a successful scan.
+  useEffect(() => {
+    if (!token || !expiresAt) return;
+
+    let cancelled = false;
+    const checkStatus = async () => {
+      try {
+        const status = await apiGetStampTokenStatus(shopId);
+        if (cancelled) return;
+
+        if (!status.active) {
+          clearActiveQr();
+          return;
+        }
+
+        if (status.expiresAt) {
+          const nextExpiresAt = new Date(status.expiresAt);
+          if (!Number.isNaN(nextExpiresAt.getTime()) && nextExpiresAt.getTime() !== expiresAt.getTime()) {
+            setExpiresAt(nextExpiresAt);
+          }
+        }
+      } catch {
+        // Keep current QR visible during transient polling errors.
+      }
+    };
+
+    void checkStatus();
+    const pollRef = setInterval(() => {
+      void checkStatus();
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(pollRef);
+    };
+  }, [clearActiveQr, expiresAt, shopId, token]);
 
   const progressPercent = expiresAt ? Math.max(0, (secondsLeft / 60) * 100) : 0;
 
