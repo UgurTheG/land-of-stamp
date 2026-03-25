@@ -357,6 +357,11 @@ body {
   background: linear-gradient(90deg, transparent 5%, rgba(99, 102, 241, 0.15) 30%, rgba(245, 158, 11, 0.1) 70%, transparent 95%);
 }
 
+/* Role-based landing CTA heading should stay dark in light mode */
+[data-theme="light"] .landing-role-cta-heading {
+  color: #0f172a !important;
+}
+
 /* ── Theme toggle button ── */
 .theme-toggle {
   display: flex;

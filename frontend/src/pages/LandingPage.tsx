@@ -349,7 +349,7 @@ export default function LandingPage() {
             className="relative bg-linear-to-br from-primary/30 to-accent/10 border border-white/10 rounded-3xl p-8 sm:p-12 text-center overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-accent/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-            <h2 className="relative text-3xl sm:text-4xl font-black text-white mb-4">
+            <h2 className="landing-role-cta-heading relative text-3xl sm:text-4xl font-black text-white mb-4">
               {bottomHeading}
             </h2>
             <p className="relative text-indigo-200 text-lg mb-8 max-w-xl mx-auto">
