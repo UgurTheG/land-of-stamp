@@ -60,12 +60,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface flex items-center justify-center px-4 pt-20 pb-10">
-      {/* Background effects */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-20 left-[10%] w-96 h-96 bg-primary/15 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-[10%] w-80 h-80 bg-accent/10 rounded-full blur-3xl" />
-      </div>
+    <div className="min-h-screen flex items-center justify-center px-4 pt-20 pb-10">
 
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -75,7 +70,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 group">
-            <div className="w-12 h-12 bg-gradient-to-br from-accent to-amber-400 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="w-12 h-12 bg-linear-to-br from-accent to-amber-400 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform">
               <Stamp className="w-6 h-6 text-surface" />
             </div>
           </Link>
@@ -88,7 +83,7 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <div className="bg-gradient-to-br from-white/[0.08] to-white/[0.03] backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8">
+        <div className="bg-linear-to-br from-white/8 to-white/3 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8">
           <form action={handleSubmit} className="space-y-5">
             {/* Register: Role toggle */}
             {isRegister && (
@@ -166,7 +161,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-accent to-amber-400 text-surface font-bold py-3.5 rounded-xl hover:shadow-lg hover:shadow-accent/25 transition-all hover:scale-[1.02] text-lg cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
+              className="w-full flex items-center justify-center gap-2 bg-linear-to-r from-accent to-amber-400 text-surface font-bold py-3.5 rounded-xl hover:shadow-lg hover:shadow-accent/25 transition-all hover:scale-[1.02] text-lg cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
             >
               {loading ? (
                 'Please wait...'

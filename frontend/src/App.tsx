@@ -17,7 +17,15 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <Toaster theme="dark" position="top-right" richColors closeButton />
-        <div className="min-h-screen bg-surface text-white">
+        {/* ── Animated background ── */}
+        <div className="app-bg" aria-hidden="true">
+          <div className="app-bg-orb-1" />
+          <div className="app-bg-orb-2" />
+          <div className="app-bg-grid" />
+          <div className="app-bg-vignette" />
+        </div>
+
+        <div className="relative z-10 min-h-screen text-white">
           <Navbar />
           <Suspense fallback={<div className="flex items-center justify-center h-[60vh] text-zinc-400">Loading…</div>}>
             <Routes>

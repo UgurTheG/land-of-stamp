@@ -178,12 +178,7 @@ export default function ScanPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-surface pt-20 pb-12">
-      {/* Background */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-40 left-[10%] w-80 h-80 bg-primary/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-[5%] w-72 h-72 bg-accent/8 rounded-full blur-3xl" />
-      </div>
+    <div className="min-h-screen pt-20 pb-12">
 
       <div className="relative max-w-lg mx-auto px-4">
         {/* Header */}

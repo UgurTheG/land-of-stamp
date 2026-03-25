@@ -26,12 +26,12 @@ export default function Navbar() {
     }`;
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-surface/80 backdrop-blur-xl border-b border-white/10">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#080515]/60 backdrop-blur-2xl border-b border-white/[0.06] shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 bg-gradient-to-br from-accent to-amber-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="w-9 h-9 bg-linear-to-br from-accent to-amber-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
               <Stamp className="w-5 h-5 text-surface" />
             </div>
             <span className="text-xl font-bold text-white tracking-tight">
@@ -102,7 +102,7 @@ export default function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-surface/95 backdrop-blur-xl border-b border-white/10 overflow-hidden"
+            className="md:hidden bg-[#080515]/90 backdrop-blur-2xl border-b border-white/[0.06] overflow-hidden"
           >
             <div className="px-4 py-4 space-y-3">
               <Link

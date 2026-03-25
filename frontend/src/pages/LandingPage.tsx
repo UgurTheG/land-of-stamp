@@ -58,7 +58,7 @@ export default function LandingPage() {
   ];
 
   return (
-    <div ref={containerRef} className="bg-surface min-h-screen">
+    <div ref={containerRef} className="min-h-screen">
       {/* ── Hero Section with Parallax ── */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         {/* Background layer - slow */}
@@ -66,11 +66,11 @@ export default function LandingPage() {
           style={{ y: bgY }}
           className="absolute inset-0 pointer-events-none"
         >
-          <div className="absolute inset-0 bg-linear-to-b from-indigo-950 via-surface to-surface" />
-          {/* Floating orbs */}
-          <div className="absolute top-20 left-[10%] w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
-          <div className="absolute top-40 right-[15%] w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse [animation-delay:1s]" />
-          <div className="absolute bottom-20 left-[30%] w-64 h-64 bg-purple-500/15 rounded-full blur-3xl animate-pulse [animation-delay:2s]" />
+          <div className="absolute inset-0 bg-linear-to-b from-indigo-950/60 via-transparent to-transparent" />
+          {/* Floating orbs - enhanced */}
+          <div className="absolute top-20 left-[10%] w-72 h-72 bg-primary/30 rounded-full blur-3xl animate-pulse" />
+          <div className="absolute top-40 right-[15%] w-96 h-96 bg-accent/15 rounded-full blur-3xl animate-pulse [animation-delay:1s]" />
+          <div className="absolute bottom-20 left-[30%] w-64 h-64 bg-purple-500/20 rounded-full blur-3xl animate-pulse [animation-delay:2s]" />
         </motion.div>
 
         {/* Mid layer - medium speed */}
@@ -206,6 +206,8 @@ export default function LandingPage() {
         </motion.div>
       </section>
 
+      <hr className="glow-divider" />
+
       {/* ── Stats ── */}
       <section className="py-16 relative">
         <div className="max-w-6xl mx-auto px-4">
@@ -229,6 +231,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <hr className="glow-divider" />
 
       {/* ── Features ── */}
       <section id="features" className="py-20 sm:py-28 relative">
@@ -271,6 +275,8 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <hr className="glow-divider" />
+
       {/* ── How it Works ── */}
       <section className="py-20 sm:py-28 relative">
         <div className="max-w-5xl mx-auto px-4">
@@ -308,6 +314,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      <hr className="glow-divider" />
 
       {/* ── CTA ── */}
       <section className="py-20 sm:py-28 relative">
