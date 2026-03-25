@@ -112,6 +112,7 @@ export const messages = {
       orContinueWith: 'or continue with',
       continueWithGoogle: 'Continue with Google',
       continueWithGitHub: 'Continue with GitHub',
+      continueWithApple: 'Continue with Apple',
       validation: {
         usernameRequired: 'Please enter a username',
         usernameMin: 'Username must be at least 2 characters',
@@ -357,6 +358,7 @@ export const messages = {
       orContinueWith: 'oder weiter mit',
       continueWithGoogle: 'Weiter mit Google',
       continueWithGitHub: 'Weiter mit GitHub',
+      continueWithApple: 'Weiter mit Apple',
       validation: {
         usernameRequired: 'Bitte gib einen Benutzernamen ein',
         usernameMin: 'Der Benutzername muss mindestens 2 Zeichen lang sein',

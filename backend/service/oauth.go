@@ -1,4 +1,4 @@
-// Package service — OAuth login handlers for Google and GitHub.
+// Package service — OAuth login handlers for Google, GitHub, and Apple.
 //
 // These are plain HTTP handlers (not ConnectRPC) because OAuth requires
 // browser GET redirects that ConnectRPC POST endpoints cannot support.
@@ -7,12 +7,14 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 
 	"land-of-stamp-backend/auth"
 	"land-of-stamp-backend/db"
@@ -23,11 +25,16 @@ import (
 	"gorm.io/gorm"
 )
 
-// ── Google endpoint (not in x/oauth2 by default) ───────
+// ── Provider endpoints ─────────────────────────────────
 
 var googleEndpoint = oauth2.Endpoint{
 	AuthURL:  "https://accounts.google.com/o/oauth2/auth",
 	TokenURL: "https://oauth2.googleapis.com/token",
+}
+
+var appleEndpoint = oauth2.Endpoint{
+	AuthURL:  "https://appleid.apple.com/auth/authorize",
+	TokenURL: "https://appleid.apple.com/auth/token",
 }
 
 // ── OAuthService holds configs for each provider ───────
@@ -35,6 +42,7 @@ var googleEndpoint = oauth2.Endpoint{
 type OAuthService struct {
 	google      *oauth2.Config
 	github      *oauth2.Config
+	apple       *oauth2.Config
 	frontendURL string
 }
 
@@ -72,30 +80,47 @@ func NewOAuthService() *OAuthService {
 		}
 		slog.Info("oauth: GitHub provider enabled")
 	}
+	if id := os.Getenv("APPLE_CLIENT_ID"); id != "" {
+		s.apple = &oauth2.Config{
+			ClientID:     id,
+			ClientSecret: os.Getenv("APPLE_CLIENT_SECRET"),
+			Endpoint:     appleEndpoint,
+			RedirectURL:  redirectBase + "/auth/apple/callback",
+			Scopes:       []string{"name", "email"},
+		}
+		slog.Info("oauth: Apple provider enabled")
+	}
 	return s
 }
 
 // Enabled returns which providers are configured.
-func (s *OAuthService) Enabled() (google, gh bool) {
-	return s.google != nil, s.github != nil
+func (s *OAuthService) Enabled() (google, gh, apple bool) {
+	return s.google != nil, s.github != nil, s.apple != nil
 }
 
 // Register mounts the OAuth HTTP routes on the mux.
 func (s *OAuthService) Register(mux *http.ServeMux) {
 	if s.google != nil {
-		mux.HandleFunc("GET /auth/google", s.handleLogin(s.google))
+		mux.HandleFunc("GET /auth/google", s.handleLogin(s.google, nil))
 		mux.HandleFunc("GET /auth/google/callback", s.handleCallback("google", s.google, fetchGoogleUser))
 	}
 	if s.github != nil {
-		mux.HandleFunc("GET /auth/github", s.handleLogin(s.github))
+		mux.HandleFunc("GET /auth/github", s.handleLogin(s.github, nil))
 		mux.HandleFunc("GET /auth/github/callback", s.handleCallback("github", s.github, fetchGitHubUser))
+	}
+	if s.apple != nil {
+		// Apple requires response_mode=form_post and sends callback as POST.
+		mux.HandleFunc("GET /auth/apple", s.handleLogin(s.apple, []oauth2.AuthCodeOption{
+			oauth2.SetAuthURLParam("response_mode", "form_post"),
+		}))
+		mux.HandleFunc("POST /auth/apple/callback", s.handleAppleCallback())
 	}
 }
 
 // ── Handlers ───────────────────────────────────────────
 
 // handleLogin redirects to the provider's consent screen.
-func (s *OAuthService) handleLogin(cfg *oauth2.Config) http.HandlerFunc {
+func (s *OAuthService) handleLogin(cfg *oauth2.Config, extraOpts []oauth2.AuthCodeOption) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		state := randomState()
 		http.SetCookie(w, &http.Cookie{
@@ -106,7 +131,8 @@ func (s *OAuthService) handleLogin(cfg *oauth2.Config) http.HandlerFunc {
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   300, // 5 min
 		})
-		http.Redirect(w, r, cfg.AuthCodeURL(state), http.StatusTemporaryRedirect)
+		opts := append([]oauth2.AuthCodeOption{}, extraOpts...)
+		http.Redirect(w, r, cfg.AuthCodeURL(state, opts...), http.StatusTemporaryRedirect)
 	}
 }
 
@@ -172,6 +198,64 @@ func (s *OAuthService) handleCallback(provider string, cfg *oauth2.Config, fetch
 	}
 }
 
+// handleAppleCallback handles Apple's form_post callback (POST with form data).
+// Apple sends code, state, and optionally a `user` JSON blob (first login only) as form fields.
+func (s *OAuthService) handleAppleCallback() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if err := r.ParseForm(); err != nil {
+			slog.Error("oauth: apple form parse failed", "error", err)
+			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_exchange", http.StatusTemporaryRedirect)
+			return
+		}
+
+		// Validate state
+		stateCookie, err := r.Cookie("__oauth_state")
+		if err != nil || stateCookie.Value == "" || stateCookie.Value != r.FormValue("state") {
+			slog.Warn("oauth: invalid state", "provider", "apple")
+			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_state", http.StatusTemporaryRedirect)
+			return
+		}
+		http.SetCookie(w, &http.Cookie{Name: "__oauth_state", MaxAge: -1, Path: "/"})
+
+		// Exchange code for token
+		code := r.FormValue("code")
+		oauthToken, err := s.apple.Exchange(r.Context(), code)
+		if err != nil {
+			slog.Error("oauth: apple code exchange failed", "error", err)
+			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_exchange", http.StatusTemporaryRedirect)
+			return
+		}
+
+		// Extract user info from the ID token (JWT in token response)
+		info, err := extractAppleUser(oauthToken, r.FormValue("user"))
+		if err != nil {
+			slog.Error("oauth: apple user info failed", "error", err)
+			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_userinfo", http.StatusTemporaryRedirect)
+			return
+		}
+
+		// Upsert user in DB
+		user, err := upsertOAuthUser(r.Context(), "apple", info.ID, info.Username)
+		if err != nil {
+			slog.Error("oauth: upsert failed", "provider", "apple", "error", err)
+			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_db", http.StatusTemporaryRedirect)
+			return
+		}
+
+		// Generate JWT and redirect
+		uid := user.UUID.String()
+		jwtToken, err := auth.GenerateToken(uid, user.Username, user.Role)
+		if err != nil {
+			slog.Error("oauth: token generation failed", "provider", "apple", "error", err)
+			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_token", http.StatusTemporaryRedirect)
+			return
+		}
+		SetTokenCookie(w.Header(), jwtToken)
+		slog.Info("oauth: user logged in", "provider", "apple", "uuid", uid, "username", user.Username)
+		http.Redirect(w, r, s.frontendURL+"/login/oauth-callback", http.StatusTemporaryRedirect)
+	}
+}
+
 // ── Provider-specific user info fetchers ───────────────
 
 func fetchGoogleUser(ctx context.Context, token *oauth2.Token) (*oauthUserInfo, error) {
@@ -217,6 +301,59 @@ func fetchGitHubUser(ctx context.Context, token *oauth2.Token) (*oauthUserInfo, 
 		ID:       fmt.Sprintf("%d", data.ID),
 		Username: data.Login,
 		Email:    data.Email,
+	}, nil
+}
+
+// extractAppleUser parses the ID token from Apple's token response.
+// Apple provides user info (name) only on the first authorization via the `user` form param.
+// The `sub` (unique user ID) and email always come from the ID token JWT.
+func extractAppleUser(token *oauth2.Token, userJSON string) (*oauthUserInfo, error) {
+	// The ID token is a JWT in the Extra data
+	idTokenRaw, ok := token.Extra("id_token").(string)
+	if !ok || idTokenRaw == "" {
+		return nil, fmt.Errorf("no id_token in Apple token response")
+	}
+
+	// Decode JWT payload (second segment) without verification —
+	// we just exchanged the code server-side so the token is trustworthy.
+	parts := strings.SplitN(idTokenRaw, ".", 3)
+	if len(parts) < 2 {
+		return nil, fmt.Errorf("malformed Apple id_token")
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, fmt.Errorf("decode Apple id_token payload: %w", err)
+	}
+
+	var claims struct {
+		Sub   string `json:"sub"`
+		Email string `json:"email"`
+	}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return nil, fmt.Errorf("parse Apple id_token claims: %w", err)
+	}
+
+	// Try to get the user's name from the `user` form param (first login only)
+	username := claims.Email
+	if userJSON != "" {
+		var userData struct {
+			Name struct {
+				FirstName string `json:"firstName"`
+				LastName  string `json:"lastName"`
+			} `json:"name"`
+		}
+		if err := json.Unmarshal([]byte(userJSON), &userData); err == nil {
+			name := strings.TrimSpace(userData.Name.FirstName + " " + userData.Name.LastName)
+			if name != "" {
+				username = name
+			}
+		}
+	}
+
+	return &oauthUserInfo{
+		ID:       claims.Sub,
+		Username: username,
+		Email:    claims.Email,
 	}, nil
 }
 
