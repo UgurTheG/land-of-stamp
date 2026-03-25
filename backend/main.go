@@ -57,7 +57,7 @@ func main() {
 
 func initLogging() {
 	var level slog.Level
-	switch os.Getenv("LOG_LEVEL") {
+	switch os.Getenv(constants.EnvLogLevel) {
 	case "debug":
 		level = slog.LevelDebug
 	case "warn":
@@ -112,9 +112,9 @@ func buildMux() *http.ServeMux {
 }
 
 func serveFrontend(ctx context.Context, mux *http.ServeMux) {
-	distDir := os.Getenv("DIST_DIR")
+	distDir := os.Getenv(constants.EnvDistDir)
 	if distDir == "" {
-		distDir = "../frontend/dist"
+		distDir = constants.DefaultDistDir
 	}
 	if _, err := os.Stat(distDir); err == nil {
 		slog.InfoContext(ctx, "serving frontend", "dir", distDir)

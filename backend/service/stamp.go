@@ -200,7 +200,7 @@ func (s *StampService) RedeemCard(ctx context.Context, req *connect.Request[pb.R
 	db.DB.WithContext(ctx).Create(&freshCard) // ignore unique constraint error
 
 	slog.InfoContext(ctx, "card redeemed", "card", cardID, "user", claims.UserID, "shop", card.ShopID)
-	return connect.NewResponse(&pb.StatusResponse{Status: "redeemed"}), nil
+	return connect.NewResponse(&pb.StatusResponse{Status: constants.StatusRedeemed}), nil
 }
 
 func (s *StampService) GetShopCustomers(ctx context.Context, req *connect.Request[pb.GetShopCustomersRequest]) (*connect.Response[pb.UserList], error) {

@@ -23,7 +23,7 @@ type AuthService struct {
 
 func (s *AuthService) Logout(ctx context.Context, _ *connect.Request[pb.LogoutRequest]) (*connect.Response[pb.StatusResponse], error) {
 	slog.InfoContext(ctx, "user logged out")
-	resp := connect.NewResponse(&pb.StatusResponse{Status: "logged out"})
+	resp := connect.NewResponse(&pb.StatusResponse{Status: constants.StatusLoggedOut})
 	ClearTokenCookie(resp.Header())
 	return resp, nil
 }

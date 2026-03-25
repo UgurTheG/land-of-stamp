@@ -57,6 +57,8 @@ const (
 	EnvFrontendURL       = "FRONTEND_URL"
 	EnvOAuthRedirectBase = "OAUTH_REDIRECT_BASE"
 	EnvTestSeed          = "TEST_SEED"
+	EnvLogLevel          = "LOG_LEVEL"
+	EnvDistDir           = "DIST_DIR"
 	EnvGoogleClientID    = "GOOGLE_CLIENT_ID"
 	EnvGoogleSecret      = "GOOGLE_CLIENT_SECRET"
 	EnvGitHubClientID    = "GITHUB_CLIENT_ID"
@@ -70,8 +72,16 @@ const (
 const (
 	DefaultPort            = "8080"
 	DefaultDBPath          = "land-of-stamp.db"
+	DefaultDistDir         = "../frontend/dist"
 	DefaultOAuthRedirect   = "http://localhost:8080"
 	DefaultFrontendURL     = "http://localhost:5173"
+)
+
+// ── Status response values ─────────────────────────────
+
+const (
+	StatusLoggedOut = "logged out"
+	StatusRedeemed  = "redeemed"
 )
 
 // ── CORS ───────────────────────────────────────────────
