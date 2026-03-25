@@ -20,9 +20,7 @@ WORKDIR /app
 COPY --from=builder /app/server .
 
 USER appuser
-
 EXPOSE 8080
-
 ENV PORT=8080
 
 ENTRYPOINT ["./server"]

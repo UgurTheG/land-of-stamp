@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 
 go_library(
     name = "backend_lib",
@@ -9,8 +9,11 @@ go_library(
         "//auth",
         "//db",
         "//docs",
-        "//handlers",
+        "//gen/pb/pbconnect",
+        "//interceptor",
         "//middleware",
+        "//service",
+        "@com_connectrpc_connect//:connect",
     ],
 )
 
@@ -18,5 +21,24 @@ go_binary(
     name = "server",
     embed = [":backend_lib"],
     visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "backend_test",
+    size = "medium",
+    srcs = ["e2e_test.go"],
+    embed = [":backend_lib"],
+    deps = [
+        "//auth",
+        "//db",
+        "//docs",
+        "//gen/pb",
+        "//gen/pb/pbconnect",
+        "//interceptor",
+        "//middleware",
+        "//service",
+        "@com_connectrpc_connect//:connect",
+        "@com_github_google_uuid//:uuid",
+    ],
 )
 

@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "interceptor",
+    srcs = ["auth.go"],
+    importpath = "land-of-stamp-backend/interceptor",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//auth",
+        "//gen/pb/pbconnect",
+        "@com_connectrpc_connect//:connect",
+    ],
+)
+

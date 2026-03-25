@@ -1,0 +1,18 @@
+# ── Common ───────────────────────────────────────────────
+build --enable_bzlmod
+build --incompatible_strict_action_env
+
+# ── Remote / Disk cache ─────────────────────────────────
+build --disk_cache=~/.cache/bazel-disk
+build --repository_cache=~/.cache/bazel-repo
+
+# ── Test ────────────────────────────────────────────────
+test --test_output=errors
+test --test_verbose_timeout_warnings
+
+# ── CI overrides (activated with --config=ci) ───────────
+build:ci --disk_cache=
+build:ci --color=yes
+build:ci --curses=no
+test:ci --test_output=all
+

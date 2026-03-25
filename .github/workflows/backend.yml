@@ -1,0 +1,84 @@
+name: "Backend · Bazel"
+
+on:
+  push:
+    branches: [main]
+    paths: [backend/**]
+  pull_request:
+    paths: [backend/**]
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  # ── Build all targets ─────────────────────────────────
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Bazel
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel
+          key: bazel-build-${{ runner.os }}-${{ hashFiles('backend/MODULE.bazel', 'backend/MODULE.bazel.lock') }}
+          restore-keys: bazel-build-${{ runner.os }}-
+
+      - name: Build
+        run: bazelisk build --config=ci //...
+
+  # ── Run all tests ─────────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Bazel
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel
+          key: bazel-test-${{ runner.os }}-${{ hashFiles('backend/MODULE.bazel', 'backend/MODULE.bazel.lock') }}
+          restore-keys: bazel-test-${{ runner.os }}-
+
+      - name: Test
+        run: bazelisk test --config=ci //...
+
+  # ── Lint (golangci-lint — runs outside Bazel) ─────────
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+          working-directory: backend
+
+  # ── Vulnerability scan (weekly + on push) ─────────────
+  security:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+
+      - name: Run govulncheck
+        run: govulncheck ./...
+

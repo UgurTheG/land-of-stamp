@@ -16,9 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: backend/go.mod
 
       - uses: actions/setup-node@v4
         with:
@@ -34,14 +31,21 @@ jobs:
         working-directory: frontend
         run: npx playwright install --with-deps chromium
 
+      - name: Cache Bazel
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel
+          key: bazel-e2e-${{ runner.os }}-${{ hashFiles('backend/MODULE.bazel', 'backend/MODULE.bazel.lock') }}
+          restore-keys: bazel-e2e-${{ runner.os }}-
+
       - name: Build backend
         working-directory: backend
-        run: go build -o ./server .
+        run: bazelisk build --config=ci //:server
 
       - name: Start backend
         working-directory: backend
         run: |
-          DB_PATH=:memory: JWT_SECRET=e2e-ci-secret TEST_SEED=true ./server &
+          DB_PATH=:memory: JWT_SECRET=e2e-ci-secret TEST_SEED=true ./bazel-bin/server_/server &
           sleep 2
 
       - name: Start frontend dev server

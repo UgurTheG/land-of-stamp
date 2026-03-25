@@ -2,9 +2,19 @@ load("@rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "db",
-    srcs = ["db.go"],
+    srcs = [
+        "db.go",
+        "models.go",
+    ],
     importpath = "land-of-stamp-backend/db",
     visibility = ["//:__subpackages__"],
-    deps = ["@org_modernc_sqlite//:sqlite"],
+    deps = [
+        "//gen/pb",
+        "@com_github_glebarez_sqlite//:sqlite",
+        "@com_github_google_uuid//:uuid",
+        "@io_gorm_gorm//:gorm",
+        "@io_gorm_gorm//logger",
+        "@org_golang_google_protobuf//proto",
+    ],
 )
 
