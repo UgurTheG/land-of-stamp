@@ -1,0 +1,32 @@
+services:
+  backend:
+    build: backend
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      DB_PATH: /data/land-of-stamp.db
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      COOKIE_SECURE: "false"
+      FRONTEND_URL: http://localhost:3000
+      OAUTH_REDIRECT_BASE: http://localhost:8080
+      # OAuth (optional — set in .env)
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+    volumes:
+      - db-data:/data
+
+  frontend:
+    build: frontend
+    ports:
+      - "3000:80"
+    environment:
+      BACKEND_URL: http://backend:8080
+    depends_on:
+      - backend
+
+volumes:
+  db-data:
+
