@@ -1,7 +1,11 @@
+load("@gazelle//:def.bzl", "gazelle")
 load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 
+# gazelle:prefix land-of-stamp-backend
+gazelle(name = "gazelle")
+
 go_library(
-    name = "backend_lib",
+    name = "land-of-stamp-backend_lib",
     srcs = ["main.go"],
     importpath = "land-of-stamp-backend",
     visibility = ["//visibility:private"],
@@ -19,15 +23,15 @@ go_library(
 
 go_binary(
     name = "server",
-    embed = [":backend_lib"],
+    embed = [":land-of-stamp-backend_lib"],
     visibility = ["//visibility:public"],
 )
 
 go_test(
-    name = "backend_test",
+    name = "land-of-stamp-backend_test",
     size = "medium",
     srcs = ["e2e_test.go"],
-    embed = [":backend_lib"],
+    embed = [":land-of-stamp-backend_lib"],
     deps = [
         "//auth",
         "//db",
@@ -41,4 +45,3 @@ go_test(
         "@com_github_google_uuid//:uuid",
     ],
 )
-

@@ -5,9 +5,5 @@ go_library(
     srcs = ["middleware.go"],
     importpath = "land-of-stamp-backend/middleware",
     visibility = ["//:__subpackages__"],
-    deps = [
-        "//auth",
-        "@com_github_google_uuid//:uuid",
-    ],
+    deps = ["@com_github_google_uuid//:uuid"],
 )
-

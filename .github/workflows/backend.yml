@@ -49,6 +49,31 @@ jobs:
       - name: Test
         run: bazelisk test --config=ci //...
 
+  # ── Gazelle dirty check (BUILD files up to date) ───────
+  gazelle:
+    name: Gazelle dirty check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Bazel
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel
+          key: bazel-gazelle-${{ runner.os }}-${{ hashFiles('backend/MODULE.bazel', 'backend/MODULE.bazel.lock') }}
+          restore-keys: bazel-gazelle-${{ runner.os }}-
+
+      - name: Run Gazelle (update BUILD files)
+        run: bazelisk run --config=ci //:gazelle -- update
+
+      - name: Check for differences
+        run: |
+          git diff --exit-code -- '*.bazel' 'MODULE.bazel' || {
+            echo "::error::BUILD files are out of date. Run 'bazel run //:gazelle' in backend/ and commit."
+            git diff -- '*.bazel' 'MODULE.bazel'
+            exit 1
+          }
+
   # ── Lint (golangci-lint — runs outside Bazel) ─────────
   lint:
     name: Lint

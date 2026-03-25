@@ -10,4 +10,3 @@ go_library(
         "@org_golang_google_protobuf//runtime/protoimpl",
     ],
 )
-

@@ -11,4 +11,3 @@ go_library(
         "@com_connectrpc_connect//:connect",
     ],
 )
-
