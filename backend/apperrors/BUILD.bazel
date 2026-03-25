@@ -6,4 +6,3 @@ go_library(
     importpath = "land-of-stamp-backend/apperrors",
     visibility = ["//:__subpackages__"],
 )
-
