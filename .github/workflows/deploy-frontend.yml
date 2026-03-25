@@ -28,7 +28,7 @@ jobs:
       image-tag: ${{ steps.meta.outputs.tags }}
       environment: ${{ steps.env.outputs.env }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Determine environment
         id: env
@@ -80,7 +80,7 @@ jobs:
     environment:
       name: frontend-${{ needs.build-image.outputs.environment }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       # ──────────────────────────────────────────────────────────
       # Replace this section with your actual deployment target.
