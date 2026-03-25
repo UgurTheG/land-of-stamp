@@ -2,19 +2,13 @@
 package auth
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
+	"land-of-stamp-backend/apperrors"
 	"land-of-stamp-backend/constants"
 
 	"github.com/golang-jwt/jwt/v5"
-)
-
-// Sentinel errors for token validation failures.
-var (
-	ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
-	ErrInvalidToken            = errors.New("invalid token")
 )
 
 var jwtKey []byte
@@ -52,7 +46,7 @@ func ValidateToken(tokenStr string) (*Claims, error) {
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("%w: %v", ErrUnexpectedSigningMethod, t.Header["alg"])
+			return nil, fmt.Errorf("%w: %v", apperrors.ErrUnexpectedSigningMethod, t.Header["alg"])
 		}
 		return jwtKey, nil
 	})
@@ -60,7 +54,7 @@ func ValidateToken(tokenStr string) (*Claims, error) {
 		return nil, err
 	}
 	if !token.Valid {
-		return nil, ErrInvalidToken
+		return nil, apperrors.ErrInvalidToken
 	}
 	return claims, nil
 }

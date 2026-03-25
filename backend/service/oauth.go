@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 
+	"land-of-stamp-backend/apperrors"
 	"land-of-stamp-backend/auth"
 	"land-of-stamp-backend/constants"
 	"land-of-stamp-backend/db"
@@ -26,13 +27,6 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 	"gorm.io/gorm"
-)
-
-// Sentinel errors for OAuth operations.
-var (
-	errNoIDToken            = errors.New("no id_token in Apple token response")
-	errMalformedIDToken     = errors.New("malformed Apple id_token")
-	errUniqueUsernameFailed = errors.New("could not create unique username")
 )
 
 // maxAppleFormSize limits the request body size for Apple's form_post callback.
@@ -334,14 +328,14 @@ func extractAppleUser(token *oauth2.Token, userJSON string) (*oauthUserInfo, err
 	// The ID token is a JWT in the Extra data
 	idTokenRaw, ok := token.Extra("id_token").(string)
 	if !ok || idTokenRaw == "" {
-		return nil, errNoIDToken
+		return nil, apperrors.ErrNoIDToken
 	}
 
 	// Decode JWT payload (second segment) without verification —
 	// we just exchanged the code server-side so the token is trustworthy.
 	parts := strings.SplitN(idTokenRaw, ".", 3)
 	if len(parts) < 2 {
-		return nil, errMalformedIDToken
+		return nil, apperrors.ErrMalformedIDToken
 	}
 	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
@@ -414,7 +408,7 @@ func upsertOAuthUser(ctx context.Context, provider, oauthID, username string) (*
 		// Username conflict — try with suffix
 		candidateName = fmt.Sprintf("%s_%s_%s", username, provider, randomShort())
 	}
-	return nil, fmt.Errorf("%w for %s/%s", errUniqueUsernameFailed, provider, oauthID)
+	return nil, fmt.Errorf("%w for %s/%s", apperrors.ErrUniqueUsernameFailed, provider, oauthID)
 }
 
 // ── Utilities ──────────────────────────────────────────

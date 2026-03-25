@@ -12,6 +12,7 @@ go_library(
     importpath = "land-of-stamp-backend/service",
     visibility = ["//:__subpackages__"],
     deps = [
+        "//apperrors",
         "//auth",
         "//constants",
         "//db",
