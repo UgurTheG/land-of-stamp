@@ -2,7 +2,7 @@ import { createClient } from '@connectrpc/connect';
 import { createConnectTransport } from '@connectrpc/connect-web';
 import { create } from '@bufbuild/protobuf';
 
-import { AuthService, ShopService, StampService } from '../gen/proto/stempelkarte_connect';
+import { AuthService, ShopService, StampService } from '../gen/proto/stempelkarte_pb';
 import {
   RegisterRequestSchema,
   LoginRequestSchema,
@@ -40,7 +40,7 @@ const API_BASE = import.meta.env.VITE_API_URL ?? '';
 const transport = createConnectTransport({
   baseUrl: API_BASE,
   // Send cookies (HttpOnly JWT) with every request.
-  credentials: 'include',
+  fetch: (input, init) => fetch(input, { ...init, credentials: 'include' }),
 });
 
 const authClient  = createClient(AuthService, transport);

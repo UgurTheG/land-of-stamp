@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(getInitialUser);
 
   // Verify the session is still valid on mount. If the backend restarted
-  // with a new JWT secret the cookie token is stale and /api/auth/me will
+  // with a new JWT secret the cookie token is stale and GetMe will
   // return 401 — in that case clear the local state so the UI reflects it.
   useEffect(() => {
     if (!user) return;

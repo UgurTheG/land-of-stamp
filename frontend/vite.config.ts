@@ -11,6 +11,10 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      '/landofstamp.v1.': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
     },
   },
 })

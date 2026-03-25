@@ -15,3 +15,6 @@ Thumbs.db
 !.env.example
 
 backend/MODULE.bazel.lock
+
+# SQLite in-memory artifact
+:memory:*

@@ -14,6 +14,32 @@ const uid = () => Math.random().toString(36).slice(2, 8);
 
 const API_BASE = 'http://localhost:8080';
 
+/** ConnectRPC service base paths */
+const RPC = {
+  register:          `${API_BASE}/landofstamp.v1.AuthService/Register`,
+  login:             `${API_BASE}/landofstamp.v1.AuthService/Login`,
+  logout:            `${API_BASE}/landofstamp.v1.AuthService/Logout`,
+  getMe:             `${API_BASE}/landofstamp.v1.AuthService/GetMe`,
+  listShops:         `${API_BASE}/landofstamp.v1.ShopService/ListShops`,
+  createShop:        `${API_BASE}/landofstamp.v1.ShopService/CreateShop`,
+  getMyShops:        `${API_BASE}/landofstamp.v1.ShopService/GetMyShops`,
+  joinShop:          `${API_BASE}/landofstamp.v1.StampService/JoinShop`,
+  getMyCards:        `${API_BASE}/landofstamp.v1.StampService/GetMyCards`,
+  grantStamp:        `${API_BASE}/landofstamp.v1.StampService/GrantStamp`,
+  redeemCard:        `${API_BASE}/landofstamp.v1.StampService/RedeemCard`,
+  getShopCustomers:  `${API_BASE}/landofstamp.v1.StampService/GetShopCustomers`,
+  createStampToken:  `${API_BASE}/landofstamp.v1.StampService/CreateStampToken`,
+  claimStamp:        `${API_BASE}/landofstamp.v1.StampService/ClaimStamp`,
+} as const;
+
+/** POST a ConnectRPC JSON request. */
+function rpc(ctx: { request: { post: Function } }, url: string, data: Record<string, unknown> = {}) {
+  return ctx.request.post(url, {
+    headers: { 'Content-Type': 'application/json' },
+    data,
+  });
+}
+
 /** Register a user via the backend API and set the auth cookie on the page. */
 async function registerViaAPI(
   page: Page,
@@ -24,13 +50,7 @@ async function registerViaAPI(
   const password = opts?.password ?? 'test1234';
 
   const context = page.context();
-  const resp = await context.request.post(`${API_BASE}/api/auth/register`, {
-    headers: {
-      Authorization: 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64'),
-      'Content-Type': 'application/json',
-    },
-    data: { role },
-  });
+  const resp = await rpc(context, RPC.register, { username, password, role });
 
   if (!resp.ok()) {
     const body = await resp.text();
@@ -58,12 +78,7 @@ async function registerViaAPI(
 /** Login via API and navigate to the appropriate dashboard. */
 async function loginViaAPI(page: Page, username: string, password: string) {
   const context = page.context();
-  const resp = await context.request.post(`${API_BASE}/api/auth/login`, {
-    headers: {
-      Authorization: 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64'),
-      'Content-Type': 'application/json',
-    },
-  });
+  const resp = await rpc(context, RPC.login, { username, password });
 
   if (!resp.ok()) {
     const body = await resp.text();
@@ -173,13 +188,7 @@ test.describe('Registration', () => {
 
     // Try to register same username via API directly
     const context = page.context();
-    const resp = await context.request.post(`${API_BASE}/api/auth/register`, {
-      headers: {
-        Authorization: 'Basic ' + Buffer.from(`${username}:${password}`).toString('base64'),
-        'Content-Type': 'application/json',
-      },
-      data: { role: 'user' },
-    });
+    const resp = await rpc(context, RPC.register, { username, password, role: 'user' });
     expect(resp.status()).toBe(409);
   });
 });
@@ -203,23 +212,13 @@ test.describe('Login & Logout', () => {
   test('wrong password returns 401 from API', async ({ page }) => {
     const { username } = await registerViaAPI(page, 'user');
     const context = page.context();
-    const resp = await context.request.post(`${API_BASE}/api/auth/login`, {
-      headers: {
-        Authorization: 'Basic ' + Buffer.from(`${username}:wrongpass`).toString('base64'),
-        'Content-Type': 'application/json',
-      },
-    });
+    const resp = await rpc(context, RPC.login, { username, password: 'wrongpass' });
     expect(resp.status()).toBe(401);
   });
 
   test('non-existent user returns 401 from API', async ({ page }) => {
     const context = page.context();
-    const resp = await context.request.post(`${API_BASE}/api/auth/login`, {
-      headers: {
-        Authorization: 'Basic ' + Buffer.from(`ghost_${uid()}:anypass`).toString('base64'),
-        'Content-Type': 'application/json',
-      },
-    });
+    const resp = await rpc(context, RPC.login, { username: `ghost_${uid()}`, password: 'anypass' });
     expect(resp.status()).toBe(401);
   });
 
@@ -404,9 +403,8 @@ test.describe('Full E2E Journey', () => {
     await registerViaAPI(adminPage, 'admin');
 
     const journeyShopName = `Journey Café ${uid()}`;
-    const resp = await adminPage.context().request.post(`${API_BASE}/api/shops`, {
-      headers: { 'Content-Type': 'application/json' },
-      data: { name: journeyShopName, description: 'Your favorite café', rewardDescription: '1 free espresso', stampsRequired: 2, color: '#6366f1' },
+    const resp = await rpc(adminPage.context(), RPC.createShop, {
+      name: journeyShopName, description: 'Your favorite café', rewardDescription: '1 free espresso', stampsRequired: 2, color: '#6366f1',
     });
     expect(resp.ok()).toBeTruthy();
     const shopData = await resp.json();
@@ -562,27 +560,24 @@ test.describe('Navbar', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test.describe('API Edge Cases', () => {
-  test('unauthenticated request to /api/auth/me returns 401', async ({ page }) => {
-    const resp = await page.context().request.get(`${API_BASE}/api/auth/me`);
+  test('unauthenticated GetMe returns 401', async ({ page }) => {
+    const resp = await rpc(page.context(), RPC.getMe);
     expect(resp.status()).toBe(401);
   });
 
   test('user cannot create a shop (403)', async ({ page }) => {
     await registerViaAPI(page, 'user');
-    const resp = await page.context().request.post(`${API_BASE}/api/shops`, {
-      data: { name: 'Sneaky', rewardDescription: 'test' },
-    });
+    const resp = await rpc(page.context(), RPC.createShop, { name: 'Sneaky', rewardDescription: 'test' });
     expect(resp.status()).toBe(403);
   });
 
   test('admin can create a shop via API', async ({ page }) => {
     await registerViaAPI(page, 'admin');
     const shopName = `API Shop ${uid()}`;
-    const resp = await page.context().request.post(`${API_BASE}/api/shops`, {
-      headers: { 'Content-Type': 'application/json' },
-      data: { name: shopName, rewardDescription: 'Free item', stampsRequired: 5 },
+    const resp = await rpc(page.context(), RPC.createShop, {
+      name: shopName, rewardDescription: 'Free item', stampsRequired: 5,
     });
-    expect(resp.status()).toBe(201);
+    expect(resp.status()).toBe(200);
     const body = await resp.json();
     expect(body.name).toBe(shopName);
     expect(body.stampsRequired).toBe(5);
@@ -599,11 +594,11 @@ test.describe('API Edge Cases', () => {
     const userPage = await userCtx.newPage();
     await registerViaAPI(userPage, 'user');
 
-    const resp = await userPage.context().request.post(`${API_BASE}/api/shops/${shop.id}/join`);
-    expect(resp.status()).toBe(201);
+    const resp = await rpc(userPage.context(), RPC.joinShop, { shopId: shop.id });
+    expect(resp.status()).toBe(200);
 
     // Joining again should return 200 (idempotent)
-    const resp2 = await userPage.context().request.post(`${API_BASE}/api/shops/${shop.id}/join`);
+    const resp2 = await rpc(userPage.context(), RPC.joinShop, { shopId: shop.id });
     expect(resp2.status()).toBe(200);
 
     await adminPage.close();
@@ -615,11 +610,11 @@ test.describe('API Edge Cases', () => {
   test('logout clears cookie via API', async ({ page }) => {
     await registerViaAPI(page, 'user');
     // Verify authenticated
-    const resp = await page.context().request.get(`${API_BASE}/api/auth/me`);
+    const resp = await rpc(page.context(), RPC.getMe);
     expect(resp.status()).toBe(200);
 
     // Logout via API
-    await page.context().request.post(`${API_BASE}/api/auth/logout`);
+    await rpc(page.context(), RPC.logout);
     // Also clear localStorage (simulating what the UI logout does)
     await page.evaluate(() => localStorage.clear());
 
@@ -636,9 +631,8 @@ test.describe('API Edge Cases', () => {
 /** Helper: create a shop via API from the admin's context and return { id, name }. */
 async function createShopViaAPI(page: Page, name?: string): Promise<{ id: string; name: string }> {
   const shopName = name ?? `QR E2E Shop ${uid()}`;
-  const resp = await page.context().request.post(`${API_BASE}/api/shops`, {
-    headers: { 'Content-Type': 'application/json' },
-    data: { name: shopName, rewardDescription: 'Free test item', stampsRequired: 3, color: '#6366f1' },
+  const resp = await rpc(page.context(), RPC.createShop, {
+    name: shopName, rewardDescription: 'Free test item', stampsRequired: 3, color: '#6366f1',
   });
   if (!resp.ok()) {
     const text = await resp.text();
@@ -651,9 +645,7 @@ async function createShopViaAPI(page: Page, name?: string): Promise<{ id: string
 
 /** Helper: join a shop as the current user. */
 async function joinShopViaAPI(page: Page, shopId: string): Promise<void> {
-  const resp = await page.context().request.post(`${API_BASE}/api/shops/${shopId}/join`, {
-    headers: { 'Content-Type': 'application/json' },
-  });
+  const resp = await rpc(page.context(), RPC.joinShop, { shopId });
   if (!resp.ok()) {
     const text = await resp.text();
     throw new Error(`joinShopViaAPI failed (${resp.status()}): ${text}`);
@@ -662,9 +654,7 @@ async function joinShopViaAPI(page: Page, shopId: string): Promise<void> {
 
 /** Helper: generate a stamp token via API and return the token string. */
 async function createStampTokenViaAPI(page: Page, shopId: string): Promise<string> {
-  const resp = await page.context().request.post(`${API_BASE}/api/shops/${shopId}/stamp-token`, {
-    headers: { 'Content-Type': 'application/json' },
-  });
+  const resp = await rpc(page.context(), RPC.createStampToken, { shopId });
   if (!resp.ok()) {
     const text = await resp.text();
     throw new Error(`createStampTokenViaAPI failed (${resp.status()}): ${text}`);
@@ -886,7 +876,7 @@ test.describe('QR API Edge Cases', () => {
     const userPage = await userContext.newPage();
     await registerViaAPI(userPage, 'user');
 
-    const resp = await userPage.context().request.post(`${API_BASE}/api/shops/${shop.id}/stamp-token`);
+    const resp = await rpc(userPage.context(), RPC.createStampToken, { shopId: shop.id });
     expect(resp.status()).toBe(403);
 
     await adminPage.close();
@@ -897,19 +887,13 @@ test.describe('QR API Edge Cases', () => {
 
   test('claim with empty token returns 400', async ({ page }) => {
     await registerViaAPI(page, 'user');
-    const resp = await page.context().request.post(`${API_BASE}/api/stamps/claim`, {
-      headers: { 'Content-Type': 'application/json' },
-      data: { token: '' },
-    });
+    const resp = await rpc(page.context(), RPC.claimStamp, { token: '' });
     expect(resp.status()).toBe(400);
   });
 
   test('claim with invalid token returns 404', async ({ page }) => {
     await registerViaAPI(page, 'user');
-    const resp = await page.context().request.post(`${API_BASE}/api/stamps/claim`, {
-      headers: { 'Content-Type': 'application/json' },
-      data: { token: 'nonexistent-token' },
-    });
+    const resp = await rpc(page.context(), RPC.claimStamp, { token: 'nonexistent-token' });
     expect(resp.status()).toBe(404);
   });
 
@@ -918,10 +902,7 @@ test.describe('QR API Edge Cases', () => {
     const shop = await createShopViaAPI(page);
     const token = await createStampTokenViaAPI(page, shop.id);
 
-    const resp = await page.context().request.post(`${API_BASE}/api/stamps/claim`, {
-      headers: { 'Content-Type': 'application/json' },
-      data: { token },
-    });
+    const resp = await rpc(page.context(), RPC.claimStamp, { token });
     expect(resp.status()).toBe(403);
   });
 
@@ -937,10 +918,7 @@ test.describe('QR API Edge Cases', () => {
 
     const user1Page = await user1Ctx.newPage();
     await registerViaAPI(user1Page, 'user');
-    const resp1 = await user1Page.context().request.post(`${API_BASE}/api/stamps/claim`, {
-      headers: { 'Content-Type': 'application/json' },
-      data: { token },
-    });
+    const resp1 = await rpc(user1Page.context(), RPC.claimStamp, { token });
     expect(resp1.status()).toBe(200);
     const body1 = await resp1.json();
     expect(body1.stamps).toBe(1);
@@ -948,10 +926,7 @@ test.describe('QR API Edge Cases', () => {
     // Second user tries the same token — should fail (token consumed)
     const user2Page = await user2Ctx.newPage();
     await registerViaAPI(user2Page, 'user');
-    const resp2 = await user2Page.context().request.post(`${API_BASE}/api/stamps/claim`, {
-      headers: { 'Content-Type': 'application/json' },
-      data: { token },
-    });
+    const resp2 = await rpc(user2Page.context(), RPC.claimStamp, { token });
     expect(resp2.status()).toBe(404);
 
     await adminPage.close();
@@ -975,18 +950,12 @@ test.describe('QR API Edge Cases', () => {
     await registerViaAPI(userPage, 'user');
 
     // First claim
-    const resp1 = await userPage.context().request.post(`${API_BASE}/api/stamps/claim`, {
-      headers: { 'Content-Type': 'application/json' },
-      data: { token },
-    });
+    const resp1 = await rpc(userPage.context(), RPC.claimStamp, { token });
     const body1 = await resp1.json();
     expect(body1.stamps).toBe(1);
 
     // Second claim — token already consumed and deleted
-    const resp2 = await userPage.context().request.post(`${API_BASE}/api/stamps/claim`, {
-      headers: { 'Content-Type': 'application/json' },
-      data: { token },
-    });
+    const resp2 = await rpc(userPage.context(), RPC.claimStamp, { token });
     expect(resp2.status()).toBe(404);
 
     await adminPage.close();
@@ -1009,9 +978,8 @@ test.describe('Full QR E2E Journey', () => {
     const adminPage = await adminCtx.newPage();
     await registerViaAPI(adminPage, 'admin');
     const qrShopName = `QR Journey Café ${uid()}`;
-    const resp = await adminPage.context().request.post(`${API_BASE}/api/shops`, {
-      headers: { 'Content-Type': 'application/json' },
-      data: { name: qrShopName, rewardDescription: 'Free espresso', stampsRequired: 2, color: '#ef4444' },
+    const resp = await rpc(adminPage.context(), RPC.createShop, {
+      name: qrShopName, rewardDescription: 'Free espresso', stampsRequired: 2, color: '#ef4444',
     });
     const shop = await resp.json();
 

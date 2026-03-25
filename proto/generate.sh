@@ -15,12 +15,12 @@ protoc \
   --connect-go_opt=module=land-of-stamp-backend/gen/pb \
   "$ROOT/proto/stempelkarte.proto"
 echo "  → backend/gen/pb/stempelkarte.pb.go"
-echo "  → backend/gen/pb/ (connect service stubs)"
+echo "  → backend/gen/pb/pbconnect/stempelkarte.connect.go"
 
-echo "=== Generating TypeScript protobuf ==="
+echo "=== Generating TypeScript protobuf + services ==="
 mkdir -p "$ROOT/frontend/src/gen/proto"
 
-# Use @bufbuild/protoc-gen-es for protobuf messages
+# @bufbuild/protoc-gen-es v2 generates both messages and service descriptors
 protoc \
   --proto_path="$ROOT" \
   --experimental_allow_proto3_optional \
@@ -29,15 +29,5 @@ protoc \
   --es_opt=target=ts \
   "$ROOT/proto/stempelkarte.proto"
 echo "  → frontend/src/gen/proto/stempelkarte_pb.ts"
-
-# Use @connectrpc/protoc-gen-connect-es for Connect service clients
-protoc \
-  --proto_path="$ROOT" \
-  --experimental_allow_proto3_optional \
-  --plugin="protoc-gen-connect-es=$ROOT/frontend/node_modules/.bin/protoc-gen-connect-es" \
-  --connect-es_out="$ROOT/frontend/src/gen" \
-  --connect-es_opt=target=ts \
-  "$ROOT/proto/stempelkarte.proto"
-echo "  → frontend/src/gen/proto/stempelkarte_connect.ts"
 
 echo "✅ Proto generation complete"

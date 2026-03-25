@@ -21,6 +21,7 @@ const userKey ctxKey = "user"
 var publicProcedures = map[string]bool{
 	pbconnect.AuthServiceRegisterProcedure:  true,
 	pbconnect.AuthServiceLoginProcedure:     true,
+	pbconnect.AuthServiceLogoutProcedure:    true,
 	pbconnect.ShopServiceListShopsProcedure: true,
 }
 
