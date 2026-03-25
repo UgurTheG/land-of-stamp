@@ -367,7 +367,7 @@ test.describe('Admin Stamp Granting', () => {
     await registerViaAPI(page, 'admin');
 
     // Create shop via API for reliability
-    const shop = await createShopViaAPI(page, 'Stamp Test Shop');
+    const shop = await createShopViaAPI(page, `Stamp Test Shop ${uid()}`);
 
     // Register a customer in a separate context and join the shop
     const customerPage = await customerContext.newPage();
@@ -526,7 +526,7 @@ test.describe('Cookie Security', () => {
 test.describe('Admin Statistics', () => {
   test('statistics tab renders without errors', async ({ page }) => {
     await registerViaAPI(page, 'admin');
-    const shop = await createShopViaAPI(page, 'Stats Shop');
+    const shop = await createShopViaAPI(page, `Stats Shop ${uid()}`);
     await page.reload();
     await page.waitForLoadState('networkidle');
     await expect(page.getByRole('heading', { name: shop.name })).toBeVisible({ timeout: 5_000 });

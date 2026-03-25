@@ -13,8 +13,12 @@ import (
 	"land-of-stamp-backend/auth"
 	"land-of-stamp-backend/db"
 	"land-of-stamp-backend/docs"
-	"land-of-stamp-backend/handlers"
+	"land-of-stamp-backend/gen/pb/pbconnect"
+	"land-of-stamp-backend/interceptor"
 	"land-of-stamp-backend/middleware"
+	"land-of-stamp-backend/service"
+
+	"connectrpc.com/connect"
 )
 
 func main() {
@@ -44,7 +48,7 @@ func main() {
 		Handler:           middleware.RequestLog(middleware.CORS(mux)),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-	slog.InfoContext(ctx, "server starting", "port", port, "url", "http://localhost:"+port)
+	slog.InfoContext(ctx, "server starting (gRPC + Connect + gRPC-Web)", "port", port, "url", "http://localhost:"+port)
 	if err := srv.ListenAndServe(); err != nil {
 		slog.ErrorContext(ctx, "server failed", "error", err)
 	}
@@ -82,45 +86,20 @@ func initJWT(ctx context.Context) {
 func buildMux() *http.ServeMux {
 	mux := http.NewServeMux()
 
-	// ── Public routes ──
-	mux.HandleFunc("POST /api/auth/register", handlers.Register)
-	mux.HandleFunc("POST /api/auth/login", handlers.Login)
-	mux.HandleFunc("POST /api/auth/logout", handlers.Logout)
-	mux.HandleFunc("GET /api/shops", handlers.ListShops)
+	// Shared ConnectRPC handler options: auth interceptor.
+	opts := connect.WithInterceptors(interceptor.NewAuthInterceptor())
+
+	// ── gRPC services (each serves Connect + gRPC + gRPC-Web) ──
+	authPath, authHandler := pbconnect.NewAuthServiceHandler(&service.AuthService{}, opts)
+	shopPath, shopHandler := pbconnect.NewShopServiceHandler(&service.ShopService{}, opts)
+	stampPath, stampHandler := pbconnect.NewStampServiceHandler(&service.StampService{}, opts)
+
+	mux.Handle(authPath, authHandler)
+	mux.Handle(shopPath, shopHandler)
+	mux.Handle(stampPath, stampHandler)
 
 	// ── API Documentation (Scalar UI) ──
 	docs.Register(mux)
-
-	// ── Authenticated routes ──
-	authed := http.NewServeMux()
-	authed.HandleFunc("GET /api/auth/me", handlers.GetMe)
-	authed.HandleFunc("GET /api/users/me/cards", handlers.GetMyCards)
-	authed.HandleFunc("POST /api/cards/{id}/redeem", handlers.RedeemCard)
-	authed.HandleFunc("POST /api/stamps/claim", handlers.ClaimStamp)
-	authed.HandleFunc("POST /api/shops/{id}/join", handlers.JoinShop)
-
-	// ── Admin routes ──
-	admin := http.NewServeMux()
-	admin.HandleFunc("POST /api/shops", handlers.CreateShop)
-	admin.HandleFunc("PUT /api/shops/{id}", handlers.UpdateShop)
-	admin.HandleFunc("GET /api/shops/mine", handlers.GetMyShops)
-	admin.HandleFunc("GET /api/shops/{id}/cards", handlers.GetShopCards)
-	admin.HandleFunc("GET /api/shops/{id}/customers", handlers.GetShopCustomers)
-	admin.HandleFunc("POST /api/shops/{id}/stamps", handlers.GrantStamp)
-	admin.HandleFunc("PATCH /api/shops/{id}/stamps", handlers.UpdateStampCount)
-	admin.HandleFunc("POST /api/shops/{id}/stamp-token", handlers.CreateStampToken)
-	admin.HandleFunc("GET /api/shops/{id}/stamp-token/status", handlers.GetStampTokenStatus)
-
-	// ── Mount with middleware ──
-	mux.Handle("/api/auth/me", middleware.Auth(authed))
-	mux.Handle("/api/users/me/", middleware.Auth(authed))
-	mux.Handle("/api/cards/", middleware.Auth(authed))
-	mux.Handle("/api/stamps/", middleware.Auth(authed))
-	mux.Handle("POST /api/shops/{id}/join", middleware.Auth(authed))
-	mux.Handle("GET /api/shops/mine", middleware.Auth(middleware.AdminOnly(admin)))
-	mux.Handle("PUT /api/shops/{id}", middleware.Auth(middleware.AdminOnly(admin)))
-	mux.Handle("/api/shops/{id}/", middleware.Auth(middleware.AdminOnly(admin)))
-	mux.Handle("POST /api/shops", middleware.Auth(middleware.AdminOnly(admin)))
 
 	return mux
 }

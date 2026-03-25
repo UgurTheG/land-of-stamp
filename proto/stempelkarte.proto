@@ -35,14 +35,27 @@ message StampCard {
 // ── Auth ───────────────────────────────────────────────
 
 message RegisterRequest {
-  string role = 1;  // credentials come via Basic auth header, not body
+  string username = 1;
+  string password = 2;
+  string role = 3;
 }
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message LogoutRequest {}
+
+message GetMeRequest {}
 
 message AuthResponse {
   User user = 1;
 }
 
 // ── Shops ──────────────────────────────────────────────
+
+message ListShopsRequest {}
 
 message CreateShopRequest {
   string name = 1;
@@ -52,19 +65,50 @@ message CreateShopRequest {
   string color = 5;
 }
 
+message UpdateShopRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string reward_description = 4;
+  int32  stamps_required = 5;
+  string color = 6;
+}
+
+message GetMyShopsRequest {}
+
 message ShopList {
   repeated Shop shops = 1;
 }
 
 // ── Stamps ─────────────────────────────────────────────
 
+message GetMyCardsRequest {}
+
+message JoinShopRequest {
+  string shop_id = 1;
+}
+
+message GetShopCardsRequest {
+  string shop_id = 1;
+}
+
 message GrantStampRequest {
-  string user_id = 1;
+  string shop_id = 1;
+  string user_id = 2;
 }
 
 message UpdateStampCountRequest {
-  string user_id = 1;
-  int32  stamps = 2;
+  string shop_id = 1;
+  string user_id = 2;
+  int32  stamps = 3;
+}
+
+message RedeemCardRequest {
+  string card_id = 1;
+}
+
+message GetShopCustomersRequest {
+  string shop_id = 1;
 }
 
 message StampCardList {
@@ -72,6 +116,19 @@ message StampCardList {
 }
 
 // ── QR / Tokens ────────────────────────────────────────
+
+message CreateStampTokenRequest {
+  string shop_id = 1;
+}
+
+message GetStampTokenStatusRequest {
+  string shop_id = 1;
+}
+
+message StampTokenStatusResponse {
+  bool   active = 1;
+  string expires_at = 2;
+}
 
 message StampToken {
   string token = 1;
@@ -102,4 +159,33 @@ message StatusResponse {
 
 message ErrorResponse {
   string error = 1;
+}
+
+// ── Services ───────────────────────────────────────────
+
+service AuthService {
+  rpc Register(RegisterRequest) returns (AuthResponse);
+  rpc Login(LoginRequest) returns (AuthResponse);
+  rpc Logout(LogoutRequest) returns (StatusResponse);
+  rpc GetMe(GetMeRequest) returns (User);
+}
+
+service ShopService {
+  rpc ListShops(ListShopsRequest) returns (ShopList);
+  rpc CreateShop(CreateShopRequest) returns (Shop);
+  rpc UpdateShop(UpdateShopRequest) returns (Shop);
+  rpc GetMyShops(GetMyShopsRequest) returns (ShopList);
+}
+
+service StampService {
+  rpc GetMyCards(GetMyCardsRequest) returns (StampCardList);
+  rpc JoinShop(JoinShopRequest) returns (StampCard);
+  rpc GetShopCards(GetShopCardsRequest) returns (StampCardList);
+  rpc GrantStamp(GrantStampRequest) returns (StampCard);
+  rpc UpdateStampCount(UpdateStampCountRequest) returns (StampCard);
+  rpc RedeemCard(RedeemCardRequest) returns (StatusResponse);
+  rpc GetShopCustomers(GetShopCustomersRequest) returns (UserList);
+  rpc CreateStampToken(CreateStampTokenRequest) returns (StampToken);
+  rpc GetStampTokenStatus(GetStampTokenStatusRequest) returns (StampTokenStatusResponse);
+  rpc ClaimStamp(ClaimStampRequest) returns (ClaimStampResponse);
 }

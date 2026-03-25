@@ -1766,8 +1766,7 @@ func TestGetMe_WithShopId(t *testing.T) {
 	shopID := shopBody["id"].(string)
 
 	// Update user's shop_id in DB
-	_, err := db.DB.Exec("UPDATE users SET shop_id = ? WHERE username = 'admin'", shopID)
-	if err != nil {
+	if err := db.DB.Exec("UPDATE users SET shop_id = ? WHERE username = 'admin'", shopID).Error; err != nil {
 		t.Fatalf("failed to set shop_id: %v", err)
 	}
 

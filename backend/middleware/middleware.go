@@ -1,22 +1,16 @@
-// Package middleware provides HTTP middleware for authentication, logging, and CORS.
+// Package middleware provides HTTP middleware for request logging and CORS.
 package middleware
 
 import (
 	"context"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
-
-	"land-of-stamp-backend/auth"
 
 	"github.com/google/uuid"
 )
 
 type contextKey string
-
-// UserKey is the context key used to store authenticated user claims.
-const UserKey contextKey = "user"
 
 // requestIDKey is used to store a unique request ID in the context.
 const requestIDKey contextKey = "request_id"
@@ -56,61 +50,8 @@ func (w *statusWriter) WriteHeader(code int) {
 	w.ResponseWriter.WriteHeader(code)
 }
 
-// Auth extracts and validates the JWT from the Authorization header OR the __token HttpOnly cookie.
-func Auth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		var tokenStr string
-
-		// 1. Try Authorization: Bearer header
-		if header := r.Header.Get("Authorization"); strings.HasPrefix(header, "Bearer ") {
-			tokenStr = strings.TrimPrefix(header, "Bearer ")
-		}
-
-		// 2. Fall back to HttpOnly cookie
-		if tokenStr == "" {
-			if c, err := r.Cookie("__token"); err == nil {
-				tokenStr = c.Value
-			}
-		}
-
-		if tokenStr == "" {
-			slog.WarnContext(ctx, "auth: no token provided", "path", r.URL.Path)
-			http.Error(w, `{"error":"missing or invalid authorization"}`, http.StatusUnauthorized)
-			return
-		}
-
-		claims, err := auth.ValidateToken(tokenStr)
-		if err != nil {
-			slog.WarnContext(ctx, "auth: invalid token", "path", r.URL.Path, "error", err)
-			http.Error(w, `{"error":"invalid or expired token"}`, http.StatusUnauthorized)
-			return
-		}
-
-		ctx = context.WithValue(ctx, UserKey, claims)
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-// AdminOnly requires the authenticated user to have role "admin".
-func AdminOnly(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		claims := GetUser(r)
-		if claims == nil || claims.Role != "admin" {
-			role := "none"
-			if claims != nil {
-				role = claims.Role
-			}
-			slog.WarnContext(ctx, "auth: admin access denied", "path", r.URL.Path, "role", role)
-			http.Error(w, `{"error":"admin access required"}`, http.StatusForbidden)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
 // CORS handles cross-origin requests.
+// Allows Connect, gRPC-Web, and standard headers.
 func CORS(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
@@ -119,7 +60,8 @@ func CORS(next http.Handler) http.Handler {
 		}
 		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Connect-Protocol-Version, Connect-Timeout-Ms, Grpc-Timeout, X-Grpc-Web, X-User-Agent")
+		w.Header().Set("Access-Control-Expose-Headers", "Grpc-Status, Grpc-Message, Grpc-Status-Details-Bin")
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Max-Age", "86400")
 		if r.Method == http.MethodOptions {
@@ -128,10 +70,4 @@ func CORS(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
-}
-
-// GetUser extracts the authenticated user claims from the request context.
-func GetUser(r *http.Request) *auth.Claims {
-	claims, _ := r.Context().Value(UserKey).(*auth.Claims)
-	return claims
 }
