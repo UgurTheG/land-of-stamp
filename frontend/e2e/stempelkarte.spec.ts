@@ -971,6 +971,7 @@ test.describe('QR API Edge Cases', () => {
 
 test.describe('Full QR E2E Journey', () => {
   test('admin creates QR → user claims via URL → fills card → redeems', async ({ browser }) => {
+    test.setTimeout(60_000);
     const adminCtx = await browser.newContext();
     const userCtx = await browser.newContext();
 

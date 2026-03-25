@@ -6,5 +6,8 @@ go_library(
     embedsrcs = ["openapi.yaml"],
     importpath = "land-of-stamp-backend/docs",
     visibility = ["//:__subpackages__"],
+    deps = [
+        "//gen/pb",
+        "@com_connectrpc_connect//:connect",
+    ],
 )
-

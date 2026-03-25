@@ -21,6 +21,8 @@ import (
 const _ = connect.IsAtLeastVersion1_13_0
 
 const (
+	// DocsServiceName is the fully-qualified name of the DocsService service.
+	DocsServiceName = "landofstamp.v1.DocsService"
 	// AuthServiceName is the fully-qualified name of the AuthService service.
 	AuthServiceName = "landofstamp.v1.AuthService"
 	// ShopServiceName is the fully-qualified name of the ShopService service.
@@ -37,6 +39,11 @@ const (
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
+	// DocsServiceGetOpenAPISpecProcedure is the fully-qualified name of the DocsService's
+	// GetOpenAPISpec RPC.
+	DocsServiceGetOpenAPISpecProcedure = "/landofstamp.v1.DocsService/GetOpenAPISpec"
+	// DocsServiceGetDocsPageProcedure is the fully-qualified name of the DocsService's GetDocsPage RPC.
+	DocsServiceGetDocsPageProcedure = "/landofstamp.v1.DocsService/GetDocsPage"
 	// AuthServiceRegisterProcedure is the fully-qualified name of the AuthService's Register RPC.
 	AuthServiceRegisterProcedure = "/landofstamp.v1.AuthService/Register"
 	// AuthServiceLoginProcedure is the fully-qualified name of the AuthService's Login RPC.
@@ -79,6 +86,102 @@ const (
 	// StampServiceClaimStampProcedure is the fully-qualified name of the StampService's ClaimStamp RPC.
 	StampServiceClaimStampProcedure = "/landofstamp.v1.StampService/ClaimStamp"
 )
+
+// DocsServiceClient is a client for the landofstamp.v1.DocsService service.
+type DocsServiceClient interface {
+	GetOpenAPISpec(context.Context, *connect.Request[pb.GetOpenAPISpecRequest]) (*connect.Response[pb.GetOpenAPISpecResponse], error)
+	GetDocsPage(context.Context, *connect.Request[pb.GetDocsPageRequest]) (*connect.Response[pb.GetDocsPageResponse], error)
+}
+
+// NewDocsServiceClient constructs a client for the landofstamp.v1.DocsService service. By default,
+// it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and
+// sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC()
+// or connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewDocsServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) DocsServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	docsServiceMethods := pb.File_proto_stempelkarte_proto.Services().ByName("DocsService").Methods()
+	return &docsServiceClient{
+		getOpenAPISpec: connect.NewClient[pb.GetOpenAPISpecRequest, pb.GetOpenAPISpecResponse](
+			httpClient,
+			baseURL+DocsServiceGetOpenAPISpecProcedure,
+			connect.WithSchema(docsServiceMethods.ByName("GetOpenAPISpec")),
+			connect.WithClientOptions(opts...),
+		),
+		getDocsPage: connect.NewClient[pb.GetDocsPageRequest, pb.GetDocsPageResponse](
+			httpClient,
+			baseURL+DocsServiceGetDocsPageProcedure,
+			connect.WithSchema(docsServiceMethods.ByName("GetDocsPage")),
+			connect.WithClientOptions(opts...),
+		),
+	}
+}
+
+// docsServiceClient implements DocsServiceClient.
+type docsServiceClient struct {
+	getOpenAPISpec *connect.Client[pb.GetOpenAPISpecRequest, pb.GetOpenAPISpecResponse]
+	getDocsPage    *connect.Client[pb.GetDocsPageRequest, pb.GetDocsPageResponse]
+}
+
+// GetOpenAPISpec calls landofstamp.v1.DocsService.GetOpenAPISpec.
+func (c *docsServiceClient) GetOpenAPISpec(ctx context.Context, req *connect.Request[pb.GetOpenAPISpecRequest]) (*connect.Response[pb.GetOpenAPISpecResponse], error) {
+	return c.getOpenAPISpec.CallUnary(ctx, req)
+}
+
+// GetDocsPage calls landofstamp.v1.DocsService.GetDocsPage.
+func (c *docsServiceClient) GetDocsPage(ctx context.Context, req *connect.Request[pb.GetDocsPageRequest]) (*connect.Response[pb.GetDocsPageResponse], error) {
+	return c.getDocsPage.CallUnary(ctx, req)
+}
+
+// DocsServiceHandler is an implementation of the landofstamp.v1.DocsService service.
+type DocsServiceHandler interface {
+	GetOpenAPISpec(context.Context, *connect.Request[pb.GetOpenAPISpecRequest]) (*connect.Response[pb.GetOpenAPISpecResponse], error)
+	GetDocsPage(context.Context, *connect.Request[pb.GetDocsPageRequest]) (*connect.Response[pb.GetDocsPageResponse], error)
+}
+
+// NewDocsServiceHandler builds an HTTP handler from the service implementation. It returns the path
+// on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewDocsServiceHandler(svc DocsServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	docsServiceMethods := pb.File_proto_stempelkarte_proto.Services().ByName("DocsService").Methods()
+	docsServiceGetOpenAPISpecHandler := connect.NewUnaryHandler(
+		DocsServiceGetOpenAPISpecProcedure,
+		svc.GetOpenAPISpec,
+		connect.WithSchema(docsServiceMethods.ByName("GetOpenAPISpec")),
+		connect.WithHandlerOptions(opts...),
+	)
+	docsServiceGetDocsPageHandler := connect.NewUnaryHandler(
+		DocsServiceGetDocsPageProcedure,
+		svc.GetDocsPage,
+		connect.WithSchema(docsServiceMethods.ByName("GetDocsPage")),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/landofstamp.v1.DocsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case DocsServiceGetOpenAPISpecProcedure:
+			docsServiceGetOpenAPISpecHandler.ServeHTTP(w, r)
+		case DocsServiceGetDocsPageProcedure:
+			docsServiceGetDocsPageHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
+// UnimplementedDocsServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedDocsServiceHandler struct{}
+
+func (UnimplementedDocsServiceHandler) GetOpenAPISpec(context.Context, *connect.Request[pb.GetOpenAPISpecRequest]) (*connect.Response[pb.GetOpenAPISpecResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("landofstamp.v1.DocsService.GetOpenAPISpec is not implemented"))
+}
+
+func (UnimplementedDocsServiceHandler) GetDocsPage(context.Context, *connect.Request[pb.GetDocsPageRequest]) (*connect.Response[pb.GetDocsPageResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("landofstamp.v1.DocsService.GetDocsPage is not implemented"))
+}
 
 // AuthServiceClient is a client for the landofstamp.v1.AuthService service.
 type AuthServiceClient interface {

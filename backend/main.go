@@ -93,13 +93,12 @@ func buildMux() *http.ServeMux {
 	authPath, authHandler := pbconnect.NewAuthServiceHandler(&service.AuthService{}, opts)
 	shopPath, shopHandler := pbconnect.NewShopServiceHandler(&service.ShopService{}, opts)
 	stampPath, stampHandler := pbconnect.NewStampServiceHandler(&service.StampService{}, opts)
+	docsPath, docsHandler := pbconnect.NewDocsServiceHandler(&docs.DocsService{}, opts)
 
 	mux.Handle(authPath, authHandler)
 	mux.Handle(shopPath, shopHandler)
 	mux.Handle(stampPath, stampHandler)
-
-	// ── API Documentation (Scalar UI) ──
-	docs.Register(mux)
+	mux.Handle(docsPath, docsHandler)
 
 	return mux
 }

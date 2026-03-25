@@ -1,38 +1,52 @@
-// Package docs serves a Scalar-powered OpenAPI documentation UI.
-// The OpenAPI 3.1 spec is embedded at compile time and served alongside
-// the Scalar CDN-based viewer.
+// Package docs provides a ConnectRPC DocsService that serves a
+// Scalar-powered OpenAPI documentation UI and the raw OpenAPI 3.1 spec.
+// The spec is embedded at compile time.
 package docs
 
 import (
+	"context"
 	_ "embed"
-	"log/slog"
-	"net/http"
+	"encoding/json"
+	"strings"
+
+	pb "land-of-stamp-backend/gen/pb"
+
+	"connectrpc.com/connect"
 )
 
 //go:embed openapi.yaml
-var specYAML []byte
+var specYAML string
 
-// Register mounts the API documentation endpoints on the provided mux:
-//   - GET /api/docs          → Scalar UI
-//   - GET /api/docs/openapi.yaml → raw OpenAPI spec
-func Register(mux *http.ServeMux) {
-	mux.HandleFunc("GET /api/docs/openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/yaml")
-		w.Header().Set("Cache-Control", "no-cache")
-		if _, err := w.Write(specYAML); err != nil {
-			slog.ErrorContext(r.Context(), "docs: failed to write openapi spec", "error", err)
-		}
-	})
+// DocsService implements pbconnect.DocsServiceHandler.
+type DocsService struct{}
 
-	mux.HandleFunc("GET /api/docs", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		if _, err := w.Write([]byte(scalarHTML)); err != nil {
-			slog.ErrorContext(r.Context(), "docs: failed to write scalar HTML", "error", err)
-		}
-	})
+// GetOpenAPISpec returns the raw OpenAPI YAML spec.
+func (s *DocsService) GetOpenAPISpec(_ context.Context, _ *connect.Request[pb.GetOpenAPISpecRequest]) (*connect.Response[pb.GetOpenAPISpecResponse], error) {
+	return connect.NewResponse(&pb.GetOpenAPISpecResponse{
+		Content:     specYAML,
+		ContentType: "application/yaml",
+	}), nil
 }
 
-const scalarHTML = `<!doctype html>
+// GetDocsPage returns a self-contained Scalar UI HTML page with the spec inlined.
+func (s *DocsService) GetDocsPage(_ context.Context, _ *connect.Request[pb.GetDocsPageRequest]) (*connect.Response[pb.GetDocsPageResponse], error) {
+	return connect.NewResponse(&pb.GetDocsPageResponse{
+		Html: buildScalarHTML(specYAML),
+	}), nil
+}
+
+// buildScalarHTML returns Scalar UI HTML with the OpenAPI spec inlined
+// so no additional network request is needed.
+func buildScalarHTML(spec string) string {
+	// Build a JSON configuration object with the spec content embedded.
+	cfg, _ := json.Marshal(map[string]any{
+		"spec": map[string]any{
+			"content": spec,
+		},
+	})
+	// HTML-safe: single-quote the attribute value so the JSON double-quotes are fine.
+	var b strings.Builder
+	b.WriteString(`<!doctype html>
 <html>
 <head>
   <title>Länd of Stamp – API Docs</title>
@@ -41,8 +55,12 @@ const scalarHTML = `<!doctype html>
   <style>body { margin: 0; }</style>
 </head>
 <body>
-  <script id="api-reference" data-url="/api/docs/openapi.yaml"></script>
+  <script id="api-reference" data-configuration='`)
+	b.Write(cfg)
+	b.WriteString(`'></script>
   <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
 </body>
 </html>
-`
+`)
+	return b.String()
+}

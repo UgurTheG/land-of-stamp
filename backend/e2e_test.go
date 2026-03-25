@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	"land-of-stamp-backend/auth"
@@ -43,7 +44,8 @@ func setupTestServer(t *testing.T) *httptest.Server {
 	mux.Handle(p, h)
 	p, h = pbconnect.NewStampServiceHandler(&service.StampService{}, opts)
 	mux.Handle(p, h)
-	docs.Register(mux)
+	p, h = pbconnect.NewDocsServiceHandler(&docs.DocsService{}, opts)
+	mux.Handle(p, h)
 	return httptest.NewServer(middleware.RequestLog(middleware.CORS(mux)))
 }
 
@@ -51,6 +53,7 @@ type clients struct {
 	auth  pbconnect.AuthServiceClient
 	shop  pbconnect.ShopServiceClient
 	stamp pbconnect.StampServiceClient
+	docs  pbconnect.DocsServiceClient
 }
 
 func newClients(url string) clients {
@@ -58,6 +61,7 @@ func newClients(url string) clients {
 		auth:  pbconnect.NewAuthServiceClient(http.DefaultClient, url),
 		shop:  pbconnect.NewShopServiceClient(http.DefaultClient, url),
 		stamp: pbconnect.NewStampServiceClient(http.DefaultClient, url),
+		docs:  pbconnect.NewDocsServiceClient(http.DefaultClient, url),
 	}
 }
 
@@ -1288,7 +1292,7 @@ func TestRedeemCard_AutoCreatesNewCard(t *testing.T) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  HTTP-LEVEL TESTS (docs, request log)
+//  INFRASTRUCTURE TESTS (docs, request log)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 func doHTTPGet(t *testing.T, ts *httptest.Server, path string) *http.Response {
@@ -1317,30 +1321,43 @@ func TestRequestLog_SetsRequestID(t *testing.T) {
 	}
 }
 
-func TestDocs_OpenAPIEndpoint(t *testing.T) {
+func TestDocs_GetOpenAPISpec(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
+	c := newClients(ts.URL)
 
-	resp := doHTTPGet(t, ts, "/api/docs/openapi.yaml")
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	resp, err := c.docs.GetOpenAPISpec(context.Background(), connect.NewRequest(&pb.GetOpenAPISpecRequest{}))
+	if err != nil {
+		t.Fatalf("GetOpenAPISpec: %v", err)
 	}
-	if ct := resp.Header.Get("Content-Type"); ct != "application/yaml" {
-		t.Errorf("expected application/yaml, got %q", ct)
+	if resp.Msg.ContentType != "application/yaml" {
+		t.Errorf("expected content_type application/yaml, got %q", resp.Msg.ContentType)
+	}
+	if !strings.Contains(resp.Msg.Content, "openapi:") {
+		t.Error("expected spec content to contain 'openapi:' key")
+	}
+	if !strings.Contains(resp.Msg.Content, "Länd of Stamp") {
+		t.Error("expected spec to contain API title")
 	}
 }
 
-func TestDocs_ScalarUI(t *testing.T) {
+func TestDocs_GetDocsPage(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
+	c := newClients(ts.URL)
 
-	resp := doHTTPGet(t, ts, "/api/docs")
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	resp, err := c.docs.GetDocsPage(context.Background(), connect.NewRequest(&pb.GetDocsPageRequest{}))
+	if err != nil {
+		t.Fatalf("GetDocsPage: %v", err)
 	}
-	if ct := resp.Header.Get("Content-Type"); ct != "text/html; charset=utf-8" {
-		t.Errorf("expected text/html, got %q", ct)
+	html := resp.Msg.Html
+	if !strings.Contains(html, "<!doctype html>") {
+		t.Error("expected HTML doctype")
+	}
+	if !strings.Contains(html, "scalar") {
+		t.Error("expected Scalar script reference")
+	}
+	if !strings.Contains(html, "openapi") {
+		t.Error("expected inlined spec content in HTML")
 	}
 }

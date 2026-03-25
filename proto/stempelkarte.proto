@@ -161,7 +161,25 @@ message ErrorResponse {
   string error = 1;
 }
 
+// ── Docs ───────────────────────────────────────────────
+
+message GetOpenAPISpecRequest {}
+message GetOpenAPISpecResponse {
+  string content = 1;      // Raw YAML
+  string content_type = 2; // e.g. "application/yaml"
+}
+
+message GetDocsPageRequest {}
+message GetDocsPageResponse {
+  string html = 1;         // Self-contained Scalar HTML page
+}
+
 // ── Services ───────────────────────────────────────────
+
+service DocsService {
+  rpc GetOpenAPISpec(GetOpenAPISpecRequest) returns (GetOpenAPISpecResponse);
+  rpc GetDocsPage(GetDocsPageRequest) returns (GetDocsPageResponse);
+}
 
 service AuthService {
   rpc Register(RegisterRequest) returns (AuthResponse);
