@@ -15,6 +15,7 @@ import (
 )
 
 // GetMyCards returns all stamp cards for the authenticated user.
+// Only returns cards for shops the user has explicitly joined.
 func GetMyCards(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	claims := middleware.GetUser(r)
@@ -23,42 +24,62 @@ func GetMyCards(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ensure cards exist for every shop — collect IDs first to avoid
-	// holding the query connection while executing inserts (deadlock
-	// with MaxOpenConns=1).
-	rows, err := db.DB.QueryContext(ctx, "SELECT id FROM shops")
-	if err != nil {
-		slog.ErrorContext(ctx, "stamps: failed to query shops", "error", err)
-		jsonError(ctx, w, "failed to load cards", http.StatusInternalServerError)
-		return
-	}
-	var shopIDs []string
-	func() {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			var sid string
-			if err := rows.Scan(&sid); err != nil {
-				slog.WarnContext(ctx, "stamps: failed to scan shop id", "error", err)
-				continue
-			}
-			shopIDs = append(shopIDs, sid)
-		}
-		if err := rows.Err(); err != nil {
-			slog.ErrorContext(ctx, "stamps: rows iteration error for shops", "error", err)
-		}
-	}()
-
-	for _, sid := range shopIDs {
-		if _, err := db.DB.ExecContext(ctx,
-			"INSERT OR IGNORE INTO stamp_cards (id, user_id, shop_id, stamps, redeemed) VALUES (?, ?, ?, 0, FALSE)",
-			uuid.New().String(), claims.UserID, sid,
-		); err != nil {
-			slog.WarnContext(ctx, "stamps: failed to ensure card exists", "shop", sid, "user", claims.UserID, "error", err)
-		}
-	}
-
 	cards := queryCardsByUser(ctx, claims.UserID)
 	writeProtoList(ctx, w, cards)
+}
+
+// JoinShop lets a user create a stamp card for a shop (opt-in).
+func JoinShop(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	claims := middleware.GetUser(r)
+	if claims == nil {
+		jsonError(ctx, w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	shopID := r.PathValue("id")
+	if shopID == "" {
+		jsonError(ctx, w, "shop id required", http.StatusBadRequest)
+		return
+	}
+
+	// Verify shop exists
+	var exists int
+	if err := db.DB.QueryRowContext(ctx, "SELECT 1 FROM shops WHERE id = ?", shopID).Scan(&exists); err != nil {
+		jsonError(ctx, w, "shop not found", http.StatusNotFound)
+		return
+	}
+
+	// Check if user already has an active card for this shop
+	var existingID string
+	err := db.DB.QueryRowContext(ctx,
+		"SELECT id FROM stamp_cards WHERE user_id = ? AND shop_id = ? AND redeemed = FALSE",
+		claims.UserID, shopID,
+	).Scan(&existingID)
+	if err == nil {
+		// Already joined
+		writeProto(ctx, w, http.StatusOK, &pb.StampCard{
+			Id: existingID, UserId: claims.UserID, ShopId: shopID,
+			Stamps: 0, Redeemed: false,
+		})
+		return
+	}
+
+	cardID := uuid.New().String()
+	if _, err := db.DB.ExecContext(ctx,
+		"INSERT OR IGNORE INTO stamp_cards (id, user_id, shop_id, stamps, redeemed) VALUES (?, ?, ?, 0, FALSE)",
+		cardID, claims.UserID, shopID,
+	); err != nil {
+		slog.ErrorContext(ctx, "stamps: failed to create card on join", "user", claims.UserID, "shop", shopID, "error", err)
+		jsonError(ctx, w, "failed to join shop", http.StatusInternalServerError)
+		return
+	}
+
+	slog.InfoContext(ctx, "user joined shop", "user", claims.UserID, "shop", shopID)
+	writeProto(ctx, w, http.StatusCreated, &pb.StampCard{
+		Id: cardID, UserId: claims.UserID, ShopId: shopID,
+		Stamps: 0, Redeemed: false,
+	})
 }
 
 // GetShopCards returns all stamp cards for a given shop.
@@ -259,13 +280,24 @@ func RedeemCard(w http.ResponseWriter, r *http.Request) {
 	writeProto(ctx, w, http.StatusOK, &pb.StatusResponse{Status: "redeemed"})
 }
 
-// ListCustomers returns all users with role 'user' (for admin stamp granting).
-func ListCustomers(w http.ResponseWriter, r *http.Request) {
+// GetShopCustomers returns users who have joined the given shop (have a stamp card for it).
+func GetShopCustomers(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	rows, err := db.DB.QueryContext(ctx, "SELECT id, username, role FROM users WHERE role = 'user'")
+	shopID, _ := verifyShopOwner(ctx, w, r)
+	if shopID == "" {
+		return
+	}
+
+	rows, err := db.DB.QueryContext(ctx,
+		`SELECT DISTINCT u.id, u.username, u.role
+		 FROM users u
+		 INNER JOIN stamp_cards sc ON sc.user_id = u.id
+		 WHERE sc.shop_id = ? AND u.role = 'user'`,
+		shopID,
+	)
 	if err != nil {
-		slog.ErrorContext(ctx, "stamps: failed to fetch customers", "error", err)
-		jsonError(ctx, w, "failed to fetch users", http.StatusInternalServerError)
+		slog.ErrorContext(ctx, "stamps: failed to fetch shop customers", "shop", shopID, "error", err)
+		jsonError(ctx, w, "failed to fetch customers", http.StatusInternalServerError)
 		return
 	}
 	defer func() { _ = rows.Close() }()
@@ -280,7 +312,7 @@ func ListCustomers(w http.ResponseWriter, r *http.Request) {
 		users = append(users, &u)
 	}
 	if err := rows.Err(); err != nil {
-		slog.ErrorContext(ctx, "stamps: rows iteration error for customers", "error", err)
+		slog.ErrorContext(ctx, "stamps: rows iteration error for shop customers", "error", err)
 	}
 	writeProtoList(ctx, w, users)
 }

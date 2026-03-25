@@ -263,13 +263,47 @@ test.describe('Role-Based Navigation', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test.describe('User Dashboard', () => {
-  test('shows empty state or zero stats when no stamps', async ({ page }) => {
+  test('shows empty state when no shops joined', async ({ page }) => {
     await registerViaAPI(page, 'user');
-    const noShops = page.getByText(/no shops available/i);
+    const noShops = page.getByText(/no shops joined yet/i);
     const zero = page.getByText('0');
     const hasNoShops = await noShops.isVisible().catch(() => false);
     const hasZero = await zero.first().isVisible().catch(() => false);
     expect(hasNoShops || hasZero).toBeTruthy();
+  });
+
+  test('user can discover and join a shop', async ({ browser }) => {
+    const adminCtx = await browser.newContext();
+    const userCtx = await browser.newContext();
+
+    // Admin creates a shop
+    const adminPage = await adminCtx.newPage();
+    await registerViaAPI(adminPage, 'admin');
+    const discoverShopName = `Discoverable Café ${uid()}`;
+    const shop = await createShopViaAPI(adminPage, discoverShopName);
+
+    // User registers and sees empty state
+    const userPage = await userCtx.newPage();
+    await registerViaAPI(userPage, 'user');
+
+    // Open discover section
+    const discoverBtn = userPage.getByRole('button', { name: /Discover Shops/i });
+    await expect(discoverBtn).toBeVisible({ timeout: 5_000 });
+    await discoverBtn.click();
+    await expect(userPage.getByText(discoverShopName)).toBeVisible({ timeout: 5_000 });
+
+    // Join the shop
+    await userPage.getByRole('button', { name: /Join Shop/i }).first().click();
+    await userPage.waitForTimeout(2_000);
+
+    // Card should now be visible
+    await expect(userPage.getByText(discoverShopName)).toBeVisible();
+    await expect(userPage.getByText('0 / 3 stamps')).toBeVisible();
+
+    await adminPage.close();
+    await userPage.close();
+    await adminCtx.close();
+    await userCtx.close();
   });
 });
 
@@ -280,34 +314,37 @@ test.describe('User Dashboard', () => {
 test.describe('Admin Shop Management', () => {
   test('can create a shop', async ({ page }) => {
     await registerViaAPI(page, 'admin');
+    const shopName = `E2E Coffee ${uid()}`;
     // Open the create-shop modal
     await page.getByRole('button', { name: /Create Your First Stamp Card/i }).click();
-    await page.getByPlaceholder('My Awesome Shop').fill('E2E Coffee');
+    await page.getByPlaceholder('My Awesome Shop').fill(shopName);
     await page.getByPlaceholder(/Tell customers/i).fill('Best coffee for testing');
     await page.getByPlaceholder(/e\.g\./i).fill('1 free test latte');
     // Submit inside the modal (button text is "Create Stamp Card")
     await page.locator('form button[type="submit"]').click();
     // After creation the modal closes and the shop card appears in the list
-    await expect(page.getByRole('heading', { name: 'E2E Coffee' })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('heading', { name: shopName })).toBeVisible({ timeout: 5_000 });
   });
 
   test('can update shop details', async ({ page }) => {
     await registerViaAPI(page, 'admin');
+    const oldName = `Old Shop ${uid()}`;
+    const newName = `Updated Shop ${uid()}`;
     // Create shop via modal
     await page.getByRole('button', { name: /Create Your First Stamp Card/i }).click();
-    await page.getByPlaceholder('My Awesome Shop').fill('Old Shop Name');
+    await page.getByPlaceholder('My Awesome Shop').fill(oldName);
     await page.getByPlaceholder(/e\.g\./i).fill('Old reward');
     await page.locator('form button[type="submit"]').click();
-    await expect(page.getByRole('heading', { name: 'Old Shop Name' })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('heading', { name: oldName })).toBeVisible({ timeout: 5_000 });
 
     // Open the edit modal
     await page.getByRole('button', { name: /Edit/i }).click();
     await page.getByPlaceholder('My Awesome Shop').clear();
-    await page.getByPlaceholder('My Awesome Shop').fill('Updated Shop Name');
+    await page.getByPlaceholder('My Awesome Shop').fill(newName);
     await page.getByRole('button', { name: /Save Changes/i }).click();
     // Wait for the save to complete and the updated name to appear in the card
     await page.waitForTimeout(1_000);
-    await expect(page.getByRole('heading', { name: 'Updated Shop Name' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: newName })).toBeVisible();
   });
 
   test('shop settings tab is shown by default', async ({ page }) => {
@@ -332,9 +369,10 @@ test.describe('Admin Stamp Granting', () => {
     // Create shop via API for reliability
     const shop = await createShopViaAPI(page, 'Stamp Test Shop');
 
-    // Register a customer in a separate context so admin session is preserved
+    // Register a customer in a separate context and join the shop
     const customerPage = await customerContext.newPage();
     await registerViaAPI(customerPage, 'user');
+    await joinShopViaAPI(customerPage, shop.id);
     await customerPage.close();
     await customerContext.close();
 
@@ -365,22 +403,28 @@ test.describe('Full E2E Journey', () => {
     const adminPage = await adminContext.newPage();
     await registerViaAPI(adminPage, 'admin');
 
+    const journeyShopName = `Journey Café ${uid()}`;
     const resp = await adminPage.context().request.post(`${API_BASE}/api/shops`, {
       headers: { 'Content-Type': 'application/json' },
-      data: { name: 'Journey Café', description: 'Your favorite café', rewardDescription: '1 free espresso', stampsRequired: 2, color: '#6366f1' },
+      data: { name: journeyShopName, description: 'Your favorite café', rewardDescription: '1 free espresso', stampsRequired: 2, color: '#6366f1' },
     });
     expect(resp.ok()).toBeTruthy();
+    const shopData = await resp.json();
 
     // Reload admin page so it picks up the shop
     await adminPage.reload();
     await adminPage.waitForLoadState('networkidle');
-    await expect(adminPage.getByRole('heading', { name: 'Journey Café' })).toBeVisible({ timeout: 5_000 });
+    await expect(adminPage.getByRole('heading', { name: journeyShopName })).toBeVisible({ timeout: 5_000 });
 
-    // 2. User registers and sees the shop card
+    // 2. User registers and joins the shop
     const userPage = await userContext.newPage();
     const { username: customerName } = await registerViaAPI(userPage, 'user');
+    await joinShopViaAPI(userPage, shopData.id);
 
-    await expect(userPage.getByText('Journey Café')).toBeVisible({ timeout: 5_000 });
+    // Reload to see the joined shop
+    await userPage.reload();
+    await userPage.waitForLoadState('networkidle');
+    await expect(userPage.getByText(journeyShopName)).toBeVisible({ timeout: 5_000 });
     await expect(userPage.getByText('0 / 2 stamps')).toBeVisible();
 
     // 3. Admin grants stamps via UI (admin context has its own cookie)
@@ -533,14 +577,39 @@ test.describe('API Edge Cases', () => {
 
   test('admin can create a shop via API', async ({ page }) => {
     await registerViaAPI(page, 'admin');
+    const shopName = `API Shop ${uid()}`;
     const resp = await page.context().request.post(`${API_BASE}/api/shops`, {
       headers: { 'Content-Type': 'application/json' },
-      data: { name: 'API Shop', rewardDescription: 'Free item', stampsRequired: 5 },
+      data: { name: shopName, rewardDescription: 'Free item', stampsRequired: 5 },
     });
     expect(resp.status()).toBe(201);
     const body = await resp.json();
-    expect(body.name).toBe('API Shop');
+    expect(body.name).toBe(shopName);
     expect(body.stampsRequired).toBe(5);
+  });
+
+  test('user can join a shop via API', async ({ browser }) => {
+    const adminCtx = await browser.newContext();
+    const userCtx = await browser.newContext();
+
+    const adminPage = await adminCtx.newPage();
+    await registerViaAPI(adminPage, 'admin');
+    const shop = await createShopViaAPI(adminPage, `Joinable Shop ${uid()}`);
+
+    const userPage = await userCtx.newPage();
+    await registerViaAPI(userPage, 'user');
+
+    const resp = await userPage.context().request.post(`${API_BASE}/api/shops/${shop.id}/join`);
+    expect(resp.status()).toBe(201);
+
+    // Joining again should return 200 (idempotent)
+    const resp2 = await userPage.context().request.post(`${API_BASE}/api/shops/${shop.id}/join`);
+    expect(resp2.status()).toBe(200);
+
+    await adminPage.close();
+    await userPage.close();
+    await adminCtx.close();
+    await userCtx.close();
   });
 
   test('logout clears cookie via API', async ({ page }) => {
@@ -578,6 +647,17 @@ async function createShopViaAPI(page: Page, name?: string): Promise<{ id: string
   const body = await resp.json();
   if (!body.id) throw new Error(`createShopViaAPI: response missing id: ${JSON.stringify(body)}`);
   return { id: body.id, name: shopName };
+}
+
+/** Helper: join a shop as the current user. */
+async function joinShopViaAPI(page: Page, shopId: string): Promise<void> {
+  const resp = await page.context().request.post(`${API_BASE}/api/shops/${shopId}/join`, {
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!resp.ok()) {
+    const text = await resp.text();
+    throw new Error(`joinShopViaAPI failed (${resp.status()}): ${text}`);
+  }
 }
 
 /** Helper: generate a stamp token via API and return the token string. */
@@ -701,17 +781,17 @@ test.describe('Claim Page', () => {
     await expect(page.getByText(/Couldn't Claim Stamp/i)).toBeVisible({ timeout: 10_000 });
   });
 
-  test('double-scan shows friendly already-scanned message', async ({ browser }) => {
+  test('double-scan shows error (token consumed after first scan)', async ({ browser }) => {
     const ctx = await setupClaimTest(browser);
 
     // First claim
     await ctx.userPage.goto(`/claim/${ctx.token}`);
     await expect(ctx.userPage.getByRole('heading', { name: /Stamp Collected/i })).toBeVisible({ timeout: 10_000 });
 
-    // Second claim (same token, same user)
+    // Second claim (same token — now consumed/deleted)
     await ctx.userPage.goto(`/claim/${ctx.token}`);
     await ctx.userPage.waitForLoadState('networkidle');
-    await expect(ctx.userPage.getByText(/already scanned/i)).toBeVisible({ timeout: 10_000 });
+    await expect(ctx.userPage.getByText(/Couldn't Claim Stamp/i)).toBeVisible({ timeout: 10_000 });
 
     await teardownClaimTest(ctx);
   });
@@ -845,7 +925,7 @@ test.describe('QR API Edge Cases', () => {
     expect(resp.status()).toBe(403);
   });
 
-  test('multiple users can claim same token', async ({ browser }) => {
+  test('token is invalidated after first claim', async ({ browser }) => {
     const adminCtx = await browser.newContext();
     const user1Ctx = await browser.newContext();
     const user2Ctx = await browser.newContext();
@@ -865,15 +945,14 @@ test.describe('QR API Edge Cases', () => {
     const body1 = await resp1.json();
     expect(body1.stamps).toBe(1);
 
+    // Second user tries the same token — should fail (token consumed)
     const user2Page = await user2Ctx.newPage();
     await registerViaAPI(user2Page, 'user');
     const resp2 = await user2Page.context().request.post(`${API_BASE}/api/stamps/claim`, {
       headers: { 'Content-Type': 'application/json' },
       data: { token },
     });
-    expect(resp2.status()).toBe(200);
-    const body2 = await resp2.json();
-    expect(body2.stamps).toBe(1);
+    expect(resp2.status()).toBe(404);
 
     await adminPage.close();
     await user1Page.close();
@@ -883,7 +962,7 @@ test.describe('QR API Edge Cases', () => {
     await user2Ctx.close();
   });
 
-  test('double claim returns same stamp count (no extra stamp)', async ({ browser }) => {
+  test('double claim returns 404 (token consumed)', async ({ browser }) => {
     const adminCtx = await browser.newContext();
     const userCtx = await browser.newContext();
 
@@ -903,14 +982,12 @@ test.describe('QR API Edge Cases', () => {
     const body1 = await resp1.json();
     expect(body1.stamps).toBe(1);
 
-    // Second claim — same user, same token
+    // Second claim — token already consumed and deleted
     const resp2 = await userPage.context().request.post(`${API_BASE}/api/stamps/claim`, {
       headers: { 'Content-Type': 'application/json' },
       data: { token },
     });
-    const body2 = await resp2.json();
-    expect(body2.stamps).toBe(1); // no extra stamp
-    expect(body2.message).toContain('already scanned');
+    expect(resp2.status()).toBe(404);
 
     await adminPage.close();
     await userPage.close();
@@ -931,9 +1008,10 @@ test.describe('Full QR E2E Journey', () => {
     // 1. Admin creates shop with 2 stamps required
     const adminPage = await adminCtx.newPage();
     await registerViaAPI(adminPage, 'admin');
+    const qrShopName = `QR Journey Café ${uid()}`;
     const resp = await adminPage.context().request.post(`${API_BASE}/api/shops`, {
       headers: { 'Content-Type': 'application/json' },
-      data: { name: 'QR Journey Café', rewardDescription: 'Free espresso', stampsRequired: 2, color: '#ef4444' },
+      data: { name: qrShopName, rewardDescription: 'Free espresso', stampsRequired: 2, color: '#ef4444' },
     });
     const shop = await resp.json();
 
@@ -956,7 +1034,7 @@ test.describe('Full QR E2E Journey', () => {
     // 5. User goes to dashboard and sees the completed card
     await userPage.goto('/dashboard');
     await userPage.waitForLoadState('networkidle');
-    await expect(userPage.getByText('QR Journey Café')).toBeVisible({ timeout: 5_000 });
+    await expect(userPage.getByText(qrShopName)).toBeVisible({ timeout: 5_000 });
 
     // 6. User redeems the card
     const redeemBtn = userPage.getByRole('button', { name: /Redeem Reward/i });

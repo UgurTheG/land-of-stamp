@@ -143,10 +143,18 @@ export async function apiRedeemCard(cardId: string): Promise<void> {
   await request(`/api/cards/${cardId}/redeem`, { method: 'POST' });
 }
 
-// ── Customers (admin) ──────────────────────────────────
+// ── Customers (admin — per shop) ───────────────────────
 
-export async function apiGetCustomers(): Promise<User[]> {
-  return request<User[]>('/api/users/customers');
+export async function apiGetShopCustomers(shopId: string): Promise<User[]> {
+  return request<User[]>(`/api/shops/${shopId}/customers`);
+}
+
+// ── Join Shop (user) ───────────────────────────────────
+
+export async function apiJoinShop(shopId: string): Promise<StampCard> {
+  return request<StampCard>(`/api/shops/${shopId}/join`, {
+    method: 'POST',
+  });
 }
 
 // ── QR Code Stamps ─────────────────────────────────────

@@ -96,31 +96,37 @@ export default function StampCard({ shop, card, onRedeem }: Props) {
           >
             {/* Celebration particles */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
-              {[...Array(6)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ 
-                    y: -20, 
-                    x: Math.random() * 40 - 20,
-                    opacity: 1,
-                    scale: 1
-                  }}
-                  animate={{ 
-                    y: 300, 
-                    x: Math.random() * 100 - 50,
-                    opacity: 0,
-                    scale: 0
-                  }}
-                  transition={{ 
-                    duration: 2.5, 
-                    delay: i * 0.1,
-                    ease: 'easeOut'
-                  }}
-                  className="absolute text-2xl"
-                >
-                  {['🎉', '⭐', '🏆', '✨', '🎊', '🌟'][i]}
-                </motion.div>
-              ))}
+              {[...Array(12)].map((_, i) => {
+                const startX = `${10 + (i % 4) * 25 + Math.random() * 15}%`;
+                const driftX = (Math.random() - 0.5) * 80;
+                return (
+                  <motion.div
+                    key={i}
+                    initial={{
+                      top: '-8%',
+                      left: startX,
+                      opacity: 1,
+                      scale: 1,
+                      x: 0,
+                    }}
+                    animate={{
+                      top: '110%',
+                      x: driftX,
+                      opacity: 0,
+                      scale: 0.4,
+                      rotate: Math.random() * 360,
+                    }}
+                    transition={{
+                      duration: 2.5 + Math.random(),
+                      delay: i * 0.12,
+                      ease: 'easeOut',
+                    }}
+                    className="absolute text-2xl"
+                  >
+                    {['🎉', '⭐', '🏆', '✨', '🎊', '🌟'][i % 6]}
+                  </motion.div>
+                );
+              })}
             </div>
 
             <motion.div

@@ -97,6 +97,7 @@ func buildMux() *http.ServeMux {
 	authed.HandleFunc("GET /api/users/me/cards", handlers.GetMyCards)
 	authed.HandleFunc("POST /api/cards/{id}/redeem", handlers.RedeemCard)
 	authed.HandleFunc("POST /api/stamps/claim", handlers.ClaimStamp)
+	authed.HandleFunc("POST /api/shops/{id}/join", handlers.JoinShop)
 
 	// ── Admin routes ──
 	admin := http.NewServeMux()
@@ -104,21 +105,21 @@ func buildMux() *http.ServeMux {
 	admin.HandleFunc("PUT /api/shops/{id}", handlers.UpdateShop)
 	admin.HandleFunc("GET /api/shops/mine", handlers.GetMyShops)
 	admin.HandleFunc("GET /api/shops/{id}/cards", handlers.GetShopCards)
+	admin.HandleFunc("GET /api/shops/{id}/customers", handlers.GetShopCustomers)
 	admin.HandleFunc("POST /api/shops/{id}/stamps", handlers.GrantStamp)
 	admin.HandleFunc("PATCH /api/shops/{id}/stamps", handlers.UpdateStampCount)
 	admin.HandleFunc("POST /api/shops/{id}/stamp-token", handlers.CreateStampToken)
 	admin.HandleFunc("GET /api/shops/{id}/stamp-token/status", handlers.GetStampTokenStatus)
-	admin.HandleFunc("GET /api/users/customers", handlers.ListCustomers)
 
 	// ── Mount with middleware ──
 	mux.Handle("/api/auth/me", middleware.Auth(authed))
 	mux.Handle("/api/users/me/", middleware.Auth(authed))
 	mux.Handle("/api/cards/", middleware.Auth(authed))
 	mux.Handle("/api/stamps/", middleware.Auth(authed))
+	mux.Handle("POST /api/shops/{id}/join", middleware.Auth(authed))
 	mux.Handle("GET /api/shops/mine", middleware.Auth(middleware.AdminOnly(admin)))
 	mux.Handle("PUT /api/shops/{id}", middleware.Auth(middleware.AdminOnly(admin)))
 	mux.Handle("/api/shops/{id}/", middleware.Auth(middleware.AdminOnly(admin)))
-	mux.Handle("/api/users/customers", middleware.Auth(middleware.AdminOnly(admin)))
 	mux.Handle("POST /api/shops", middleware.Auth(middleware.AdminOnly(admin)))
 
 	return mux

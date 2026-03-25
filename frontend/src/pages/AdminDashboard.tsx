@@ -7,7 +7,7 @@ import {
   apiGetMyShops,
   apiCreateShop,
   apiUpdateShop,
-  apiGetCustomers,
+  apiGetShopCustomers,
   apiGetShopCards,
   apiGrantStamp,
   apiUpdateStampCount,
@@ -88,50 +88,68 @@ export default function AdminDashboard() {
 
   const loadCardsForShop = useCallback(async (shopId: string) => {
     try {
-      const cards = await apiGetShopCards(shopId);
+      const [cards, custs] = await Promise.all([
+        apiGetShopCards(shopId),
+        apiGetShopCustomers(shopId),
+      ]);
       setShopCards(cards);
+      setCustomers(custs);
     } catch (e) {
       const msg = e instanceof Error ? e.message : m.admin.toasts.loadCardsFailed;
       toast.error(msg);
       setShopCards([]);
+      setCustomers([]);
     }
   }, [m.admin.toasts.loadCardsFailed]);
 
+  const loadShopData = useCallback(async (shopId: string) => {
+    const [cards, custs] = await Promise.all([
+      apiGetShopCards(shopId),
+      apiGetShopCustomers(shopId),
+    ]);
+    setShopCards(cards);
+    setCustomers(custs);
+  }, []);
+
   const refresh = useCallback(async () => {
     try {
-      const [fetchedShops, c] = await Promise.all([apiGetMyShops(), apiGetCustomers()]);
+      const fetchedShops = await apiGetMyShops();
       setShops(fetchedShops);
-      setCustomers(c);
 
       if (fetchedShops.length > 0) {
         const current = fetchedShops.find((s) => s.id === selectedShopId);
         const active = current ?? fetchedShops[0];
         setSelectedShopId(active.id);
-        const cards = await apiGetShopCards(active.id);
-        setShopCards(cards);
+        await loadShopData(active.id);
       } else {
         setSelectedShopId(null);
         setShopCards([]);
+        setCustomers([]);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : m.admin.toasts.refreshFailed;
       toast.error(msg);
     }
-  }, [m.admin.toasts.refreshFailed, selectedShopId]);
+  }, [loadShopData, m.admin.toasts.refreshFailed, selectedShopId]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [fetchedShops, c] = await Promise.all([apiGetMyShops(), apiGetCustomers()]);
+        const fetchedShops = await apiGetMyShops();
         if (cancelled) return;
         setShops(fetchedShops);
-        setCustomers(c);
         if (fetchedShops.length > 0) {
           const first = fetchedShops[0];
           setSelectedShopId(first.id);
-          const cards = await apiGetShopCards(first.id);
-          if (!cancelled) setShopCards(cards);
+          const [cards, custs] = await Promise.all([
+            apiGetShopCards(first.id),
+            apiGetShopCustomers(first.id),
+          ]);
+          if (!cancelled) {
+            setShopCards(cards);
+            setCustomers(custs);
+          }
         }
       } catch (e) {
         if (!cancelled) {

@@ -7,17 +7,21 @@ import {
   apiGetShops,
   apiGetMyCards,
   apiRedeemCard,
+  apiJoinShop,
   type Shop,
   type StampCard as StampCardType,
 } from '../lib/api';
 import StampCard from '../components/stamps/StampCard';
-import { Stamp, Star, Gift, TrendingUp, History, ChevronDown } from 'lucide-react';
+import { Stamp, Star, Gift, TrendingUp, History, ChevronDown, Search, Store, PlusCircle, CheckCircle } from 'lucide-react';
 
 export default function UserDashboard() {
   const { user } = useAuth();
   const { m, locale } = useLocale();
   const [shops, setShops] = useState<Shop[]>([]);
   const [cards, setCards] = useState<StampCardType[]>([]);
+  const [shopSearch, setShopSearch] = useState('');
+  const [showDiscover, setShowDiscover] = useState(false);
+  const [joiningShopId, setJoiningShopId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -56,6 +60,20 @@ export default function UserDashboard() {
     }
   };
 
+  const handleJoinShop = async (shopId: string) => {
+    setJoiningShopId(shopId);
+    try {
+      await apiJoinShop(shopId);
+      toast.success(m.userDashboard.joinedShop);
+      await refresh();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : m.userDashboard.errors.joinFailed;
+      toast.error(msg);
+    } finally {
+      setJoiningShopId(null);
+    }
+  };
+
   const totalStamps = cards.reduce((sum, c) => sum + c.stamps, 0);
   const activeCards = cards.filter((c) => !c.redeemed);
   const redeemedCardsList = cards.filter((c) => c.redeemed);
@@ -65,6 +83,19 @@ export default function UserDashboard() {
   }).length;
   const redeemedCards = redeemedCardsList.length;
   const [showHistory, setShowHistory] = useState(false);
+
+  // Shops the user has joined (has a card for)
+  const joinedShopIds = new Set(cards.map((c) => c.shopId));
+  const joinedShops = shops.filter((s) => joinedShopIds.has(s.id));
+
+  // Shops available to discover (not yet joined)
+  const discoverableShops = shops.filter(
+    (s) =>
+      !joinedShopIds.has(s.id) &&
+      (shopSearch === '' ||
+        s.name.toLowerCase().includes(shopSearch.toLowerCase()) ||
+        s.description.toLowerCase().includes(shopSearch.toLowerCase()))
+  );
 
   return (
     <div className="min-h-screen pt-20 pb-12">
@@ -93,7 +124,7 @@ export default function UserDashboard() {
         >
           {[
             { icon: Stamp, label: m.userDashboard.stats.totalStamps, value: totalStamps, color: 'text-primary-light' },
-            { icon: Star, label: m.userDashboard.stats.activeCards, value: cards.filter((c) => !c.redeemed).length, color: 'text-accent' },
+            { icon: Star, label: m.userDashboard.stats.activeCards, value: activeCards.length, color: 'text-accent' },
             { icon: TrendingUp, label: m.userDashboard.stats.completed, value: completedCards, color: 'text-emerald-400' },
             { icon: Gift, label: m.userDashboard.stats.redeemed, value: redeemedCards, color: 'text-rose-400' },
           ].map((stat, i) => (
@@ -108,39 +139,151 @@ export default function UserDashboard() {
           ))}
         </motion.div>
 
-        {/* Active Cards */}
-        {shops.length === 0 ? (
+        {/* My Cards */}
+        {joinedShops.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-20"
+            className="text-center py-16"
           >
             <Stamp className="w-16 h-16 text-indigo-600 mx-auto mb-4" />
             <h2 className="text-xl font-bold text-white mb-2">{m.userDashboard.empty.title}</h2>
-            <p className="text-indigo-400">{m.userDashboard.empty.description}</p>
+            <p className="text-indigo-400 mb-6">{m.userDashboard.empty.description}</p>
+            {shops.length > 0 && (
+              <button
+                onClick={() => setShowDiscover(true)}
+                className="inline-flex items-center gap-2 bg-linear-to-r from-primary to-primary-dark text-white font-bold px-6 py-3 rounded-xl hover:scale-[1.02] transition-transform cursor-pointer"
+              >
+                <Search className="w-5 h-5" />
+                {m.userDashboard.discoverShops}
+              </button>
+            )}
           </motion.div>
         ) : (
-          <div className="grid sm:grid-cols-2 gap-6">
-            {shops.map((shop, i) => {
-              const card = activeCards.find((c) => c.shopId === shop.id);
-              if (!card) return null;
-              return (
-                <motion.div
-                  key={shop.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15 + i * 0.1 }}
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Star className="w-5 h-5 text-accent" />
+                {m.userDashboard.myCardsTitle}
+              </h2>
+              {shops.length > joinedShops.length && (
+                <button
+                  onClick={() => setShowDiscover((v) => !v)}
+                  className="flex items-center gap-2 bg-white/[0.07] border border-white/10 text-indigo-300 hover:text-white hover:bg-white/10 font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer text-sm"
                 >
-                  <StampCard
-                    shop={shop}
-                    card={card}
-                    onRedeem={() => handleRedeem(card.id)}
-                  />
-                </motion.div>
-              );
-            })}
-          </div>
+                  <Search className="w-4 h-4" />
+                  {m.userDashboard.discoverShops}
+                </button>
+              )}
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-6">
+              {joinedShops.map((shop, i) => {
+                const card = activeCards.find((c) => c.shopId === shop.id);
+                if (!card) return null;
+                return (
+                  <motion.div
+                    key={shop.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.15 + i * 0.1 }}
+                  >
+                    <StampCard
+                      shop={shop}
+                      card={card}
+                      onRedeem={() => handleRedeem(card.id)}
+                    />
+                  </motion.div>
+                );
+              })}
+            </div>
+          </>
         )}
+
+        {/* Discover Shops Section */}
+        <AnimatePresence>
+          {showDiscover && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="overflow-hidden mt-10"
+            >
+              <div className="bg-linear-to-br from-white/8 to-white/3 border border-white/10 rounded-3xl p-6 sm:p-8">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center">
+                    <Store className="w-5 h-5 text-primary-light" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">{m.userDashboard.discoverTitle}</h2>
+                    <p className="text-sm text-indigo-400">{m.userDashboard.discoverDescription}</p>
+                  </div>
+                </div>
+
+                {/* Search input */}
+                <div className="relative mb-5">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
+                  <input
+                    type="text"
+                    value={shopSearch}
+                    onChange={(e) => setShopSearch(e.target.value)}
+                    placeholder={m.userDashboard.searchPlaceholder}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                  />
+                </div>
+
+                {discoverableShops.length === 0 ? (
+                  <div className="text-center py-8">
+                    <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-2" />
+                    <p className="text-indigo-400">
+                      {shopSearch ? m.userDashboard.noShopsMatchSearch : m.userDashboard.joinedAllShops}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {discoverableShops.map((shop) => (
+                      <motion.div
+                        key={shop.id}
+                        layout
+                        className="relative bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/8 transition-colors"
+                      >
+                        <div className="absolute top-0 left-6 right-6 h-1 rounded-b-full" style={{ backgroundColor: shop.color }} />
+
+                        <div className="flex items-start gap-3 mt-1">
+                          <div
+                            className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0"
+                            style={{ backgroundColor: shop.color }}
+                          >
+                            {shop.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-white font-bold truncate">{shop.name}</h4>
+                            <p className="text-indigo-400 text-xs mt-0.5 truncate">{shop.description}</p>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex items-center gap-3 text-xs text-indigo-400">
+                          <span className="bg-white/5 px-2 py-1 rounded-lg">{shop.stampsRequired} stamps</span>
+                          <span className="bg-white/5 px-2 py-1 rounded-lg truncate flex-1">🎁 {shop.rewardDescription}</span>
+                        </div>
+
+                        <button
+                          onClick={() => handleJoinShop(shop.id)}
+                          disabled={joiningShopId === shop.id}
+                          className="mt-4 w-full flex items-center justify-center gap-2 bg-linear-to-r from-primary to-primary-dark text-white font-semibold py-2.5 rounded-xl hover:scale-[1.01] active:scale-[0.99] transition-transform cursor-pointer text-sm disabled:opacity-50"
+                        >
+                          <PlusCircle className="w-4 h-4" />
+                          {joiningShopId === shop.id ? m.userDashboard.joining : m.userDashboard.joinShop}
+                        </button>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Redeemed History */}
         {redeemedCardsList.length > 0 && (
