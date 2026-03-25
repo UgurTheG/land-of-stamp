@@ -1,11 +1,13 @@
 import { Link, useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../../hooks/useAuth';
-import { Stamp, LogOut, LayoutDashboard, Home, Menu, X, ScanLine } from 'lucide-react';
+import { useTheme } from '../../hooks/useTheme';
+import { Stamp, LogOut, LayoutDashboard, Home, Menu, X, ScanLine, Sun, Moon } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function Navbar() {
   const { user, logout, isAuthenticated } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -62,6 +64,16 @@ export default function Navbar() {
                 Dashboard
               </Link>
             )}
+
+            {/* Theme toggle */}
+            <button
+              onClick={toggleTheme}
+              className="theme-toggle text-indigo-200"
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
+
             {isAuthenticated ? (
               <div className="flex items-center gap-4">
                 <span className="text-sm text-indigo-300 bg-white/5 px-3 py-1 rounded-full">
@@ -105,6 +117,14 @@ export default function Navbar() {
             className="md:hidden bg-[#080515]/90 backdrop-blur-2xl border-b border-white/[0.06] overflow-hidden"
           >
             <div className="px-4 py-4 space-y-3">
+              {/* Theme toggle (mobile) */}
+              <button
+                onClick={toggleTheme}
+                className="flex items-center gap-2 text-indigo-200 hover:text-white py-2 w-full cursor-pointer"
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+              </button>
               <Link
                 to="/"
                 onClick={() => setMobileOpen(false)}

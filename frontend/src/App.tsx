@@ -1,6 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { useTheme } from './hooks/useTheme';
 import { Toaster } from 'sonner';
 import Navbar from './components/layout/Navbar';
 import ProtectedRoute from './components/layout/ProtectedRoute';
@@ -12,23 +14,24 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const ScanPage = lazy(() => import('./pages/ScanPage'));
 const ClaimPage = lazy(() => import('./pages/ClaimPage'));
 
-function App() {
-  return (
-    <BrowserRouter>
-      <AuthProvider>
-        <Toaster theme="dark" position="top-right" richColors closeButton />
-        {/* ── Animated background ── */}
-        <div className="app-bg" aria-hidden="true">
-          <div className="app-bg-orb-1" />
-          <div className="app-bg-orb-2" />
-          <div className="app-bg-grid" />
-          <div className="app-bg-vignette" />
-        </div>
+function AppShell() {
+  const { theme } = useTheme();
 
-        <div className="relative z-10 min-h-screen text-white">
-          <Navbar />
-          <Suspense fallback={<div className="flex items-center justify-center h-[60vh] text-zinc-400">Loading…</div>}>
-            <Routes>
+  return (
+    <>
+      <Toaster theme={theme} position="top-right" richColors closeButton />
+      {/* ── Animated background ── */}
+      <div className="app-bg" aria-hidden="true">
+        <div className="app-bg-orb-1" />
+        <div className="app-bg-orb-2" />
+        <div className="app-bg-grid" />
+        <div className="app-bg-vignette" />
+      </div>
+
+      <div className="relative z-10 min-h-screen text-white">
+        <Navbar />
+        <Suspense fallback={<div className="flex items-center justify-center h-[60vh] text-zinc-400">Loading…</div>}>
+          <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route
@@ -64,9 +67,20 @@ function App() {
               }
             />
           </Routes>
-          </Suspense>
-        </div>
-      </AuthProvider>
+        </Suspense>
+      </div>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <ThemeProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

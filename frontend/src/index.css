@@ -154,3 +154,195 @@ body {
   max-width: 60rem;
 }
 
+
+/* ═══════════════════════════════════════════════════════
+   LIGHT MODE THEME
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Body ── */
+[data-theme="light"] body {
+  background: #f0f2f8;
+}
+
+/* ── Animated background — soft pastel version ── */
+[data-theme="light"] .app-bg {
+  background: linear-gradient(
+    160deg,
+    #eef2ff 0%,
+    #e8ecf8 20%,
+    #f3f0ff 40%,
+    #fef7ed 60%,
+    #f8fafc 100%
+  );
+}
+
+[data-theme="light"] .app-bg::before {
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.14) 0%, rgba(139, 92, 246, 0.05) 50%, transparent 70%);
+  opacity: 0.8;
+}
+
+[data-theme="light"] .app-bg::after {
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.12) 0%, rgba(249, 115, 22, 0.04) 50%, transparent 70%);
+  opacity: 0.8;
+}
+
+[data-theme="light"] .app-bg-orb-1 {
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.12) 0%, rgba(139, 92, 246, 0.04) 50%, transparent 70%);
+  opacity: 0.9;
+}
+
+[data-theme="light"] .app-bg-orb-2 {
+  background: radial-gradient(circle, rgba(34, 211, 238, 0.1) 0%, rgba(56, 189, 248, 0.03) 50%, transparent 70%);
+  opacity: 0.8;
+}
+
+[data-theme="light"] .app-bg-grid {
+  background-image: radial-gradient(circle, rgba(99, 102, 241, 0.08) 1px, transparent 1px);
+}
+
+[data-theme="light"] .app-bg-vignette {
+  background: radial-gradient(ellipse 70% 55% at 50% 45%, transparent 50%, rgba(240, 242, 248, 0.35) 100%);
+}
+
+/* ── Text color overrides ── */
+[data-theme="light"] .text-white            { color: #0f172a; }
+[data-theme="light"] .hover\:text-white:hover { color: #0f172a; }
+[data-theme="light"] .text-white\/20        { color: rgba(15, 23, 42, 0.2); }
+[data-theme="light"] .text-indigo-200       { color: #475569; }
+[data-theme="light"] .text-indigo-300       { color: #64748b; }
+[data-theme="light"] .text-indigo-400       { color: #94a3b8; }
+[data-theme="light"] .text-indigo-500       { color: #cbd5e1; }
+[data-theme="light"] .text-indigo-600       { color: #e2e8f0; }
+[data-theme="light"] .text-zinc-400         { color: #94a3b8; }
+
+/* Preserve white text inside gradient / colored containers */
+[data-theme="light"] :is(
+  [class*="bg-linear-to"],
+  [class*="from-primary"],
+  [class*="from-accent"],
+  [class*="from-amber"],
+  [class*="from-emerald"],
+  [class*="from-rose"],
+  [class*="from-indigo-5"],
+  [class*="bg-primary"],
+  [class*="bg-accent"],
+  [class*="bg-green-500"],
+  [style*="linear-gradient"],
+  [style*="background"]
+) > .text-white,
+[data-theme="light"] :is(
+  [class*="bg-linear-to"],
+  [class*="from-primary"],
+  [class*="from-accent"],
+  [class*="from-amber"],
+  [style*="linear-gradient"]
+).text-white {
+  color: #ffffff;
+}
+
+/* ── Background overrides ── */
+[data-theme="light"] .bg-white\/5  { background-color: rgba(0, 0, 0, 0.03); }
+[data-theme="light"] .bg-white\/10 { background-color: rgba(0, 0, 0, 0.04); }
+[data-theme="light"] .bg-white\/15 { background-color: rgba(0, 0, 0, 0.05); }
+
+[data-theme="light"] .hover\:bg-white\/5:hover  { background-color: rgba(0, 0, 0, 0.03); }
+[data-theme="light"] .hover\:bg-white\/10:hover { background-color: rgba(0, 0, 0, 0.04); }
+[data-theme="light"] .hover\:bg-white\/15:hover { background-color: rgba(0, 0, 0, 0.05); }
+
+/* White gradient cards → solid white surface */
+[data-theme="light"] [class*="from-white"][class*="to-white"] {
+  background-color: rgba(255, 255, 255, 0.65);
+  background-image: none;
+}
+
+/* CTA gradient card */
+[data-theme="light"] [class*="from-primary"][class*="to-accent"] {
+  background-image: linear-gradient(to bottom right, rgba(99, 102, 241, 0.1), rgba(245, 158, 11, 0.06));
+}
+
+/* ── Glassmorphic cards ── */
+[data-theme="light"] [class*="backdrop-blur"]:not(nav):not(nav *) {
+  background: rgba(255, 255, 255, 0.72) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+/* ── Borders ── */
+[data-theme="light"] .border-white\/10,
+[data-theme="light"] .border-white\/\[0\.06\] { border-color: rgba(0, 0, 0, 0.08); }
+[data-theme="light"] .border-white\/15        { border-color: rgba(0, 0, 0, 0.1); }
+[data-theme="light"] .border-white\/20        { border-color: rgba(0, 0, 0, 0.12); }
+[data-theme="light"] .border-dashed.border-white\/20 { border-color: rgba(0, 0, 0, 0.18); }
+[data-theme="light"] .hover\:border-white\/20:hover  { border-color: rgba(0, 0, 0, 0.12); }
+[data-theme="light"] .border-t.border-white\/10      { border-color: rgba(0, 0, 0, 0.08); }
+
+/* ── Navbar ── */
+[data-theme="light"] nav.fixed {
+  background: rgba(255, 255, 255, 0.72) !important;
+  border-bottom-color: rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+/* Mobile menu */
+[data-theme="light"] nav .md\:hidden[class*="backdrop-blur"],
+[data-theme="light"] nav [class*="bg-\["][class*="backdrop-blur"] {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-bottom-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+/* ── Input fields ── */
+[data-theme="light"] input:not([type="color"]) {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #0f172a !important;
+}
+[data-theme="light"] input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* ── Hero orbs — lighter in light mode ── */
+[data-theme="light"] .bg-primary\/30  { background-color: rgba(99, 102, 241, 0.1); }
+[data-theme="light"] .bg-primary\/20  { background-color: rgba(99, 102, 241, 0.08); }
+[data-theme="light"] .bg-primary\/15  { background-color: rgba(99, 102, 241, 0.06); }
+[data-theme="light"] .bg-primary\/10  { background-color: rgba(99, 102, 241, 0.05); }
+[data-theme="light"] .bg-accent\/15   { background-color: rgba(245, 158, 11, 0.06); }
+[data-theme="light"] .bg-accent\/10   { background-color: rgba(245, 158, 11, 0.05); }
+[data-theme="light"] .bg-purple-500\/20 { background-color: rgba(168, 85, 247, 0.08); }
+[data-theme="light"] .bg-purple-500\/15 { background-color: rgba(168, 85, 247, 0.06); }
+
+/* ── Hero dark gradient overlay → light ── */
+[data-theme="light"] .from-indigo-950\/60 {
+  --tw-gradient-from: rgba(224, 231, 255, 0.35);
+}
+
+/* ── Ring offset for stamp active indicators ── */
+[data-theme="light"] .ring-offset-surface {
+  --tw-ring-offset-color: #f0f2f8;
+}
+
+/* ── Section divider ── */
+[data-theme="light"] .glow-divider {
+  background: linear-gradient(90deg, transparent 5%, rgba(99, 102, 241, 0.15) 30%, rgba(245, 158, 11, 0.1) 70%, transparent 95%);
+}
+
+/* ── Theme toggle button ── */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, transform 0.2s;
+  border: none;
+  background: transparent;
+}
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: scale(1.1);
+}
+[data-theme="light"] .theme-toggle:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+
