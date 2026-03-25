@@ -1,4 +1,4 @@
-## Production override — pulls pre-built images from GHCR.
+## Production override — pulls pre-built images from GHCR with persistent DB.
 ##
 ## Usage:
 ##   docker compose -f docker-compose.yml -f docker-compose.prod.yml up
@@ -13,8 +13,15 @@ services:
   backend:
     build: !reset null
     image: ghcr.io/ugurtheg/land-of-stamp/backend:${BACKEND_TAG:-prod-latest}
+    environment:
+      DB_PATH: /data/land-of-stamp.db
+      TEST_SEED: "false"
+    volumes:
+      - db-data:/data
 
   frontend:
     build: !reset null
     image: ghcr.io/ugurtheg/land-of-stamp/frontend:${FRONTEND_TAG:-prod-latest}
 
+volumes:
+  db-data:

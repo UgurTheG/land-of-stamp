@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -27,15 +26,10 @@ import (
 
 func setupTestServer(t *testing.T) *httptest.Server {
 	t.Helper()
-	tmpFile, err := os.CreateTemp("", "land-of-stamp-test-*.db")
-	if err != nil {
-		t.Fatalf("create temp db: %v", err)
-	}
-	_ = tmpFile.Close()
-	t.Cleanup(func() { db.Close(context.Background()); _ = os.Remove(tmpFile.Name()) })
+	t.Cleanup(func() { db.Close(context.Background()) })
 
 	auth.Init("test-secret-key-for-e2e")
-	db.Init(context.Background(), tmpFile.Name())
+	db.Init(context.Background(), ":memory:")
 
 	mux := http.NewServeMux()
 	opts := connect.WithInterceptors(interceptor.NewAuthInterceptor())
