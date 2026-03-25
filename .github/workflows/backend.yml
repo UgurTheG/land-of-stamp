@@ -70,11 +70,14 @@ jobs:
       - name: Run Gazelle (update BUILD files)
         run: bazelisk run --config=ci //:gazelle -- update
 
+      - name: Update MODULE.bazel.lock
+        run: bazelisk mod deps --lockfile_mode=update
+
       - name: Check for differences
         run: |
-          git diff --exit-code -- '*.bazel' 'MODULE.bazel' || {
-            echo "::error::BUILD files are out of date. Run 'bazel run //:gazelle' in backend/ and commit."
-            git diff -- '*.bazel' 'MODULE.bazel'
+          git diff --exit-code -- '*.bazel' 'MODULE.bazel' 'MODULE.bazel.lock' || {
+            echo "::error::BUILD/MODULE files are out of date. Run 'bazel run //:gazelle && bazel mod deps --lockfile_mode=update' in backend/ and commit."
+            git diff --stat -- '*.bazel' 'MODULE.bazel' 'MODULE.bazel.lock'
             exit 1
           }
 
@@ -110,4 +113,15 @@ jobs:
 
       - name: Run govulncheck
         run: govulncheck ./...
+
+  # ── Bazel deps freshness (MODULE.bazel up to date) ────
+  bazel-deps:
+    name: Bazel deps freshness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check bazel_dep versions against BCR
+        working-directory: backend
+        run: ./tools/check-bazel-deps.sh MODULE.bazel
 
