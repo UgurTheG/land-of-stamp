@@ -33,6 +33,16 @@ updates:
       - dependencies
       - npm
     open-pull-requests-limit: 10
+    ignore:
+      # Major bumps that break peer dependencies — upgrade manually.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: typescript-eslint
+        update-types: ["version-update:semver-major"]
     groups:
       npm-minor:
         update-types:

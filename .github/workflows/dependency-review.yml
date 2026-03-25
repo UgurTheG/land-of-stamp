@@ -15,6 +15,9 @@ jobs:
   dependency-review:
     name: Dependency review
     runs-on: ubuntu-latest
+    # Only runs when Dependency Graph is available (public repos, or GHAS enabled).
+    # Prevents failures on repos without Advanced Security.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
 
@@ -22,4 +25,3 @@ jobs:
         with:
           fail-on-severity: high
           comment-summary-in-pr: always
-
