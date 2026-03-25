@@ -1,0 +1,98 @@
+name: "Deps · Auto-update"
+
+# Runs weekly or on-demand; updates Go, npm, and Bazel deps,
+# then opens a single PR with all changes.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # every Monday at 06:00 UTC
+  workflow_dispatch: # manual trigger from Actions tab
+
+concurrency:
+  group: deps-update
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    name: Update dependencies
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      # ── Go ────────────────────────────────────────────
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: backend/go.mod
+
+      - name: Update Go modules
+        working-directory: backend
+        run: |
+          go get -u ./...
+          go mod tidy
+
+      # ── Node / npm ────────────────────────────────────
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: frontend/package.json
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Update npm packages
+        working-directory: frontend
+        run: |
+          npm update
+          npm audit fix --force 2>/dev/null || true
+
+      # ── Bazel / Gazelle ───────────────────────────────
+      - name: Cache Bazel
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/bazel
+          key: bazel-deps-${{ runner.os }}-${{ hashFiles('backend/MODULE.bazel', 'backend/MODULE.bazel.lock') }}
+          restore-keys: bazel-deps-${{ runner.os }}-
+
+      - name: Regenerate BUILD files
+        working-directory: backend
+        run: bazelisk run //:gazelle -- update
+
+      # ── Verify ────────────────────────────────────────
+      - name: Backend build + test
+        working-directory: backend
+        run: |
+          go build ./...
+          go vet ./...
+          go test ./...
+
+      - name: Frontend build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      # ── Open PR ───────────────────────────────────────
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: chore/deps-update
+          delete-branch: true
+          title: "chore(deps): weekly dependency update"
+          body: |
+            Automated dependency update — triggered by [deps-update workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}).
+
+            ### What changed
+            - **Go**: `go get -u ./...` + `go mod tidy`
+            - **npm**: `npm update` + `npm audit fix`
+            - **Bazel**: `gazelle update`
+
+            All backend and frontend builds/tests passed ✅
+          labels: |
+            dependencies
+            automated
+          commit-message: "chore(deps): weekly dependency update"
+
