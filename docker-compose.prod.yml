@@ -1,0 +1,20 @@
+## Production override — pulls pre-built images from GHCR.
+##
+## Usage:
+##   docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+##
+## Override the image tag via env vars:
+##   BACKEND_TAG=prod-latest FRONTEND_TAG=prod-latest docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+##
+## You must be logged in to GHCR first:
+##   echo $GITHUB_TOKEN | docker login ghcr.io -u YOUR_USERNAME --password-stdin
+
+services:
+  backend:
+    build: !reset null
+    image: ghcr.io/ugurtheg/land-of-stamp/backend:${BACKEND_TAG:-prod-latest}
+
+  frontend:
+    build: !reset null
+    image: ghcr.io/ugurtheg/land-of-stamp/frontend:${FRONTEND_TAG:-prod-latest}
+
