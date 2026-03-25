@@ -13,6 +13,7 @@ go_library(
     visibility = ["//:__subpackages__"],
     deps = [
         "//auth",
+        "//constants",
         "//db",
         "//gen/pb",
         "//gen/pb/pbconnect",

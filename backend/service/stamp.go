@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"land-of-stamp-backend/auth"
+	"land-of-stamp-backend/constants"
 	"land-of-stamp-backend/db"
 	"land-of-stamp-backend/gen/pb"
 	"land-of-stamp-backend/gen/pb/pbconnect"
@@ -222,7 +223,7 @@ func (s *StampService) GetShopCustomers(ctx context.Context, req *connect.Reques
 	}
 
 	var users []db.User
-	if err := db.DB.WithContext(ctx).Where("uuid IN ? AND role = ?", userUUIDs, "user").Find(&users).Error; err != nil {
+	if err := db.DB.WithContext(ctx).Where("uuid IN ? AND role = ?", userUUIDs, constants.RoleUser).Find(&users).Error; err != nil {
 		slog.ErrorContext(ctx, "stamps: failed to fetch customers", "shop", shopID, "error", err)
 		return nil, connect.NewError(connect.CodeInternal, nil)
 	}
@@ -269,7 +270,7 @@ func (s *StampService) CreateStampToken(ctx context.Context, req *connect.Reques
 		return nil, connect.NewError(connect.CodeInternal, nil)
 	}
 	token := hex.EncodeToString(tokenBytes)
-	expiresAt := now.Add(60 * time.Second)
+	expiresAt := now.Add(constants.StampTokenTTL)
 
 	st := db.StampToken{UUID: uuid.New(), ShopID: shopID, Token: token, ExpiresAt: expiresAt}
 	if err := db.DB.WithContext(ctx).Create(&st).Error; err != nil {
@@ -318,7 +319,7 @@ func (s *StampService) ClaimStamp(ctx context.Context, req *connect.Request[pb.C
 	if claims == nil {
 		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
 	}
-	if claims.Role != "user" {
+	if claims.Role != constants.RoleUser {
 		return nil, connect.NewError(connect.CodePermissionDenied, nil)
 	}
 	if req.Msg.Token == "" {

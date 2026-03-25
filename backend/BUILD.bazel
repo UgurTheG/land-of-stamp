@@ -11,6 +11,7 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//auth",
+        "//constants",
         "//db",
         "//docs",
         "//gen/pb/pbconnect",

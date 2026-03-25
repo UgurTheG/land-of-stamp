@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"land-of-stamp-backend/auth"
+	"land-of-stamp-backend/constants"
 	"land-of-stamp-backend/db"
 
 	"github.com/google/uuid"
@@ -49,41 +50,41 @@ type OAuthService struct {
 // NewOAuthService reads env vars and builds OAuth configs.
 // If a provider's client ID is empty the provider is disabled.
 func NewOAuthService() *OAuthService {
-	redirectBase := os.Getenv("OAUTH_REDIRECT_BASE")
+	redirectBase := os.Getenv(constants.EnvOAuthRedirectBase)
 	if redirectBase == "" {
-		redirectBase = "http://localhost:8080"
+		redirectBase = constants.DefaultOAuthRedirect
 	}
-	frontendURL := os.Getenv("FRONTEND_URL")
+	frontendURL := os.Getenv(constants.EnvFrontendURL)
 	if frontendURL == "" {
-		frontendURL = "http://localhost:5173"
+		frontendURL = constants.DefaultFrontendURL
 	}
 
 	s := &OAuthService{frontendURL: frontendURL}
 
-	if id := os.Getenv("GOOGLE_CLIENT_ID"); id != "" {
+	if id := os.Getenv(constants.EnvGoogleClientID); id != "" {
 		s.google = &oauth2.Config{
 			ClientID:     id,
-			ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+			ClientSecret: os.Getenv(constants.EnvGoogleSecret),
 			Endpoint:     googleEndpoint,
 			RedirectURL:  redirectBase + "/auth/google/callback",
 			Scopes:       []string{"openid", "email", "profile"},
 		}
 		slog.Info("oauth: Google provider enabled")
 	}
-	if id := os.Getenv("GITHUB_CLIENT_ID"); id != "" {
+	if id := os.Getenv(constants.EnvGitHubClientID); id != "" {
 		s.github = &oauth2.Config{
 			ClientID:     id,
-			ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
+			ClientSecret: os.Getenv(constants.EnvGitHubSecret),
 			Endpoint:     github.Endpoint,
 			RedirectURL:  redirectBase + "/auth/github/callback",
 			Scopes:       []string{"read:user", "user:email"},
 		}
 		slog.Info("oauth: GitHub provider enabled")
 	}
-	if id := os.Getenv("APPLE_CLIENT_ID"); id != "" {
+	if id := os.Getenv(constants.EnvAppleClientID); id != "" {
 		s.apple = &oauth2.Config{
 			ClientID:     id,
-			ClientSecret: os.Getenv("APPLE_CLIENT_SECRET"),
+			ClientSecret: os.Getenv(constants.EnvAppleSecret),
 			Endpoint:     appleEndpoint,
 			RedirectURL:  redirectBase + "/auth/apple/callback",
 			Scopes:       []string{"name", "email"},
@@ -102,11 +103,11 @@ func (s *OAuthService) Enabled() (google, gh, apple bool) {
 func (s *OAuthService) Register(mux *http.ServeMux) {
 	if s.google != nil {
 		mux.HandleFunc("GET /auth/google", s.handleLogin(s.google, nil))
-		mux.HandleFunc("GET /auth/google/callback", s.handleCallback("google", s.google, fetchGoogleUser))
+		mux.HandleFunc("GET /auth/google/callback", s.handleCallback(constants.ProviderGoogle, s.google, fetchGoogleUser))
 	}
 	if s.github != nil {
 		mux.HandleFunc("GET /auth/github", s.handleLogin(s.github, nil))
-		mux.HandleFunc("GET /auth/github/callback", s.handleCallback("github", s.github, fetchGitHubUser))
+		mux.HandleFunc("GET /auth/github/callback", s.handleCallback(constants.ProviderGitHub, s.github, fetchGitHubUser))
 	}
 	if s.apple != nil {
 		// Apple requires response_mode=form_post and sends callback as POST.
@@ -124,12 +125,12 @@ func (s *OAuthService) handleLogin(cfg *oauth2.Config, extraOpts []oauth2.AuthCo
 	return func(w http.ResponseWriter, r *http.Request) {
 		state := randomState()
 		http.SetCookie(w, &http.Cookie{
-			Name:     "__oauth_state",
+			Name:     constants.CookieOAuthState,
 			Value:    state,
 			Path:     "/",
 			HttpOnly: true,
 			SameSite: http.SameSiteLaxMode,
-			MaxAge:   300, // 5 min
+			MaxAge:   constants.OAuthStateCookieMaxAge,
 		})
 		opts := append([]oauth2.AuthCodeOption{}, extraOpts...)
 		http.Redirect(w, r, cfg.AuthCodeURL(state, opts...), http.StatusTemporaryRedirect)
@@ -148,21 +149,21 @@ type userFetcher func(ctx context.Context, token *oauth2.Token) (*oauthUserInfo,
 func (s *OAuthService) handleCallback(provider string, cfg *oauth2.Config, fetch userFetcher) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Validate state
-		stateCookie, err := r.Cookie("__oauth_state")
+		stateCookie, err := r.Cookie(constants.CookieOAuthState)
 		if err != nil || stateCookie.Value == "" || stateCookie.Value != r.URL.Query().Get("state") {
 			slog.Warn("oauth: invalid state", "provider", provider)
-			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_state", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, s.frontendURL+constants.OAuthErrorPath+"?error=oauth_state", http.StatusTemporaryRedirect)
 			return
 		}
 		// Clear state cookie
-		http.SetCookie(w, &http.Cookie{Name: "__oauth_state", MaxAge: -1, Path: "/"})
+		http.SetCookie(w, &http.Cookie{Name: constants.CookieOAuthState, MaxAge: -1, Path: "/"})
 
 		// Exchange code for token
 		code := r.URL.Query().Get("code")
 		oauthToken, err := cfg.Exchange(r.Context(), code)
 		if err != nil {
 			slog.Error("oauth: code exchange failed", "provider", provider, "error", err)
-			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_exchange", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, s.frontendURL+constants.OAuthErrorPath+"?error=oauth_exchange", http.StatusTemporaryRedirect)
 			return
 		}
 
@@ -170,7 +171,7 @@ func (s *OAuthService) handleCallback(provider string, cfg *oauth2.Config, fetch
 		info, err := fetch(r.Context(), oauthToken)
 		if err != nil {
 			slog.Error("oauth: user info fetch failed", "provider", provider, "error", err)
-			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_userinfo", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, s.frontendURL+constants.OAuthErrorPath+"?error=oauth_userinfo", http.StatusTemporaryRedirect)
 			return
 		}
 
@@ -178,7 +179,7 @@ func (s *OAuthService) handleCallback(provider string, cfg *oauth2.Config, fetch
 		user, err := upsertOAuthUser(r.Context(), provider, info.ID, info.Username)
 		if err != nil {
 			slog.Error("oauth: upsert failed", "provider", provider, "error", err)
-			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_db", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, s.frontendURL+constants.OAuthErrorPath+"?error=oauth_db", http.StatusTemporaryRedirect)
 			return
 		}
 
@@ -187,14 +188,14 @@ func (s *OAuthService) handleCallback(provider string, cfg *oauth2.Config, fetch
 		jwtToken, err := auth.GenerateToken(uid, user.Username, user.Role)
 		if err != nil {
 			slog.Error("oauth: token generation failed", "provider", provider, "error", err)
-			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_token", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, s.frontendURL+constants.OAuthErrorPath+"?error=oauth_token", http.StatusTemporaryRedirect)
 			return
 		}
 
 		// Set cookie and redirect
 		SetTokenCookie(w.Header(), jwtToken)
 		slog.Info("oauth: user logged in", "provider", provider, "uuid", uid, "username", user.Username)
-		http.Redirect(w, r, s.frontendURL+"/login/oauth-callback", http.StatusTemporaryRedirect)
+		http.Redirect(w, r, s.frontendURL+constants.OAuthCallbackPath, http.StatusTemporaryRedirect)
 	}
 }
 
@@ -204,25 +205,25 @@ func (s *OAuthService) handleAppleCallback() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := r.ParseForm(); err != nil {
 			slog.Error("oauth: apple form parse failed", "error", err)
-			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_exchange", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, s.frontendURL+constants.OAuthErrorPath+"?error=oauth_exchange", http.StatusTemporaryRedirect)
 			return
 		}
 
 		// Validate state
-		stateCookie, err := r.Cookie("__oauth_state")
+		stateCookie, err := r.Cookie(constants.CookieOAuthState)
 		if err != nil || stateCookie.Value == "" || stateCookie.Value != r.FormValue("state") {
-			slog.Warn("oauth: invalid state", "provider", "apple")
-			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_state", http.StatusTemporaryRedirect)
+			slog.Warn("oauth: invalid state", "provider", constants.ProviderApple)
+			http.Redirect(w, r, s.frontendURL+constants.OAuthErrorPath+"?error=oauth_state", http.StatusTemporaryRedirect)
 			return
 		}
-		http.SetCookie(w, &http.Cookie{Name: "__oauth_state", MaxAge: -1, Path: "/"})
+		http.SetCookie(w, &http.Cookie{Name: constants.CookieOAuthState, MaxAge: -1, Path: "/"})
 
 		// Exchange code for token
 		code := r.FormValue("code")
 		oauthToken, err := s.apple.Exchange(r.Context(), code)
 		if err != nil {
 			slog.Error("oauth: apple code exchange failed", "error", err)
-			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_exchange", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, s.frontendURL+constants.OAuthErrorPath+"?error=oauth_exchange", http.StatusTemporaryRedirect)
 			return
 		}
 
@@ -230,15 +231,15 @@ func (s *OAuthService) handleAppleCallback() http.HandlerFunc {
 		info, err := extractAppleUser(oauthToken, r.FormValue("user"))
 		if err != nil {
 			slog.Error("oauth: apple user info failed", "error", err)
-			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_userinfo", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, s.frontendURL+constants.OAuthErrorPath+"?error=oauth_userinfo", http.StatusTemporaryRedirect)
 			return
 		}
 
 		// Upsert user in DB
-		user, err := upsertOAuthUser(r.Context(), "apple", info.ID, info.Username)
+		user, err := upsertOAuthUser(r.Context(), constants.ProviderApple, info.ID, info.Username)
 		if err != nil {
-			slog.Error("oauth: upsert failed", "provider", "apple", "error", err)
-			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_db", http.StatusTemporaryRedirect)
+			slog.Error("oauth: upsert failed", "provider", constants.ProviderApple, "error", err)
+			http.Redirect(w, r, s.frontendURL+constants.OAuthErrorPath+"?error=oauth_db", http.StatusTemporaryRedirect)
 			return
 		}
 
@@ -246,13 +247,13 @@ func (s *OAuthService) handleAppleCallback() http.HandlerFunc {
 		uid := user.UUID.String()
 		jwtToken, err := auth.GenerateToken(uid, user.Username, user.Role)
 		if err != nil {
-			slog.Error("oauth: token generation failed", "provider", "apple", "error", err)
-			http.Redirect(w, r, s.frontendURL+"/login?error=oauth_token", http.StatusTemporaryRedirect)
+			slog.Error("oauth: token generation failed", "provider", constants.ProviderApple, "error", err)
+			http.Redirect(w, r, s.frontendURL+constants.OAuthErrorPath+"?error=oauth_token", http.StatusTemporaryRedirect)
 			return
 		}
 		SetTokenCookie(w.Header(), jwtToken)
-		slog.Info("oauth: user logged in", "provider", "apple", "uuid", uid, "username", user.Username)
-		http.Redirect(w, r, s.frontendURL+"/login/oauth-callback", http.StatusTemporaryRedirect)
+		slog.Info("oauth: user logged in", "provider", constants.ProviderApple, "uuid", uid, "username", user.Username)
+		http.Redirect(w, r, s.frontendURL+constants.OAuthCallbackPath, http.StatusTemporaryRedirect)
 	}
 }
 
@@ -381,7 +382,7 @@ func upsertOAuthUser(ctx context.Context, provider, oauthID, username string) (*
 			UUID:          uuid.New(),
 			Username:      candidateName,
 			PasswordHash:  "", // no password for OAuth users
-			Role:          "user",
+			Role:          constants.RoleUser,
 			OAuthProvider: provider,
 			OAuthID:       oauthID,
 		}

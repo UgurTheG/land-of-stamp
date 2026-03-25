@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"land-of-stamp-backend/auth"
+	"land-of-stamp-backend/constants"
 	"land-of-stamp-backend/gen/pb/pbconnect"
 
 	"connectrpc.com/connect"
@@ -64,7 +65,7 @@ func NewAuthInterceptor() connect.UnaryInterceptorFunc {
 			}
 
 			// Admin-only check.
-			if adminProcedures[procedure] && claims.Role != "admin" {
+			if adminProcedures[procedure] && claims.Role != constants.RoleAdmin {
 				slog.WarnContext(ctx, "auth: admin access denied", "procedure", procedure, "role", claims.Role)
 				return nil, connect.NewError(connect.CodePermissionDenied, nil)
 			}
@@ -83,12 +84,12 @@ func GetUser(ctx context.Context) *auth.Claims {
 
 // extractToken reads a JWT from "Authorization: Bearer <token>" or the "__token" cookie.
 func extractToken(h http.Header) string {
-	if header := h.Get("Authorization"); strings.HasPrefix(header, "Bearer ") {
-		return strings.TrimPrefix(header, "Bearer ")
+	if header := h.Get("Authorization"); strings.HasPrefix(header, constants.BearerPrefix) {
+		return strings.TrimPrefix(header, constants.BearerPrefix)
 	}
 	// Parse cookies from the Cookie header.
 	req := &http.Request{Header: h}
-	if c, err := req.Cookie("__token"); err == nil {
+	if c, err := req.Cookie(constants.CookieToken); err == nil {
 		return c.Value
 	}
 	return ""

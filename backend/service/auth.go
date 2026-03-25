@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"land-of-stamp-backend/constants"
 	"land-of-stamp-backend/db"
 	"land-of-stamp-backend/gen/pb"
 	"land-of-stamp-backend/gen/pb/pbconnect"
@@ -44,7 +45,7 @@ func (s *AuthService) GetMe(ctx context.Context, _ *connect.Request[pb.GetMeRequ
 // ── Cookie helpers (exported for use by OAuth handlers) ──
 
 func cookieSecure() bool {
-	return os.Getenv("COOKIE_SECURE") == "true"
+	return os.Getenv(constants.EnvCookieSecure) == "true"
 }
 
 func SetTokenCookie(h http.Header, token string) {
@@ -54,13 +55,13 @@ func SetTokenCookie(h http.Header, token string) {
 		sameSite = http.SameSiteNoneMode
 	}
 	cookie := &http.Cookie{
-		Name:     "__token",
+		Name:     constants.CookieToken,
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
 		Secure:   secure,
 		SameSite: sameSite,
-		MaxAge:   3 * 24 * 60 * 60, // 3 days
+		MaxAge:   constants.TokenCookieMaxAge,
 	}
 	h.Add("Set-Cookie", cookie.String())
 }
@@ -72,7 +73,7 @@ func ClearTokenCookie(h http.Header) {
 		sameSite = http.SameSiteNoneMode
 	}
 	cookie := &http.Cookie{
-		Name:     "__token",
+		Name:     constants.CookieToken,
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,

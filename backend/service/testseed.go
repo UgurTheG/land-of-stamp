@@ -12,6 +12,7 @@ import (
 	"os"
 
 	"land-of-stamp-backend/auth"
+	"land-of-stamp-backend/constants"
 	"land-of-stamp-backend/db"
 
 	"github.com/google/uuid"
@@ -19,7 +20,7 @@ import (
 
 // RegisterTestSeed mounts POST /test/seed-user if TEST_SEED=true.
 func RegisterTestSeed(mux *http.ServeMux) {
-	if os.Getenv("TEST_SEED") != "true" {
+	if os.Getenv(constants.EnvTestSeed) != "true" {
 		return
 	}
 	slog.Warn("test seed endpoint enabled — do NOT use in production")
@@ -52,8 +53,8 @@ func handleSeedUser(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"username required"}`, http.StatusBadRequest)
 		return
 	}
-	if req.Role != "user" && req.Role != "admin" {
-		req.Role = "user"
+	if req.Role != constants.RoleUser && req.Role != constants.RoleAdmin {
+		req.Role = constants.RoleUser
 	}
 
 	user := db.User{

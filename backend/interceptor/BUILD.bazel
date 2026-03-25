@@ -7,6 +7,7 @@ go_library(
     visibility = ["//:__subpackages__"],
     deps = [
         "//auth",
+        "//constants",
         "//gen/pb/pbconnect",
         "@com_connectrpc_connect//:connect",
     ],

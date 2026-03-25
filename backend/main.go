@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"land-of-stamp-backend/constants"
 	"log/slog"
 	"net/http"
 	"os"
@@ -28,9 +29,9 @@ func main() {
 	initJWT(ctx)
 
 	// ── SQLite database ──
-	dbPath := os.Getenv("DB_PATH")
+	dbPath := os.Getenv(constants.EnvDBPath)
 	if dbPath == "" {
-		dbPath = "land-of-stamp.db"
+		dbPath = constants.DefaultDBPath
 	}
 	db.Init(ctx, dbPath)
 	defer db.Close(ctx)
@@ -38,9 +39,9 @@ func main() {
 	mux := buildMux()
 	serveFrontend(ctx, mux)
 
-	port := os.Getenv("PORT")
+	port := os.Getenv(constants.EnvPort)
 	if port == "" {
-		port = "8080"
+		port = constants.DefaultPort
 	}
 
 	srv := &http.Server{
@@ -70,7 +71,7 @@ func initLogging() {
 }
 
 func initJWT(ctx context.Context) {
-	secret := os.Getenv("JWT_SECRET")
+	secret := os.Getenv(constants.EnvJWTSecret)
 	if secret == "" {
 		b := make([]byte, 32)
 		if _, err := rand.Read(b); err != nil {
