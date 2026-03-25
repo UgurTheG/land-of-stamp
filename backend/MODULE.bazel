@@ -20,7 +20,4 @@ use_repo(
     "org_golang_x_oauth2",
 )
 
-# ── Proto ───────────────────────────────────────────────
-bazel_dep(name = "rules_proto", version = "7.1.0")
-bazel_dep(name = "protobuf", version = "34.1")
 
