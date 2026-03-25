@@ -9,7 +9,7 @@ COPY . .
 RUN npm run build
 
 # ── Runtime stage ────────────────────────────────────────
-FROM nginx:1.28-alpine
+FROM nginx:1.29-alpine
 
 # Remove default config
 RUN rm /etc/nginx/conf.d/default.conf
