@@ -7,6 +7,10 @@ on:
   pull_request:
     paths: [proto/**, backend/gen/**, frontend/src/gen/**]
 
+concurrency:
+  group: proto-check-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

@@ -7,6 +7,10 @@ on:
   pull_request:
     paths: [frontend/**]
 
+concurrency:
+  group: frontend-build-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

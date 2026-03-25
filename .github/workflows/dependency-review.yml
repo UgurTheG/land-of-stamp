@@ -3,6 +3,10 @@ name: "Security · Dependency Review"
 on:
   pull_request:
 
+concurrency:
+  group: dependency-review-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pull-requests: write

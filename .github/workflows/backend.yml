@@ -7,6 +7,10 @@ on:
   pull_request:
     paths: [backend/**]
 
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

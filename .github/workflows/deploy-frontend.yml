@@ -12,6 +12,10 @@ on:
         type: choice
         options: [dev, int, prod]
 
+concurrency:
+  group: deploy-frontend-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: read
   packages: write
