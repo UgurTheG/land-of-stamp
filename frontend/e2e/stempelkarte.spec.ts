@@ -61,7 +61,7 @@ async function registerViaAPI(
   // Navigate to the role-appropriate page (cookie is set from API response)
   const target = role === 'admin' ? '/admin' : '/dashboard';
   await page.goto(target);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // Also set localStorage so AuthContext picks up the user
   const json = await resp.json();
@@ -71,7 +71,7 @@ async function registerViaAPI(
 
   // Reload so React hydrates with the user from localStorage + cookie
   await page.goto(target);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   return { username };
 }
@@ -80,7 +80,7 @@ async function registerViaAPI(
 async function logoutViaUI(page: Page) {
   await page.getByText('Logout').click();
   // App may redirect to / or /login after logout
-  await expect(page).toHaveURL(/^\/$|\/login/, { timeout: 5_000 });
+  await expect(page).toHaveURL(/\/login|\:[\d]+\/$/);
 }
 
 
@@ -192,11 +192,7 @@ test.describe('Role-Based Navigation', () => {
 test.describe('User Dashboard', () => {
   test('shows empty state when no shops joined', async ({ page }) => {
     await registerViaAPI(page, 'user');
-    const noShops = page.getByText(/no shops joined yet/i);
-    const zero = page.getByText('0');
-    const hasNoShops = await noShops.isVisible().catch(() => false);
-    const hasZero = await zero.first().isVisible().catch(() => false);
-    expect(hasNoShops || hasZero).toBeTruthy();
+    await expect(page.getByRole('heading', { name: /no shops joined yet/i })).toBeVisible();
   });
 
   test('user can discover and join a shop', async ({ browser }) => {
@@ -215,9 +211,9 @@ test.describe('User Dashboard', () => {
 
     // Open discover section
     const discoverBtn = userPage.getByRole('button', { name: /Discover Shops/i });
-    await expect(discoverBtn).toBeVisible({ timeout: 5_000 });
+    await expect(discoverBtn).toBeVisible();
     await discoverBtn.click();
-    await expect(userPage.getByText(discoverShopName)).toBeVisible({ timeout: 5_000 });
+    await expect(userPage.getByText(discoverShopName)).toBeVisible();
 
     // Join the shop
     await userPage.getByRole('button', { name: /Join Shop/i }).first().click();
@@ -250,7 +246,7 @@ test.describe('Admin Shop Management', () => {
     // Submit inside the modal (button text is "Create Stamp Card")
     await page.locator('form button[type="submit"]').click();
     // After creation the modal closes and the shop card appears in the list
-    await expect(page.getByRole('heading', { name: shopName })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('heading', { name: shopName })).toBeVisible();
   });
 
   test('can update shop details', async ({ page }) => {
@@ -262,7 +258,7 @@ test.describe('Admin Shop Management', () => {
     await page.getByPlaceholder('My Awesome Shop').fill(oldName);
     await page.getByPlaceholder(/e\.g\./i).fill('Old reward');
     await page.locator('form button[type="submit"]').click();
-    await expect(page.getByRole('heading', { name: oldName })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('heading', { name: oldName })).toBeVisible();
 
     // Open the edit modal
     await page.getByRole('button', { name: /Edit/i }).click();
@@ -305,11 +301,11 @@ test.describe('Admin Stamp Granting', () => {
 
     // Reload so the admin page picks up the shop + customer
     await page.reload();
-    await page.waitForLoadState('networkidle');
-    await expect(page.getByRole('heading', { name: shop.name })).toBeVisible({ timeout: 5_000 });
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.getByRole('heading', { name: shop.name })).toBeVisible();
 
     await page.getByRole('button', { name: /Grant Stamps/i }).click();
-    await expect(page.getByPlaceholder(/search/i)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByPlaceholder(/search/i)).toBeVisible();
 
     await page.close();
     await adminContext.close();
@@ -339,8 +335,8 @@ test.describe('Full E2E Journey', () => {
 
     // Reload admin page so it picks up the shop
     await adminPage.reload();
-    await adminPage.waitForLoadState('networkidle');
-    await expect(adminPage.getByRole('heading', { name: journeyShopName })).toBeVisible({ timeout: 5_000 });
+    await adminPage.waitForLoadState('domcontentloaded');
+    await expect(adminPage.getByRole('heading', { name: journeyShopName })).toBeVisible();
 
     // 2. User registers and joins the shop
     const userPage = await userContext.newPage();
@@ -349,17 +345,17 @@ test.describe('Full E2E Journey', () => {
 
     // Reload to see the joined shop
     await userPage.reload();
-    await userPage.waitForLoadState('networkidle');
-    await expect(userPage.getByText(journeyShopName)).toBeVisible({ timeout: 5_000 });
+    await userPage.waitForLoadState('domcontentloaded');
+    await expect(userPage.getByText(journeyShopName)).toBeVisible();
     await expect(userPage.getByText('0 / 2 stamps')).toBeVisible();
 
     // 3. Admin grants stamps via UI (admin context has its own cookie)
     // Reload admin page first so it picks up the newly registered customer
     await adminPage.reload();
-    await adminPage.waitForLoadState('networkidle');
+    await adminPage.waitForLoadState('domcontentloaded');
     await adminPage.getByRole('button', { name: /Grant Stamps/i }).click();
     // Wait for customer list to load (at least one Stamp button should appear)
-    await expect(adminPage.getByRole('button', { name: 'Stamp', exact: true }).first()).toBeVisible({ timeout: 5_000 });
+    await expect(adminPage.getByRole('button', { name: 'Stamp', exact: true }).first()).toBeVisible();
 
     // Search for the specific customer so we stamp the right person
     const searchInput = adminPage.getByPlaceholder(/search/i);
@@ -423,8 +419,8 @@ test.describe('Admin Statistics', () => {
     await registerViaAPI(page, 'admin');
     const shop = await createShopViaAPI(page, `Stats Shop ${uid()}`);
     await page.reload();
-    await page.waitForLoadState('networkidle');
-    await expect(page.getByRole('heading', { name: shop.name })).toBeVisible({ timeout: 5_000 });
+    await page.waitForLoadState('domcontentloaded');
+    await expect(page.getByRole('heading', { name: shop.name })).toBeVisible();
 
     await page.getByRole('button', { name: /Statistics/i }).click();
     await expect(page.getByText(/Total Stamps/i)).toBeVisible({ timeout: 3_000 });
@@ -566,16 +562,16 @@ async function setupAdminWithShop(page: Page): Promise<{ id: string; name: strin
   await registerViaAPI(page, 'admin');
   const shop = await createShopViaAPI(page);
   await page.reload();
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   // Wait for the shop data to render in the selector before interacting with tabs
-  await expect(page.getByRole('heading', { name: shop.name })).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole('heading', { name: shop.name })).toBeVisible();
   return shop;
 }
 
 /** Helper: open QR tab and click Generate. */
 async function openQRAndGenerate(page: Page): Promise<void> {
   await page.getByRole('button', { name: /QR Code/i }).click();
-  await expect(page.getByRole('button', { name: /Generate QR Code/i })).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByRole('button', { name: /Generate QR Code/i })).toBeVisible();
   await page.getByRole('button', { name: /Generate QR Code/i }).click();
 }
 
@@ -589,7 +585,7 @@ test.describe('Admin QR Code Tab', () => {
   test('QR Code tab shows generate button', async ({ page }) => {
     await setupAdminWithShop(page);
     await page.getByRole('button', { name: /QR Code/i }).click();
-    await expect(page.getByRole('button', { name: /Generate QR Code/i })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('button', { name: /Generate QR Code/i })).toBeVisible();
   });
 
   test('generates a QR code with timer on click', async ({ page }) => {
@@ -597,7 +593,7 @@ test.describe('Admin QR Code Tab', () => {
     await openQRAndGenerate(page);
 
     // QR SVG should appear
-    await expect(page.locator('svg').first()).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('svg').first()).toBeVisible();
     // Timer should be visible
     await expect(page.getByText(/remaining/i)).toBeVisible();
     // New QR Code button should appear
@@ -607,7 +603,7 @@ test.describe('Admin QR Code Tab', () => {
   test('shows instruction text for phone camera', async ({ page }) => {
     await setupAdminWithShop(page);
     await openQRAndGenerate(page);
-    await expect(page.getByText(/phone camera/i)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/phone camera/i)).toBeVisible();
   });
 
   test('QR Code tab shows no-shop message if shop not created', async ({ page }) => {
@@ -651,9 +647,9 @@ test.describe('Claim Page', () => {
     const ctx = await setupClaimTest(browser);
 
     await ctx.userPage.goto(`/claim/${ctx.token}`);
-    await ctx.userPage.waitForLoadState('networkidle');
+    await ctx.userPage.waitForLoadState('domcontentloaded');
 
-    await expect(ctx.userPage.getByRole('heading', { name: /Stamp Collected/i })).toBeVisible({ timeout: 10_000 });
+    await expect(ctx.userPage.getByRole('heading', { name: /Stamp Collected/i })).toBeVisible();
     await expect(ctx.userPage.getByText(ctx.shopName)).toBeVisible();
     await expect(ctx.userPage.getByText('1 / 3 stamps')).toBeVisible();
 
@@ -663,9 +659,9 @@ test.describe('Claim Page', () => {
   test('shows error for invalid token', async ({ page }) => {
     await registerViaAPI(page, 'user');
     await page.goto('/claim/totally-invalid-token-12345');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
-    await expect(page.getByText(/Couldn't Claim Stamp/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Couldn't Claim Stamp/i)).toBeVisible();
   });
 
   test('double-scan shows error (token consumed after first scan)', async ({ browser }) => {
@@ -673,12 +669,12 @@ test.describe('Claim Page', () => {
 
     // First claim
     await ctx.userPage.goto(`/claim/${ctx.token}`);
-    await expect(ctx.userPage.getByRole('heading', { name: /Stamp Collected/i })).toBeVisible({ timeout: 10_000 });
+    await expect(ctx.userPage.getByRole('heading', { name: /Stamp Collected/i })).toBeVisible();
 
     // Second claim (same token — now consumed/deleted)
     await ctx.userPage.goto(`/claim/${ctx.token}`);
-    await ctx.userPage.waitForLoadState('networkidle');
-    await expect(ctx.userPage.getByText(/Couldn't Claim Stamp/i)).toBeVisible({ timeout: 10_000 });
+    await ctx.userPage.waitForLoadState('domcontentloaded');
+    await expect(ctx.userPage.getByText(/Couldn't Claim Stamp/i)).toBeVisible();
 
     await teardownClaimTest(ctx);
   });
@@ -708,7 +704,7 @@ test.describe('Claim Page', () => {
 
     // Now navigate to claim page — should work
     await userPage.goto(`/claim/${token}`);
-    await expect(userPage.getByRole('heading', { name: /Stamp Collected/i })).toBeVisible({ timeout: 10_000 });
+    await expect(userPage.getByRole('heading', { name: /Stamp Collected/i })).toBeVisible();
 
     await adminPage.close();
     await userPage.close();
@@ -880,25 +876,25 @@ test.describe('Full QR E2E Journey', () => {
     // 3. Admin generates token #1 → user claims via /claim URL
     const token1 = await createStampTokenViaAPI(adminPage, shop.id);
     await userPage.goto(`/claim/${token1}`);
-    await expect(userPage.getByRole('heading', { name: /Stamp Collected/i })).toBeVisible({ timeout: 10_000 });
+    await expect(userPage.getByRole('heading', { name: /Stamp Collected/i })).toBeVisible();
     await expect(userPage.getByText('1 / 2 stamps')).toBeVisible();
 
     // 4. Admin generates token #2 → user claims → card complete
     const token2 = await createStampTokenViaAPI(adminPage, shop.id);
     await userPage.goto(`/claim/${token2}`);
-    await expect(userPage.getByRole('heading', { name: /Card Complete/i })).toBeVisible({ timeout: 10_000 });
+    await expect(userPage.getByRole('heading', { name: /Card Complete/i })).toBeVisible();
     await expect(userPage.getByText('2 / 2 stamps')).toBeVisible();
 
     // 5. User goes to dashboard and sees the completed card
     await userPage.goto('/dashboard');
-    await userPage.waitForLoadState('networkidle');
-    await expect(userPage.getByText(qrShopName)).toBeVisible({ timeout: 5_000 });
+    await userPage.waitForLoadState('domcontentloaded');
+    await expect(userPage.getByText(qrShopName)).toBeVisible();
 
     // 6. User redeems the card
     const redeemBtn = userPage.getByRole('button', { name: /Redeem Reward/i });
     if (await redeemBtn.isVisible()) {
       await redeemBtn.click();
-      await expect(userPage.getByText(/Redeemed/i)).toBeVisible({ timeout: 5_000 });
+      await expect(userPage.getByText(/Redeemed/i)).toBeVisible();
     }
 
     await adminPage.close();
