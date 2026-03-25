@@ -9,6 +9,9 @@
 .DS_Store
 Thumbs.db
 
+# ── IDE ──────────────────────────────────
+.idea/
+
 # ── Environment / secrets ────────────────
 .env
 .env.*
