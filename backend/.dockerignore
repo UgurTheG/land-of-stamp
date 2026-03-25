@@ -1,0 +1,8 @@
+bazel-*
+*.db
+:memory:*
+MODULE.bazel.lock
+stempelkarte-backend
+stempelkarte-server
+cookies-user.txt
+

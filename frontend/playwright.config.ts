@@ -16,7 +16,7 @@ export default defineConfig({
   // The frontend dev server (vite) must be running and proxying to the backend.
   webServer: [
     {
-      command: 'cd ../backend && DB_PATH=:memory: JWT_SECRET=e2e-test-secret go run .',
+      command: 'cd ../backend && DB_PATH=:memory: JWT_SECRET=e2e-test-secret TEST_SEED=true go run .',
       port: 8080,
       reuseExistingServer: true,
       timeout: 15_000,

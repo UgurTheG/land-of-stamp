@@ -1,0 +1,53 @@
+name: "Proto · Check Generated"
+
+on:
+  push:
+    branches: [main]
+    paths: [proto/**, backend/gen/**, frontend/src/gen/**]
+  pull_request:
+    paths: [proto/**, backend/gen/**, frontend/src/gen/**]
+
+permissions:
+  contents: read
+
+jobs:
+  proto-check:
+    name: Verify generated code is up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: "29.x"
+
+      - name: Install Go protoc plugins
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+          go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest
+
+      - name: Install frontend dependencies (for protoc-gen-es)
+        working-directory: frontend
+        run: npm ci
+
+      - name: Regenerate proto
+        run: bash proto/generate.sh
+
+      - name: Check for differences
+        run: |
+          git diff --exit-code -- backend/gen/ frontend/src/gen/ || {
+            echo "::error::Generated proto code is out of date. Run 'bash proto/generate.sh' and commit."
+            exit 1
+          }
+

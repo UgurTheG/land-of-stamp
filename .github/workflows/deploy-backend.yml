@@ -1,0 +1,112 @@
+name: "Deploy · Backend"
+
+on:
+  push:
+    branches: [main, develop, staging]
+    paths: [backend/**]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options: [dev, int, prod]
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/backend
+
+jobs:
+  build-image:
+    name: Build & push Docker image
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+      environment: ${{ steps.env.outputs.env }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine environment
+        id: env
+        run: |
+          if [[ "${{ github.event.inputs.environment }}" != "" ]]; then
+            echo "env=${{ github.event.inputs.environment }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "env=prod" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref }}" == "refs/heads/staging" ]]; then
+            echo "env=int" >> "$GITHUB_OUTPUT"
+          else
+            echo "env=dev" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha
+            type=ref,event=branch
+            type=raw,value=${{ steps.env.outputs.env }}-latest
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy (${{ needs.build-image.outputs.environment }})
+    needs: build-image
+    runs-on: ubuntu-latest
+    environment:
+      name: backend-${{ needs.build-image.outputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # ──────────────────────────────────────────────────────────
+      # Replace this section with your actual deployment target.
+      # Examples below for common platforms:
+      #
+      # ── Fly.io ──
+      # - uses: superfly/flyctl-actions/setup-flyctl@master
+      # - run: flyctl deploy --image ${{ needs.build-image.outputs.image-tag }}
+      #   env:
+      #     FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      #
+      # ── Google Cloud Run ──
+      # - uses: google-github-actions/auth@v2
+      #   with:
+      #     credentials_json: ${{ secrets.GCP_SA_KEY }}
+      # - uses: google-github-actions/deploy-cloudrun@v2
+      #   with:
+      #     service: land-of-stamp-${{ needs.build-image.outputs.environment }}
+      #     image: ${{ needs.build-image.outputs.image-tag }}
+      #     region: europe-west1
+      # ──────────────────────────────────────────────────────────
+
+      - name: Deployment placeholder
+        run: |
+          echo "### 🚀 Backend deploy (${{ needs.build-image.outputs.environment }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "Image: \`${{ needs.build-image.outputs.image-tag }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo ""
+          echo "⚠️  Configure your deployment target (Fly.io, Cloud Run, etc.) in this workflow."
+

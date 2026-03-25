@@ -1,0 +1,66 @@
+name: "E2E · Playwright"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: Playwright
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Build backend
+        working-directory: backend
+        run: go build -o ./server .
+
+      - name: Start backend
+        working-directory: backend
+        run: |
+          DB_PATH=:memory: JWT_SECRET=e2e-ci-secret TEST_SEED=true ./server &
+          sleep 2
+
+      - name: Start frontend dev server
+        working-directory: frontend
+        run: |
+          npm run dev -- --port 5173 &
+          npx wait-on http://localhost:5173 --timeout 15000
+
+      - name: Run Playwright tests
+        working-directory: frontend
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            frontend/test-results/
+            frontend/playwright-report/
+          retention-days: 7
+
