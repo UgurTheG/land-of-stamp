@@ -14,6 +14,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const UserDashboard = lazy(() => import('./pages/UserDashboard'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const ClaimPage = lazy(() => import('./pages/ClaimPage'));
+const OAuthCallbackPage = lazy(() => import('./pages/OAuthCallbackPage'));
 
 function AppShell() {
   const { theme } = useTheme();
@@ -36,6 +37,7 @@ function AppShell() {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/login/oauth-callback" element={<OAuthCallbackPage />} />
             <Route
               path="/dashboard"
               element={

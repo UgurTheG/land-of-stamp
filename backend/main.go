@@ -100,6 +100,10 @@ func buildMux() *http.ServeMux {
 	mux.Handle(stampPath, stampHandler)
 	mux.Handle(docsPath, docsHandler)
 
+	// ── OAuth login (plain HTTP — providers require GET redirects) ──
+	oauthSvc := service.NewOAuthService()
+	oauthSvc.Register(mux)
+
 	return mux
 }
 

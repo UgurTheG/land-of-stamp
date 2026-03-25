@@ -59,6 +59,16 @@ func migrate(ctx context.Context) {
 		panic(err)
 	}
 
+	// Partial unique index: one OAuth identity maps to at most one user.
+	if err := DB.Exec(`
+		CREATE UNIQUE INDEX IF NOT EXISTS idx_oauth_provider_id
+		ON users (oauth_provider, oauth_id)
+		WHERE oauth_provider != '' AND deleted_at IS NULL
+	`).Error; err != nil {
+		slog.ErrorContext(ctx, "failed to create OAuth unique index", "error", err)
+		panic(err)
+	}
+
 	slog.InfoContext(ctx, "database migrations complete")
 }
 

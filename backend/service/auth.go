@@ -64,7 +64,7 @@ func (s *AuthService) Register(ctx context.Context, req *connect.Request[pb.Regi
 	resp := connect.NewResponse(&pb.AuthResponse{
 		User: &pb.User{Id: uid, Username: msg.Username, Role: role},
 	})
-	setTokenCookie(resp.Header(), token)
+	SetTokenCookie(resp.Header(), token)
 	return resp, nil
 }
 
@@ -91,14 +91,14 @@ func (s *AuthService) Login(ctx context.Context, req *connect.Request[pb.LoginRe
 
 	slog.InfoContext(ctx, "user logged in", "uuid", uid, "username", user.Username, "role", user.Role)
 	resp := connect.NewResponse(&pb.AuthResponse{User: user.ToProto()})
-	setTokenCookie(resp.Header(), token)
+	SetTokenCookie(resp.Header(), token)
 	return resp, nil
 }
 
 func (s *AuthService) Logout(ctx context.Context, _ *connect.Request[pb.LogoutRequest]) (*connect.Response[pb.StatusResponse], error) {
 	slog.InfoContext(ctx, "user logged out")
 	resp := connect.NewResponse(&pb.StatusResponse{Status: "logged out"})
-	clearTokenCookie(resp.Header())
+	ClearTokenCookie(resp.Header())
 	return resp, nil
 }
 
@@ -116,13 +116,13 @@ func (s *AuthService) GetMe(ctx context.Context, _ *connect.Request[pb.GetMeRequ
 	return connect.NewResponse(user.ToProto()), nil
 }
 
-// ── Cookie helpers ─────────────────────────────────────
+// ── Cookie helpers (exported for use by OAuth handlers) ──
 
 func cookieSecure() bool {
 	return os.Getenv("COOKIE_SECURE") == "true"
 }
 
-func setTokenCookie(h http.Header, token string) {
+func SetTokenCookie(h http.Header, token string) {
 	secure := cookieSecure()
 	sameSite := http.SameSiteStrictMode
 	if secure {
@@ -140,7 +140,7 @@ func setTokenCookie(h http.Header, token string) {
 	h.Add("Set-Cookie", cookie.String())
 }
 
-func clearTokenCookie(h http.Header) {
+func ClearTokenCookie(h http.Header) {
 	secure := cookieSecure()
 	sameSite := http.SameSiteStrictMode
 	if secure {

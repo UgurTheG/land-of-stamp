@@ -109,6 +109,9 @@ export const messages = {
       alreadyHaveAccount: 'Already have an account?',
       dontHaveAccount: "Don't have an account?",
       register: 'Register',
+      orContinueWith: 'or continue with',
+      continueWithGoogle: 'Continue with Google',
+      continueWithGitHub: 'Continue with GitHub',
       validation: {
         usernameRequired: 'Please enter a username',
         usernameMin: 'Username must be at least 2 characters',
@@ -351,6 +354,9 @@ export const messages = {
       alreadyHaveAccount: 'Hast du schon ein Konto?',
       dontHaveAccount: 'Noch kein Konto?',
       register: 'Registrieren',
+      orContinueWith: 'oder weiter mit',
+      continueWithGoogle: 'Weiter mit Google',
+      continueWithGitHub: 'Weiter mit GitHub',
       validation: {
         usernameRequired: 'Bitte gib einen Benutzernamen ein',
         usernameMin: 'Der Benutzername muss mindestens 2 Zeichen lang sein',

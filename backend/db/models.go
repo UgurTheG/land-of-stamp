@@ -14,10 +14,12 @@ import (
 
 type User struct {
 	gorm.Model
-	UUID         uuid.UUID `gorm:"type:text;uniqueIndex;not null"`
-	Username     string    `gorm:"uniqueIndex;type:text;not null"`
-	PasswordHash string    `gorm:"type:text;not null"`
-	Role         string    `gorm:"type:text;not null;check:role IN ('user','admin')"`
+	UUID          uuid.UUID `gorm:"type:text;uniqueIndex;not null"`
+	Username      string    `gorm:"uniqueIndex;type:text;not null"`
+	PasswordHash  string    `gorm:"type:text;not null;default:''"`
+	Role          string    `gorm:"type:text;not null;check:role IN ('user','admin')"`
+	OAuthProvider string    `gorm:"column:oauth_provider;type:text;not null;default:''"` // "google" | "github" | ""
+	OAuthID       string    `gorm:"column:oauth_id;type:text;not null;default:''"`       // provider's user ID
 }
 
 type Shop struct {

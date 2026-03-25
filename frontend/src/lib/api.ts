@@ -57,6 +57,9 @@ function saveUser(user: User): void {
   localStorage.setItem('land_of_stamp_current_user', JSON.stringify(user));
 }
 
+/** Persist user to localStorage (used after OAuth callback). */
+export const persistSession = saveUser;
+
 // ── Auth ───────────────────────────────────────────────
 
 export async function apiRegister(username: string, password: string, role: 'user' | 'admin'): Promise<User> {
