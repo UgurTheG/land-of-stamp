@@ -4,8 +4,6 @@ import { create } from '@bufbuild/protobuf';
 
 import { AuthService, ShopService, StampService } from '../gen/proto/stempelkarte_pb';
 import {
-  RegisterRequestSchema,
-  LoginRequestSchema,
   LogoutRequestSchema,
   GetMeRequestSchema,
   ListShopsRequestSchema,
@@ -62,19 +60,6 @@ export const persistSession = saveUser;
 
 // ── Auth ───────────────────────────────────────────────
 
-export async function apiRegister(username: string, password: string, role: 'user' | 'admin'): Promise<User> {
-  const res = await authClient.register(create(RegisterRequestSchema, { username, password, role }));
-  const user = res.user!;
-  saveUser(user);
-  return user;
-}
-
-export async function apiLogin(username: string, password: string): Promise<User> {
-  const res = await authClient.login(create(LoginRequestSchema, { username, password }));
-  const user = res.user!;
-  saveUser(user);
-  return user;
-}
 
 export async function apiLogout(): Promise<void> {
   await authClient.logout(create(LogoutRequestSchema, {}));

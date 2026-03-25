@@ -1,15 +1,16 @@
 import { createContext, useState, useEffect, type ReactNode } from 'react';
-import { type User, apiLogin, apiRegister, apiLogout, apiGetMe, clearSession } from '../lib/api';
+import { apiLogout, apiGetMe, clearSession } from '../lib/api';
 import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string) => Promise<User>;
-  register: (username: string, password: string, role: 'user' | 'admin') => Promise<User>;
   logout: () => void;
   refreshUser: (user: User) => void;
   isAuthenticated: boolean;
 }
+
+// Re-export User from api so consumers don't need a separate import.
+import type { User } from '../lib/api';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -41,18 +42,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const login = async (username: string, password: string): Promise<User> => {
-    const u = await apiLogin(username, password);
-    setUser(u);
-    return u;
-  };
-
-  const register = async (username: string, password: string, role: 'user' | 'admin'): Promise<User> => {
-    const u = await apiRegister(username, password, role);
-    setUser(u);
-    return u;
-  };
-
   const logout = () => {
     apiLogout().catch((e) => {
       const msg = e instanceof Error ? e.message : 'Logout request failed';
@@ -65,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = (u: User) => setUser(u);
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, refreshUser, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, logout, refreshUser, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

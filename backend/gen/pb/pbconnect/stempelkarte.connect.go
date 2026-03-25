@@ -44,10 +44,6 @@ const (
 	DocsServiceGetOpenAPISpecProcedure = "/landofstamp.v1.DocsService/GetOpenAPISpec"
 	// DocsServiceGetDocsPageProcedure is the fully-qualified name of the DocsService's GetDocsPage RPC.
 	DocsServiceGetDocsPageProcedure = "/landofstamp.v1.DocsService/GetDocsPage"
-	// AuthServiceRegisterProcedure is the fully-qualified name of the AuthService's Register RPC.
-	AuthServiceRegisterProcedure = "/landofstamp.v1.AuthService/Register"
-	// AuthServiceLoginProcedure is the fully-qualified name of the AuthService's Login RPC.
-	AuthServiceLoginProcedure = "/landofstamp.v1.AuthService/Login"
 	// AuthServiceLogoutProcedure is the fully-qualified name of the AuthService's Logout RPC.
 	AuthServiceLogoutProcedure = "/landofstamp.v1.AuthService/Logout"
 	// AuthServiceGetMeProcedure is the fully-qualified name of the AuthService's GetMe RPC.
@@ -185,8 +181,6 @@ func (UnimplementedDocsServiceHandler) GetDocsPage(context.Context, *connect.Req
 
 // AuthServiceClient is a client for the landofstamp.v1.AuthService service.
 type AuthServiceClient interface {
-	Register(context.Context, *connect.Request[pb.RegisterRequest]) (*connect.Response[pb.AuthResponse], error)
-	Login(context.Context, *connect.Request[pb.LoginRequest]) (*connect.Response[pb.AuthResponse], error)
 	Logout(context.Context, *connect.Request[pb.LogoutRequest]) (*connect.Response[pb.StatusResponse], error)
 	GetMe(context.Context, *connect.Request[pb.GetMeRequest]) (*connect.Response[pb.User], error)
 }
@@ -202,18 +196,6 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 	baseURL = strings.TrimRight(baseURL, "/")
 	authServiceMethods := pb.File_proto_stempelkarte_proto.Services().ByName("AuthService").Methods()
 	return &authServiceClient{
-		register: connect.NewClient[pb.RegisterRequest, pb.AuthResponse](
-			httpClient,
-			baseURL+AuthServiceRegisterProcedure,
-			connect.WithSchema(authServiceMethods.ByName("Register")),
-			connect.WithClientOptions(opts...),
-		),
-		login: connect.NewClient[pb.LoginRequest, pb.AuthResponse](
-			httpClient,
-			baseURL+AuthServiceLoginProcedure,
-			connect.WithSchema(authServiceMethods.ByName("Login")),
-			connect.WithClientOptions(opts...),
-		),
 		logout: connect.NewClient[pb.LogoutRequest, pb.StatusResponse](
 			httpClient,
 			baseURL+AuthServiceLogoutProcedure,
@@ -231,20 +213,8 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 
 // authServiceClient implements AuthServiceClient.
 type authServiceClient struct {
-	register *connect.Client[pb.RegisterRequest, pb.AuthResponse]
-	login    *connect.Client[pb.LoginRequest, pb.AuthResponse]
-	logout   *connect.Client[pb.LogoutRequest, pb.StatusResponse]
-	getMe    *connect.Client[pb.GetMeRequest, pb.User]
-}
-
-// Register calls landofstamp.v1.AuthService.Register.
-func (c *authServiceClient) Register(ctx context.Context, req *connect.Request[pb.RegisterRequest]) (*connect.Response[pb.AuthResponse], error) {
-	return c.register.CallUnary(ctx, req)
-}
-
-// Login calls landofstamp.v1.AuthService.Login.
-func (c *authServiceClient) Login(ctx context.Context, req *connect.Request[pb.LoginRequest]) (*connect.Response[pb.AuthResponse], error) {
-	return c.login.CallUnary(ctx, req)
+	logout *connect.Client[pb.LogoutRequest, pb.StatusResponse]
+	getMe  *connect.Client[pb.GetMeRequest, pb.User]
 }
 
 // Logout calls landofstamp.v1.AuthService.Logout.
@@ -259,8 +229,6 @@ func (c *authServiceClient) GetMe(ctx context.Context, req *connect.Request[pb.G
 
 // AuthServiceHandler is an implementation of the landofstamp.v1.AuthService service.
 type AuthServiceHandler interface {
-	Register(context.Context, *connect.Request[pb.RegisterRequest]) (*connect.Response[pb.AuthResponse], error)
-	Login(context.Context, *connect.Request[pb.LoginRequest]) (*connect.Response[pb.AuthResponse], error)
 	Logout(context.Context, *connect.Request[pb.LogoutRequest]) (*connect.Response[pb.StatusResponse], error)
 	GetMe(context.Context, *connect.Request[pb.GetMeRequest]) (*connect.Response[pb.User], error)
 }
@@ -272,18 +240,6 @@ type AuthServiceHandler interface {
 // and JSON codecs. They also support gzip compression.
 func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
 	authServiceMethods := pb.File_proto_stempelkarte_proto.Services().ByName("AuthService").Methods()
-	authServiceRegisterHandler := connect.NewUnaryHandler(
-		AuthServiceRegisterProcedure,
-		svc.Register,
-		connect.WithSchema(authServiceMethods.ByName("Register")),
-		connect.WithHandlerOptions(opts...),
-	)
-	authServiceLoginHandler := connect.NewUnaryHandler(
-		AuthServiceLoginProcedure,
-		svc.Login,
-		connect.WithSchema(authServiceMethods.ByName("Login")),
-		connect.WithHandlerOptions(opts...),
-	)
 	authServiceLogoutHandler := connect.NewUnaryHandler(
 		AuthServiceLogoutProcedure,
 		svc.Logout,
@@ -298,10 +254,6 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 	)
 	return "/landofstamp.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case AuthServiceRegisterProcedure:
-			authServiceRegisterHandler.ServeHTTP(w, r)
-		case AuthServiceLoginProcedure:
-			authServiceLoginHandler.ServeHTTP(w, r)
 		case AuthServiceLogoutProcedure:
 			authServiceLogoutHandler.ServeHTTP(w, r)
 		case AuthServiceGetMeProcedure:
@@ -314,14 +266,6 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 
 // UnimplementedAuthServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedAuthServiceHandler struct{}
-
-func (UnimplementedAuthServiceHandler) Register(context.Context, *connect.Request[pb.RegisterRequest]) (*connect.Response[pb.AuthResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("landofstamp.v1.AuthService.Register is not implemented"))
-}
-
-func (UnimplementedAuthServiceHandler) Login(context.Context, *connect.Request[pb.LoginRequest]) (*connect.Response[pb.AuthResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("landofstamp.v1.AuthService.Login is not implemented"))
-}
 
 func (UnimplementedAuthServiceHandler) Logout(context.Context, *connect.Request[pb.LogoutRequest]) (*connect.Response[pb.StatusResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("landofstamp.v1.AuthService.Logout is not implemented"))

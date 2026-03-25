@@ -20,6 +20,7 @@ import (
 	"land-of-stamp-backend/service"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 )
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -98,18 +99,29 @@ func noErr(t *testing.T, err error) {
 	}
 }
 
-// regUser registers a user and returns the auth cookie + user proto.
+// uuidFromName generates a deterministic UUID v5 from a name (for reproducible tests).
+func uuidFromName(name string) uuid.UUID {
+	return uuid.NewSHA1(uuid.NameSpaceURL, []byte("land-of-stamp-test:"+name))
+}
+
+// regUser creates a user directly in the DB and returns an auth cookie + user proto.
+// Since password-based registration has been removed, test setup inserts users directly.
 func regUser(t *testing.T, c clients, user, pass, role string) (*http.Cookie, *pb.User) {
 	t.Helper()
-	resp, err := c.auth.Register(context.Background(), connect.NewRequest(&pb.RegisterRequest{
-		Username: user, Password: pass, Role: role,
-	}))
-	noErr(t, err)
-	tk := tokenCookie(resp.Header())
-	if tk == nil {
-		t.Fatalf("register %s: no cookie", user)
+	u := db.User{
+		UUID:     uuidFromName(user),
+		Username: user,
+		Role:     role,
 	}
-	return tk, resp.Msg.User
+	if err := db.DB.Create(&u).Error; err != nil {
+		t.Fatalf("regUser %s: create: %v", user, err)
+	}
+	token, err := auth.GenerateToken(u.UUID.String(), user, role)
+	if err != nil {
+		t.Fatalf("regUser %s: token: %v", user, err)
+	}
+	cookie := &http.Cookie{Name: "__token", Value: token}
+	return cookie, &pb.User{Id: u.UUID.String(), Username: user, Role: role}
 }
 
 // mkShop registers an admin, creates a shop with stampsRequired=3, returns cookie + shop ID.
@@ -130,163 +142,6 @@ var ctx = context.Background()
 //  AUTH TESTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-func TestRegister_HappyPath_User(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-	c := newClients(ts.URL)
-
-	resp, err := c.auth.Register(ctx, connect.NewRequest(&pb.RegisterRequest{
-		Username: "alice", Password: "secret1234", Role: "user",
-	}))
-	noErr(t, err)
-	if resp.Msg.User.Username != "alice" {
-		t.Errorf("expected alice, got %v", resp.Msg.User.Username)
-	}
-	if resp.Msg.User.Role != "user" {
-		t.Errorf("expected role user, got %v", resp.Msg.User.Role)
-	}
-	if tokenCookie(resp.Header()) == nil {
-		t.Error("expected __token cookie")
-	}
-}
-
-func TestRegister_HappyPath_Admin(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-	c := newClients(ts.URL)
-
-	resp, err := c.auth.Register(ctx, connect.NewRequest(&pb.RegisterRequest{
-		Username: "shopowner", Password: "pass1234", Role: "admin",
-	}))
-	noErr(t, err)
-	if resp.Msg.User.Role != "admin" {
-		t.Errorf("expected admin, got %v", resp.Msg.User.Role)
-	}
-}
-
-func TestRegister_EmptyCredentials(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-	c := newClients(ts.URL)
-
-	_, err := c.auth.Register(ctx, connect.NewRequest(&pb.RegisterRequest{}))
-	wantCode(t, err, connect.CodeInvalidArgument)
-}
-
-func TestRegister_ShortUsername(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-	c := newClients(ts.URL)
-
-	_, err := c.auth.Register(ctx, connect.NewRequest(&pb.RegisterRequest{
-		Username: "a", Password: "secret1234", Role: "user",
-	}))
-	wantCode(t, err, connect.CodeInvalidArgument)
-}
-
-func TestRegister_ShortPassword(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-	c := newClients(ts.URL)
-
-	_, err := c.auth.Register(ctx, connect.NewRequest(&pb.RegisterRequest{
-		Username: "alice", Password: "abc", Role: "user",
-	}))
-	wantCode(t, err, connect.CodeInvalidArgument)
-}
-
-func TestRegister_DuplicateUsername(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-	c := newClients(ts.URL)
-
-	regUser(t, c, "alice", "secret1234", "user")
-
-	_, err := c.auth.Register(ctx, connect.NewRequest(&pb.RegisterRequest{
-		Username: "alice", Password: "otherpass", Role: "user",
-	}))
-	wantCode(t, err, connect.CodeAlreadyExists)
-}
-
-func TestRegister_InvalidRole_DefaultsToUser(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-	c := newClients(ts.URL)
-
-	resp, err := c.auth.Register(ctx, connect.NewRequest(&pb.RegisterRequest{
-		Username: "bob", Password: "pass1234", Role: "superadmin",
-	}))
-	noErr(t, err)
-	if resp.Msg.User.Role != "user" {
-		t.Errorf("invalid role should default to user, got %v", resp.Msg.User.Role)
-	}
-}
-
-func TestRegister_EmptyRole_DefaultsToUser(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-	c := newClients(ts.URL)
-
-	resp, err := c.auth.Register(ctx, connect.NewRequest(&pb.RegisterRequest{
-		Username: "charlie", Password: "pass1234",
-	}))
-	noErr(t, err)
-	if resp.Msg.User.Role != "user" {
-		t.Errorf("empty role should default to user, got %v", resp.Msg.User.Role)
-	}
-}
-
-func TestLogin_HappyPath(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-	c := newClients(ts.URL)
-
-	regUser(t, c, "alice", "secret1234", "user")
-
-	resp, err := c.auth.Login(ctx, connect.NewRequest(&pb.LoginRequest{
-		Username: "alice", Password: "secret1234",
-	}))
-	noErr(t, err)
-	if resp.Msg.User.Username != "alice" {
-		t.Errorf("expected alice, got %v", resp.Msg.User.Username)
-	}
-	if tokenCookie(resp.Header()) == nil {
-		t.Error("expected __token cookie")
-	}
-}
-
-func TestLogin_WrongPassword(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-	c := newClients(ts.URL)
-
-	regUser(t, c, "alice", "secret1234", "user")
-
-	_, err := c.auth.Login(ctx, connect.NewRequest(&pb.LoginRequest{
-		Username: "alice", Password: "wrong",
-	}))
-	wantCode(t, err, connect.CodeUnauthenticated)
-}
-
-func TestLogin_NonExistentUser(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-	c := newClients(ts.URL)
-
-	_, err := c.auth.Login(ctx, connect.NewRequest(&pb.LoginRequest{
-		Username: "ghost", Password: "pass1234",
-	}))
-	wantCode(t, err, connect.CodeUnauthenticated)
-}
-
-func TestLogin_EmptyCredentials(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-	c := newClients(ts.URL)
-
-	_, err := c.auth.Login(ctx, connect.NewRequest(&pb.LoginRequest{}))
-	wantCode(t, err, connect.CodeUnauthenticated)
-}
 
 func TestLogout(t *testing.T) {
 	ts := setupTestServer(t)

@@ -104,6 +104,9 @@ func buildMux() *http.ServeMux {
 	oauthSvc := service.NewOAuthService()
 	oauthSvc.Register(mux)
 
+	// ── Test seed endpoint (only when TEST_SEED=true) ──
+	service.RegisterTestSeed(mux)
+
 	return mux
 }
 

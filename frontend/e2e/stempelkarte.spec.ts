@@ -1,9 +1,9 @@
 /**
  * Länd of Stamp – Playwright E2E Tests
  *
- * Uses direct API calls for reliable test setup (register/login), and
- * browser-based UI interactions for testing actual user flows.
- * This avoids React 19 form-action timing issues in controlled components.
+ * Uses the test seed endpoint (POST /test/seed-user) for reliable test setup,
+ * and browser-based UI interactions for testing actual user flows.
+ * The backend must be started with TEST_SEED=true for these tests to work.
  */
 
 import { test, expect, type Page, type Browser } from '@playwright/test';
@@ -16,8 +16,7 @@ const API_BASE = 'http://localhost:8080';
 
 /** ConnectRPC service base paths */
 const RPC = {
-  register:          `${API_BASE}/landofstamp.v1.AuthService/Register`,
-  login:             `${API_BASE}/landofstamp.v1.AuthService/Login`,
+  seedUser:          `${API_BASE}/test/seed-user`,
   logout:            `${API_BASE}/landofstamp.v1.AuthService/Logout`,
   getMe:             `${API_BASE}/landofstamp.v1.AuthService/GetMe`,
   listShops:         `${API_BASE}/landofstamp.v1.ShopService/ListShops`,
@@ -40,21 +39,23 @@ function rpc(ctx: { request: { post: Function } }, url: string, data: Record<str
   });
 }
 
-/** Register a user via the backend API and set the auth cookie on the page. */
+/** Seed a user via the test-only endpoint and set the auth cookie on the page. */
 async function registerViaAPI(
   page: Page,
   role: 'user' | 'admin',
-  opts?: { username?: string; password?: string },
+  opts?: { username?: string },
 ) {
   const username = opts?.username ?? `e2e_${role}_${uid()}`;
-  const password = opts?.password ?? 'test1234';
 
   const context = page.context();
-  const resp = await rpc(context, RPC.register, { username, password, role });
+  const resp = await context.request.post(RPC.seedUser, {
+    headers: { 'Content-Type': 'application/json' },
+    data: { username, role },
+  });
 
   if (!resp.ok()) {
     const body = await resp.text();
-    throw new Error(`Register failed (${resp.status()}): ${body}`);
+    throw new Error(`Seed user failed (${resp.status()}): ${body}`);
   }
 
   // Navigate to the role-appropriate page (cookie is set from API response)
@@ -72,27 +73,7 @@ async function registerViaAPI(
   await page.goto(target);
   await page.waitForLoadState('networkidle');
 
-  return { username, password };
-}
-
-/** Login via API and navigate to the appropriate dashboard. */
-async function loginViaAPI(page: Page, username: string, password: string) {
-  const context = page.context();
-  const resp = await rpc(context, RPC.login, { username, password });
-
-  if (!resp.ok()) {
-    const body = await resp.text();
-    throw new Error(`Login failed (${resp.status()}): ${body}`);
-  }
-
-  const json = await resp.json();
-  const target = json.user.role === 'admin' ? '/admin' : '/dashboard';
-  await page.evaluate((user) => {
-    localStorage.setItem('land_of_stamp_current_user', JSON.stringify(user));
-  }, json.user);
-
-  await page.goto(target);
-  await page.waitForLoadState('networkidle');
+  return { username };
 }
 
 /** Clear auth state and go home. */
@@ -146,80 +127,27 @@ test.describe('Landing Page', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  REGISTRATION (via API + verify UI state)
+//  AUTH (OAuth-only — registration/login forms removed)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.describe('Registration', () => {
-  test('user registers and sees dashboard', async ({ page }) => {
+test.describe('Auth', () => {
+  test('seeded user reaches user dashboard', async ({ page }) => {
     await registerViaAPI(page, 'user');
     await expect(page).toHaveURL(/\/dashboard/);
     await expect(page.getByText('Welcome back')).toBeVisible();
   });
 
-  test('admin registers and sees admin panel', async ({ page }) => {
+  test('seeded admin reaches admin panel', async ({ page }) => {
     await registerViaAPI(page, 'admin');
     await expect(page).toHaveURL(/\/admin/);
     await expect(page.getByText('Shop Dashboard')).toBeVisible();
   });
 
-  test('shows error for short username (< 2 chars)', async ({ page }) => {
+  test('login page shows OAuth providers', async ({ page }) => {
     await page.goto('/login');
-    await page.getByText('Register', { exact: true }).click();
-    await page.getByPlaceholder('Enter your username').fill('a');
-    await page.getByPlaceholder('Enter your password').fill('test1234');
-    await page.getByPlaceholder('Enter your password').press('Enter');
-    await expect(page.getByText(/username must be at least 2/i)).toBeVisible({ timeout: 3_000 });
-  });
-
-  test('shows error for short password (< 4 chars)', async ({ page }) => {
-    await page.goto('/login');
-    await page.getByText('Register', { exact: true }).click();
-    await page.getByPlaceholder('Enter your username').fill('validuser');
-    await page.getByPlaceholder('Enter your password').fill('ab');
-    await page.getByPlaceholder('Enter your password').press('Enter');
-    await expect(page.getByText(/password must be at least 4/i)).toBeVisible({ timeout: 3_000 });
-  });
-
-  test('duplicate username returns 409 from API', async ({ page }) => {
-    // Register first user via API
-    const username = `dup_${uid()}`;
-    const password = 'test1234';
-    await registerViaAPI(page, 'user', { username, password });
-
-    // Try to register same username via API directly
-    const context = page.context();
-    const resp = await rpc(context, RPC.register, { username, password, role: 'user' });
-    expect(resp.status()).toBe(409);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//  LOGIN / LOGOUT
-// ═══════════════════════════════════════════════════════════════════════════════
-
-test.describe('Login & Logout', () => {
-  test('can login and reach dashboard', async ({ page }) => {
-    const { username, password } = await registerViaAPI(page, 'user');
-    // Clear cookies/storage to simulate logout
-    await page.context().clearCookies();
-    await page.evaluate(() => localStorage.clear());
-
-    // Login via API and verify dashboard
-    await loginViaAPI(page, username, password);
-    await expect(page).toHaveURL(/\/dashboard/);
-  });
-
-  test('wrong password returns 401 from API', async ({ page }) => {
-    const { username } = await registerViaAPI(page, 'user');
-    const context = page.context();
-    const resp = await rpc(context, RPC.login, { username, password: 'wrongpass' });
-    expect(resp.status()).toBe(401);
-  });
-
-  test('non-existent user returns 401 from API', async ({ page }) => {
-    const context = page.context();
-    const resp = await rpc(context, RPC.login, { username: `ghost_${uid()}`, password: 'anypass' });
-    expect(resp.status()).toBe(401);
+    await expect(page.getByText(/Continue with Google/i)).toBeVisible();
+    await expect(page.getByText(/Continue with GitHub/i)).toBeVisible();
+    await expect(page.getByText(/Continue with Apple/i)).toBeVisible();
   });
 
   test('logout clears session and redirects home', async ({ page }) => {
@@ -473,37 +401,6 @@ test.describe('Full E2E Journey', () => {
   });
 });
 
-// ═══════════════════════════════════════════════════════════════════════════════
-//  UI INTERACTIONS
-// ═══════════════════════════════════════════════════════════════════════════════
-
-test.describe('UI Interactions', () => {
-  test('password visibility toggle works', async ({ page }) => {
-    await page.goto('/login');
-    const passwordInput = page.getByPlaceholder('Enter your password');
-    await passwordInput.fill('secret');
-
-    await expect(passwordInput).toHaveAttribute('type', 'password');
-
-    const passwordContainer = page.getByPlaceholder('Enter your password').locator('..');
-    await passwordContainer.locator('button').click();
-    await expect(passwordInput).toHaveAttribute('type', 'text');
-
-    await passwordContainer.locator('button').click();
-    await expect(passwordInput).toHaveAttribute('type', 'password');
-  });
-
-  test('login/register mode toggle works', async ({ page }) => {
-    await page.goto('/login');
-    await expect(page.getByRole('heading', { name: /Welcome back/i })).toBeVisible();
-
-    await page.getByText('Register', { exact: true }).click();
-    await expect(page.getByRole('heading', { name: /Create Account/i })).toBeVisible();
-
-    await page.getByRole('button', { name: 'Sign In' }).click();
-    await expect(page.getByRole('heading', { name: /Welcome back/i })).toBeVisible();
-  });
-});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  COOKIE SECURITY
@@ -791,7 +688,7 @@ test.describe('Claim Page', () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test('redirects back to claim page after login', async ({ browser }) => {
+  test('redirects to login when not authenticated, then claim works after auth', async ({ browser }) => {
     const adminContext = await browser.newContext();
     const userContext = await browser.newContext();
 
@@ -801,28 +698,20 @@ test.describe('Claim Page', () => {
     const shop = await createShopViaAPI(adminPage);
     const token = await createStampTokenViaAPI(adminPage, shop.id);
 
-    // User registers in a fresh context (so we have credentials)
-    const setupPage = await userContext.newPage();
-    const { username, password } = await registerViaAPI(setupPage, 'user');
+    // Unauthenticated user visits claim URL — should redirect to login
+    const userPage = await userContext.newPage();
+    await userPage.goto(`/claim/${token}`);
+    await expect(userPage).toHaveURL(/\/login/);
 
-    // Clear cookies/storage to simulate logged-out state
-    await userContext.clearCookies();
-    await setupPage.evaluate(() => localStorage.clear());
-
-    // Navigate to claim URL — should redirect to login
-    await setupPage.goto(`/claim/${token}`);
-    await expect(setupPage).toHaveURL(/\/login/);
-
-    // Login
-    await loginViaAPI(setupPage, username, password);
+    // User authenticates (via test seed)
+    await registerViaAPI(userPage, 'user');
 
     // Now navigate to claim page — should work
-    await setupPage.goto(`/claim/${token}`);
-    // The heading shows "Stamp Collected!" for both first claim and already-scanned
-    await expect(setupPage.getByRole('heading', { name: /Stamp Collected/i })).toBeVisible({ timeout: 10_000 });
+    await userPage.goto(`/claim/${token}`);
+    await expect(userPage.getByRole('heading', { name: /Stamp Collected/i })).toBeVisible({ timeout: 10_000 });
 
     await adminPage.close();
-    await setupPage.close();
+    await userPage.close();
     await adminContext.close();
     await userContext.close();
   });
