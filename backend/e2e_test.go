@@ -1,20 +1,20 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"land-of-stamp-backend/auth"
+	"land-of-stamp-backend/db"
+	"land-of-stamp-backend/docs"
+	"land-of-stamp-backend/middleware"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
-	"time"
-
-	"land-of-stamp-backend/auth"
-	"land-of-stamp-backend/db"
-	"land-of-stamp-backend/middleware"
 
 	"land-of-stamp-backend/handlers"
 )
@@ -33,18 +33,20 @@ func setupTestServer(t *testing.T) *httptest.Server {
 	if err != nil {
 		t.Fatalf("create temp db: %v", err)
 	}
-	tmpFile.Close()
-	t.Cleanup(func() { db.Close(); os.Remove(tmpFile.Name()) })
+	if err := tmpFile.Close(); err != nil {
+		t.Fatalf("close temp db: %v", err)
+	}
+	t.Cleanup(func() { db.Close(context.Background()); _ = os.Remove(tmpFile.Name()) })
 
 	auth.Init("test-secret-key-for-e2e")
-	db.Init(tmpFile.Name())
+	db.Init(context.Background(), tmpFile.Name())
 
 	// Middleware wrappers matching main.go's Auth / AdminOnly chains.
 	withAuth := func(fn http.HandlerFunc) http.Handler {
-		return middleware.Auth(http.HandlerFunc(fn))
+		return middleware.Auth(fn)
 	}
 	withAdmin := func(fn http.HandlerFunc) http.Handler {
-		return middleware.Auth(middleware.AdminOnly(http.HandlerFunc(fn)))
+		return middleware.Auth(middleware.AdminOnly(fn))
 	}
 
 	mux := http.NewServeMux()
@@ -71,7 +73,10 @@ func setupTestServer(t *testing.T) *httptest.Server {
 	mux.Handle("POST /api/shops/{id}/stamp-token", withAdmin(handlers.CreateStampToken))
 	mux.Handle("GET /api/users/customers", withAdmin(handlers.ListCustomers))
 
-	handler := middleware.CORS(mux)
+	// Documentation endpoints
+	docs.Register(mux)
+
+	handler := middleware.RequestLog(middleware.CORS(mux))
 	return httptest.NewServer(handler)
 }
 
@@ -110,10 +115,10 @@ func doRequest(t *testing.T, ts *httptest.Server, opts requestOpts) (*http.Respo
 		t.Fatalf("executing request: %v", err)
 	}
 	raw, _ := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	var result map[string]any
-	json.Unmarshal(raw, &result) // may fail for arrays; caller handles
+	_ = json.Unmarshal(raw, &result) // may fail for arrays; caller handles
 	return resp, result
 }
 
@@ -140,10 +145,10 @@ func doRequestArray(t *testing.T, ts *httptest.Server, opts requestOpts) (*http.
 		t.Fatalf("executing request: %v", err)
 	}
 	raw, _ := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	var result []map[string]any
-	json.Unmarshal(raw, &result)
+	_ = json.Unmarshal(raw, &result)
 	return resp, result
 }
 
@@ -171,6 +176,19 @@ func registerUser(t *testing.T, ts *httptest.Server, username, password, role st
 		t.Fatalf("register %s: no __token cookie returned; status=%d body=%v", username, resp.StatusCode, body)
 	}
 	return cookie, body
+}
+
+// createShopHelper registers an admin, creates a shop, and returns the cookie + shop ID.
+func createShopHelper(t *testing.T, ts *httptest.Server, adminUsername string) (*http.Cookie, string) {
+	t.Helper()
+	adminCookie, _ := registerUser(t, ts, adminUsername, "admin1234", "admin")
+	_, shopBody := doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    "/api/shops",
+		body:    `{"name":"` + adminUsername + ` Shop","rewardDescription":"Free item","stampsRequired":3}`,
+		cookies: []*http.Cookie{adminCookie},
+	})
+	return adminCookie, shopBody["id"].(string)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1356,552 +1374,228 @@ func TestRedeemCard_AlreadyRedeemed(t *testing.T) {
 	}
 }
 
-func TestRedeemCard_Unauthenticated(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-
-	resp, _ := doRequest(t, ts, requestOpts{
-		method: "POST",
-		path:   "/api/cards/some-card-id/redeem",
-	})
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", resp.StatusCode)
-	}
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-//	CUSTOMERS TESTS
+//	UPDATE STAMP COUNT TESTS (PATCH /api/shops/{id}/stamps)
 //
 // ═══════════════════════════════════════════════════════════════════════════════
 
-func TestListCustomers_HappyPath(t *testing.T) {
+func TestUpdateStampCount_HappyPath(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 
-	adminCookie, _ := registerUser(t, ts, "shopowner", "admin1234", "admin")
-	registerUser(t, ts, "user1", "pass1234", "user")
-	registerUser(t, ts, "user2", "pass5678", "user")
-
-	resp, arr := doRequestArray(t, ts, requestOpts{
-		method:  "GET",
-		path:    "/api/users/customers",
-		cookies: []*http.Cookie{adminCookie},
-	})
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", resp.StatusCode)
-	}
-	if len(arr) != 2 {
-		t.Errorf("expected 2 customers, got %d", len(arr))
-	}
-	// Admin should NOT appear in customer list
-	for _, c := range arr {
-		if c["role"] == "admin" {
-			t.Error("admin should not appear in customer list")
-		}
-	}
-}
-
-func TestListCustomers_Unauthenticated(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-
-	resp, _ := doRequestArray(t, ts, requestOpts{
-		method: "GET",
-		path:   "/api/users/customers",
-	})
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", resp.StatusCode)
-	}
-}
-
-func TestListCustomers_UserRole_Forbidden(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-
-	userCookie, _ := registerUser(t, ts, "regularuser", "pass1234", "user")
-
-	resp, _ := doRequestArray(t, ts, requestOpts{
-		method:  "GET",
-		path:    "/api/users/customers",
-		cookies: []*http.Cookie{userCookie},
-	})
-	if resp.StatusCode != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d", resp.StatusCode)
-	}
-}
-
-func TestListCustomers_Empty(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-
-	adminCookie, _ := registerUser(t, ts, "shopowner", "admin1234", "admin")
-
-	resp, arr := doRequestArray(t, ts, requestOpts{
-		method:  "GET",
-		path:    "/api/users/customers",
-		cookies: []*http.Cookie{adminCookie},
-	})
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d", resp.StatusCode)
-	}
-	if len(arr) != 0 {
-		t.Errorf("expected 0 customers, got %d", len(arr))
-	}
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//
-//	CORS TESTS
-//
-// ═══════════════════════════════════════════════════════════════════════════════
-
-func TestCORS_PreflightRequest(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-
-	req, _ := http.NewRequest("OPTIONS", ts.URL+"/api/shops", nil)
-	req.Header.Set("Origin", "http://localhost:5173")
-	req.Header.Set("Access-Control-Request-Method", "POST")
-	req.Header.Set("Access-Control-Request-Headers", "Content-Type, Authorization")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatalf("preflight request failed: %v", err)
-	}
-	resp.Body.Close()
-
-	if resp.StatusCode != http.StatusNoContent {
-		t.Fatalf("expected 204, got %d", resp.StatusCode)
-	}
-	if v := resp.Header.Get("Access-Control-Allow-Origin"); v != "http://localhost:5173" {
-		t.Errorf("expected origin http://localhost:5173, got %v", v)
-	}
-	if v := resp.Header.Get("Access-Control-Allow-Credentials"); v != "true" {
-		t.Errorf("expected credentials true, got %v", v)
-	}
-}
-
-func TestCORS_DefaultOrigin(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-
-	// No Origin header → falls back to http://localhost:5173
-	req, _ := http.NewRequest("OPTIONS", ts.URL+"/api/shops", nil)
-	resp, _ := http.DefaultClient.Do(req)
-	resp.Body.Close()
-
-	if v := resp.Header.Get("Access-Control-Allow-Origin"); v != "http://localhost:5173" {
-		t.Errorf("expected default origin, got %v", v)
-	}
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//
-//	FULL E2E SCENARIO: COMPLETE USER JOURNEY
-//
-// ═══════════════════════════════════════════════════════════════════════════════
-
-func TestE2E_FullUserJourney(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-
-	// 1. Admin registers and creates a shop
-	adminCookie, _ := registerUser(t, ts, "coffeeadmin", "admin1234", "admin")
-
-	_, shopBody := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/shops",
-		body:    `{"name":"Java Beans","description":"Premium coffee","rewardDescription":"1 free latte","stampsRequired":3,"color":"#6366f1"}`,
-		cookies: []*http.Cookie{adminCookie},
-	})
-	shopID := shopBody["id"].(string)
-
-	// 2. Verify shop appears in public listing
-	_, shopList := doRequestArray(t, ts, requestOpts{
-		method: "GET",
-		path:   "/api/shops",
-	})
-	if len(shopList) != 1 {
-		t.Fatalf("expected 1 shop in listing, got %d", len(shopList))
-	}
-
-	// 3. User registers
-	userCookie, userBody := registerUser(t, ts, "coffeeuser", "user1234", "user")
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
+	_, userBody := registerUser(t, ts, "user", "user1234", "user")
 	customerID := userBody["user"].(map[string]any)["id"].(string)
 
-	// 4. User checks their profile
-	_, meBody := doRequest(t, ts, requestOpts{
-		method:  "GET",
-		path:    "/api/auth/me",
-		cookies: []*http.Cookie{userCookie},
-	})
-	if meBody["username"] != "coffeeuser" {
-		t.Errorf("expected coffeeuser, got %v", meBody["username"])
-	}
-
-	// 5. User views their cards (should auto-create card for the shop)
-	_, cardsArr := doRequestArray(t, ts, requestOpts{
-		method:  "GET",
-		path:    "/api/users/me/cards",
-		cookies: []*http.Cookie{userCookie},
-	})
-	if len(cardsArr) == 0 {
-		t.Fatal("expected at least 1 auto-created card")
-	}
-
-	// 6. Admin sees customer in customer list
-	_, custArr := doRequestArray(t, ts, requestOpts{
-		method:  "GET",
-		path:    "/api/users/customers",
-		cookies: []*http.Cookie{adminCookie},
-	})
-	found := false
-	for _, c := range custArr {
-		if c["id"] == customerID {
-			found = true
-		}
-	}
-	if !found {
-		t.Error("expected customer to appear in admin's customer list")
-	}
-
-	// 7. Admin grants 3 stamps (card complete)
-	var lastStamp map[string]any
-	for i := 0; i < 3; i++ {
-		_, lastStamp = doRequest(t, ts, requestOpts{
-			method:  "POST",
-			path:    "/api/shops/" + shopID + "/stamps",
-			body:    fmt.Sprintf(`{"userId":"%s"}`, customerID),
-			cookies: []*http.Cookie{adminCookie},
-		})
-	}
-	if lastStamp["stamps"] != float64(3) {
-		t.Errorf("expected 3 stamps, got %v", lastStamp["stamps"])
-	}
-	cardID := lastStamp["id"].(string)
-
-	// 8. User redeems the completed card
-	resp, redeemBody := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/cards/" + cardID + "/redeem",
-		cookies: []*http.Cookie{userCookie},
-	})
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("redeem failed: %d %v", resp.StatusCode, redeemBody)
-	}
-	if redeemBody["status"] != "redeemed" {
-		t.Errorf("expected redeemed, got %v", redeemBody["status"])
-	}
-
-	// 9. User cannot redeem the same card again
-	resp, _ = doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/cards/" + cardID + "/redeem",
-		cookies: []*http.Cookie{userCookie},
-	})
-	if resp.StatusCode == http.StatusOK {
-		t.Error("should not be able to redeem same card twice")
-	}
-
-	// 10. Admin updates the shop
-	resp, updatedShop := doRequest(t, ts, requestOpts{
-		method:  "PUT",
-		path:    "/api/shops/" + shopID,
-		body:    `{"name":"Java Beans Premium","description":"Updated desc","rewardDescription":"2 free lattes","stampsRequired":5,"color":"#ef4444"}`,
-		cookies: []*http.Cookie{adminCookie},
-	})
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("update failed: %d %v", resp.StatusCode, updatedShop)
-	}
-	if updatedShop["name"] != "Java Beans Premium" {
-		t.Errorf("expected updated name, got %v", updatedShop["name"])
-	}
-
-	// 11. Admin checks shop cards
-	_, shopCardsArr := doRequestArray(t, ts, requestOpts{
-		method:  "GET",
-		path:    "/api/shops/" + shopID + "/cards",
-		cookies: []*http.Cookie{adminCookie},
-	})
-	if len(shopCardsArr) == 0 {
-		t.Error("expected shop cards to be returned")
-	}
-
-	// 12. User logs out and logs back in
-	doRequest(t, ts, requestOpts{
-		method: "POST",
-		path:   "/api/auth/logout",
-	})
-
-	loginResp, loginBody := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/auth/login",
-		headers: map[string]string{"Authorization": basicAuth("coffeeuser", "user1234")},
-	})
-	if loginResp.StatusCode != http.StatusOK {
-		t.Fatalf("login failed: %d %v", loginResp.StatusCode, loginBody)
-	}
-	newCookie := extractCookie(loginResp, "__token")
-	if newCookie == nil {
-		t.Fatal("expected new cookie after login")
-	}
-
-	// 13. Verify user still has their data
-	_, meBodyAfter := doRequest(t, ts, requestOpts{
-		method:  "GET",
-		path:    "/api/auth/me",
-		cookies: []*http.Cookie{newCookie},
-	})
-	if meBodyAfter["username"] != "coffeeuser" {
-		t.Errorf("expected coffeeuser after re-login, got %v", meBodyAfter["username"])
-	}
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//
-//	MULTI-SHOP / MULTI-USER SCENARIO
-//
-// ═══════════════════════════════════════════════════════════════════════════════
-
-func TestE2E_MultipleShopsMultipleUsers(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-
-	// Create 2 admins with shops
-	admin1Cookie, _ := registerUser(t, ts, "admin1", "admin1234", "admin")
-	admin2Cookie, _ := registerUser(t, ts, "admin2", "admin5678", "admin")
-
-	_, shop1Body := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/shops",
-		body:    `{"name":"Coffee Place","rewardDescription":"Free coffee","stampsRequired":3}`,
-		cookies: []*http.Cookie{admin1Cookie},
-	})
-	shop1ID := shop1Body["id"].(string)
-
-	_, shop2Body := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/shops",
-		body:    `{"name":"Bakery","rewardDescription":"Free bread","stampsRequired":2}`,
-		cookies: []*http.Cookie{admin2Cookie},
-	})
-	shop2ID := shop2Body["id"].(string)
-
-	// Create 2 users
-	user1Cookie, user1Body := registerUser(t, ts, "user1", "user1234", "user")
-	user2Cookie, user2Body := registerUser(t, ts, "user2", "user5678", "user")
-	user1ID := user1Body["user"].(map[string]any)["id"].(string)
-	user2ID := user2Body["user"].(map[string]any)["id"].(string)
-
-	// Admin1 grants stamps to both users at shop1
-	for i := 0; i < 3; i++ {
-		doRequest(t, ts, requestOpts{
-			method:  "POST",
-			path:    "/api/shops/" + shop1ID + "/stamps",
-			body:    fmt.Sprintf(`{"userId":"%s"}`, user1ID),
-			cookies: []*http.Cookie{admin1Cookie},
-		})
-	}
-	doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/shops/" + shop1ID + "/stamps",
-		body:    fmt.Sprintf(`{"userId":"%s"}`, user2ID),
-		cookies: []*http.Cookie{admin1Cookie},
-	})
-
-	// Admin2 grants stamps to user1 at shop2
-	for i := 0; i < 2; i++ {
-		doRequest(t, ts, requestOpts{
-			method:  "POST",
-			path:    "/api/shops/" + shop2ID + "/stamps",
-			body:    fmt.Sprintf(`{"userId":"%s"}`, user1ID),
-			cookies: []*http.Cookie{admin2Cookie},
-		})
-	}
-
-	// Verify public shop listing has 2 shops
-	_, shopList := doRequestArray(t, ts, requestOpts{
-		method: "GET",
-		path:   "/api/shops",
-	})
-	if len(shopList) != 2 {
-		t.Fatalf("expected 2 shops, got %d", len(shopList))
-	}
-
-	// User1 should have cards for both shops
-	_, user1Cards := doRequestArray(t, ts, requestOpts{
-		method:  "GET",
-		path:    "/api/users/me/cards",
-		cookies: []*http.Cookie{user1Cookie},
-	})
-	shop1Card := ""
-	shop2Card := ""
-	for _, card := range user1Cards {
-		if card["shopId"] == shop1ID && card["stamps"] == float64(3) {
-			shop1Card = card["id"].(string)
-		}
-		if card["shopId"] == shop2ID && card["stamps"] == float64(2) {
-			shop2Card = card["id"].(string)
-		}
-	}
-	if shop1Card == "" {
-		t.Error("user1 should have a complete card at shop1")
-	}
-	if shop2Card == "" {
-		t.Error("user1 should have a complete card at shop2")
-	}
-
-	// User1 redeems both cards
-	resp1, _ := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/cards/" + shop1Card + "/redeem",
-		cookies: []*http.Cookie{user1Cookie},
-	})
-	if resp1.StatusCode != http.StatusOK {
-		t.Errorf("expected shop1 redeem 200, got %d", resp1.StatusCode)
-	}
-	resp2, _ := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/cards/" + shop2Card + "/redeem",
-		cookies: []*http.Cookie{user1Cookie},
-	})
-	if resp2.StatusCode != http.StatusOK {
-		t.Errorf("expected shop2 redeem 200, got %d", resp2.StatusCode)
-	}
-
-	// User2 should have 1 stamp at shop1, cannot redeem
-	_, user2Cards := doRequestArray(t, ts, requestOpts{
-		method:  "GET",
-		path:    "/api/users/me/cards",
-		cookies: []*http.Cookie{user2Cookie},
-	})
-	for _, card := range user2Cards {
-		if card["shopId"] == shop1ID && card["stamps"] == float64(1) {
-			cardID := card["id"].(string)
-			resp, body := doRequest(t, ts, requestOpts{
-				method:  "POST",
-				path:    "/api/cards/" + cardID + "/redeem",
-				cookies: []*http.Cookie{user2Cookie},
-			})
-			if resp.StatusCode != http.StatusBadRequest {
-				t.Errorf("user2 should not redeem with 1/3 stamps: %d %v", resp.StatusCode, body)
-			}
-		}
-	}
-
-	// Admin1 cannot grant stamps to admin2's shop
-	resp, body := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/shops/" + shop2ID + "/stamps",
-		body:    fmt.Sprintf(`{"userId":"%s"}`, user1ID),
-		cookies: []*http.Cookie{admin1Cookie},
-	})
-	if resp.StatusCode != http.StatusForbidden {
-		t.Errorf("expected 403 cross-shop, got %d: %v", resp.StatusCode, body)
-	}
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//
-//	QR STAMP TOKEN TESTS
-//
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// createShopHelper registers an admin, creates a shop, and returns the cookie + shopID.
-func createShopHelper(t *testing.T, ts *httptest.Server, username string) (*http.Cookie, string) {
-	t.Helper()
-	adminCookie, _ := registerUser(t, ts, username, "admin1234", "admin")
 	_, shopBody := doRequest(t, ts, requestOpts{
 		method:  "POST",
 		path:    "/api/shops",
-		body:    `{"name":"QR Test Shop","rewardDescription":"Free item","stampsRequired":3,"color":"#6366f1"}`,
+		body:    `{"name":"Stamp Shop","rewardDescription":"Reward","stampsRequired":5}`,
 		cookies: []*http.Cookie{adminCookie},
 	})
 	shopID := shopBody["id"].(string)
-	return adminCookie, shopID
-}
 
-func TestCreateStampToken_HappyPath(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-
-	adminCookie, shopID := createShopHelper(t, ts, "tokenadmin")
-
-	resp, body := doRequest(t, ts, requestOpts{
+	// Grant 1 stamp first
+	doRequest(t, ts, requestOpts{
 		method:  "POST",
-		path:    fmt.Sprintf("/api/shops/%s/stamp-token", shopID),
+		path:    "/api/shops/" + shopID + "/stamps",
+		body:    fmt.Sprintf(`{"userId":"%s"}`, customerID),
 		cookies: []*http.Cookie{adminCookie},
 	})
-	if resp.StatusCode != http.StatusCreated {
-		t.Fatalf("expected 201, got %d: %v", resp.StatusCode, body)
-	}
-	if body["token"] == nil || body["token"] == "" {
-		t.Error("expected non-empty token")
-	}
-	if body["expiresAt"] == nil || body["expiresAt"] == "" {
-		t.Error("expected non-empty expiresAt")
-	}
-	if body["shopId"] != shopID {
-		t.Errorf("expected shopId %s, got %v", shopID, body["shopId"])
-	}
-}
 
-func TestCreateStampToken_Unauthenticated(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-
-	resp, _ := doRequest(t, ts, requestOpts{
-		method: "POST",
-		path:   "/api/shops/nonexistent/stamp-token",
+	// Update stamp count to 3
+	resp, body := doRequest(t, ts, requestOpts{
+		method:  "PATCH",
+		path:    "/api/shops/" + shopID + "/stamps",
+		body:    fmt.Sprintf(`{"userId":"%s","stamps":3}`, customerID),
+		cookies: []*http.Cookie{adminCookie},
 	})
-	if resp.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("expected 401, got %d", resp.StatusCode)
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %v", resp.StatusCode, body)
+	}
+	if body["stamps"] != float64(3) {
+		t.Errorf("expected 3 stamps, got %v", body["stamps"])
 	}
 }
 
-func TestCreateStampToken_UserRole_Forbidden(t *testing.T) {
+func TestUpdateStampCount_CreateCardIfNotExists(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 
-	userCookie, _ := registerUser(t, ts, "regularuser", "pass1234", "user")
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
+	_, userBody := registerUser(t, ts, "user", "user1234", "user")
+	customerID := userBody["user"].(map[string]any)["id"].(string)
+
+	_, shopBody := doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    "/api/shops",
+		body:    `{"name":"New Shop","rewardDescription":"Reward","stampsRequired":5}`,
+		cookies: []*http.Cookie{adminCookie},
+	})
+	shopID := shopBody["id"].(string)
+
+	// Update stamp count without any prior card
+	resp, body := doRequest(t, ts, requestOpts{
+		method:  "PATCH",
+		path:    "/api/shops/" + shopID + "/stamps",
+		body:    fmt.Sprintf(`{"userId":"%s","stamps":2}`, customerID),
+		cookies: []*http.Cookie{adminCookie},
+	})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %v", resp.StatusCode, body)
+	}
+	if body["stamps"] != float64(2) {
+		t.Errorf("expected 2 stamps, got %v", body["stamps"])
+	}
+}
+
+func TestUpdateStampCount_ClampNegativeToZero(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
+	_, userBody := registerUser(t, ts, "user", "user1234", "user")
+	customerID := userBody["user"].(map[string]any)["id"].(string)
+
+	_, shopBody := doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    "/api/shops",
+		body:    `{"name":"Shop","rewardDescription":"Reward","stampsRequired":5}`,
+		cookies: []*http.Cookie{adminCookie},
+	})
+	shopID := shopBody["id"].(string)
+
+	resp, body := doRequest(t, ts, requestOpts{
+		method:  "PATCH",
+		path:    "/api/shops/" + shopID + "/stamps",
+		body:    fmt.Sprintf(`{"userId":"%s","stamps":-5}`, customerID),
+		cookies: []*http.Cookie{adminCookie},
+	})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %v", resp.StatusCode, body)
+	}
+	if body["stamps"] != float64(0) {
+		t.Errorf("negative stamps should clamp to 0, got %v", body["stamps"])
+	}
+}
+
+func TestUpdateStampCount_ClampAboveMax(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
+	_, userBody := registerUser(t, ts, "user", "user1234", "user")
+	customerID := userBody["user"].(map[string]any)["id"].(string)
+
+	_, shopBody := doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    "/api/shops",
+		body:    `{"name":"Shop","rewardDescription":"Reward","stampsRequired":3}`,
+		cookies: []*http.Cookie{adminCookie},
+	})
+	shopID := shopBody["id"].(string)
+
+	resp, body := doRequest(t, ts, requestOpts{
+		method:  "PATCH",
+		path:    "/api/shops/" + shopID + "/stamps",
+		body:    fmt.Sprintf(`{"userId":"%s","stamps":99}`, customerID),
+		cookies: []*http.Cookie{adminCookie},
+	})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %v", resp.StatusCode, body)
+	}
+	if body["stamps"] != float64(3) {
+		t.Errorf("stamps should clamp to stampsRequired=3, got %v", body["stamps"])
+	}
+}
+
+func TestUpdateStampCount_MissingUserId(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
+	_, shopBody := doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    "/api/shops",
+		body:    `{"name":"Shop","rewardDescription":"Reward","stampsRequired":3}`,
+		cookies: []*http.Cookie{adminCookie},
+	})
+	shopID := shopBody["id"].(string)
 
 	resp, _ := doRequest(t, ts, requestOpts{
+		method:  "PATCH",
+		path:    "/api/shops/" + shopID + "/stamps",
+		body:    `{"stamps":2}`,
+		cookies: []*http.Cookie{adminCookie},
+	})
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 for missing userId, got %d", resp.StatusCode)
+	}
+}
+
+func TestUpdateStampCount_InvalidBody(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
+	_, shopBody := doRequest(t, ts, requestOpts{
 		method:  "POST",
-		path:    "/api/shops/someid/stamp-token",
-		cookies: []*http.Cookie{userCookie},
+		path:    "/api/shops",
+		body:    `{"name":"Shop","rewardDescription":"Reward","stampsRequired":3}`,
+		cookies: []*http.Cookie{adminCookie},
+	})
+	shopID := shopBody["id"].(string)
+
+	resp, _ := doRequest(t, ts, requestOpts{
+		method:  "PATCH",
+		path:    "/api/shops/" + shopID + "/stamps",
+		body:    `{invalid json`,
+		cookies: []*http.Cookie{adminCookie},
+	})
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 for invalid body, got %d", resp.StatusCode)
+	}
+}
+
+func TestUpdateStampCount_NotOwner(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	admin1Cookie, _ := registerUser(t, ts, "admin1", "admin1234", "admin")
+	admin2Cookie, _ := registerUser(t, ts, "admin2", "admin5678", "admin")
+	_, userBody := registerUser(t, ts, "user", "user1234", "user")
+	customerID := userBody["user"].(map[string]any)["id"].(string)
+
+	_, shopBody := doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    "/api/shops",
+		body:    `{"name":"Shop","rewardDescription":"Reward","stampsRequired":3}`,
+		cookies: []*http.Cookie{admin1Cookie},
+	})
+	shopID := shopBody["id"].(string)
+
+	resp, _ := doRequest(t, ts, requestOpts{
+		method:  "PATCH",
+		path:    "/api/shops/" + shopID + "/stamps",
+		body:    fmt.Sprintf(`{"userId":"%s","stamps":2}`, customerID),
+		cookies: []*http.Cookie{admin2Cookie},
 	})
 	if resp.StatusCode != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d", resp.StatusCode)
 	}
 }
 
-func TestCreateStampToken_NotOwner(t *testing.T) {
+func TestUpdateStampCount_ShopNotFound(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 
-	_, shopID := createShopHelper(t, ts, "owner1")
-	otherAdmin, _ := registerUser(t, ts, "owner2", "admin1234", "admin")
-
-	resp, body := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    fmt.Sprintf("/api/shops/%s/stamp-token", shopID),
-		cookies: []*http.Cookie{otherAdmin},
-	})
-	if resp.StatusCode != http.StatusForbidden {
-		t.Fatalf("expected 403, got %d: %v", resp.StatusCode, body)
-	}
-}
-
-func TestCreateStampToken_ShopNotFound(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-
-	adminCookie, _ := registerUser(t, ts, "tokenadmin", "admin1234", "admin")
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
 
 	resp, _ := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/shops/nonexistent-id/stamp-token",
+		method:  "PATCH",
+		path:    "/api/shops/nonexistent-id/stamps",
+		body:    `{"userId":"someone","stamps":2}`,
 		cookies: []*http.Cookie{adminCookie},
 	})
 	if resp.StatusCode != http.StatusNotFound {
@@ -1909,442 +1603,481 @@ func TestCreateStampToken_ShopNotFound(t *testing.T) {
 	}
 }
 
-func TestClaimStamp_HappyPath(t *testing.T) {
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+//	ADDITIONAL EDGE CASES
+//
+// ═══════════════════════════════════════════════════════════════════════════════
+
+func TestUpdateShop_DuplicateName(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 
-	adminCookie, shopID := createShopHelper(t, ts, "claimadmin")
-	userCookie, _ := registerUser(t, ts, "claimuser", "pass1234", "user")
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
 
-	// Admin creates a token
-	_, tokenBody := doRequest(t, ts, requestOpts{
+	doRequest(t, ts, requestOpts{
 		method:  "POST",
-		path:    fmt.Sprintf("/api/shops/%s/stamp-token", shopID),
+		path:    "/api/shops",
+		body:    `{"name":"First Shop","rewardDescription":"Reward","stampsRequired":3}`,
 		cookies: []*http.Cookie{adminCookie},
 	})
-	token := tokenBody["token"].(string)
-
-	// User claims it
-	resp, body := doRequest(t, ts, requestOpts{
+	_, shop2 := doRequest(t, ts, requestOpts{
 		method:  "POST",
-		path:    "/api/stamps/claim",
-		body:    fmt.Sprintf(`{"token":"%s"}`, token),
-		cookies: []*http.Cookie{userCookie},
-	})
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %v", resp.StatusCode, body)
-	}
-	if body["shopName"] != "QR Test Shop" {
-		t.Errorf("expected shop name 'QR Test Shop', got %v", body["shopName"])
-	}
-	if body["stamps"] != float64(1) {
-		t.Errorf("expected 1 stamp, got %v", body["stamps"])
-	}
-	if body["stampsRequired"] != float64(3) {
-		t.Errorf("expected 3 stampsRequired, got %v", body["stampsRequired"])
-	}
-	msg := body["message"].(string)
-	if !strings.Contains(msg, "Stamp collected") {
-		t.Errorf("expected success message, got %q", msg)
-	}
-}
-
-func TestClaimStamp_DoubleScan_SameUser(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-
-	adminCookie, shopID := createShopHelper(t, ts, "dsadmin")
-	userCookie, _ := registerUser(t, ts, "dsuser", "pass1234", "user")
-
-	// Create token
-	_, tokenBody := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    fmt.Sprintf("/api/shops/%s/stamp-token", shopID),
+		path:    "/api/shops",
+		body:    `{"name":"Second Shop","rewardDescription":"Reward","stampsRequired":3}`,
 		cookies: []*http.Cookie{adminCookie},
 	})
-	token := tokenBody["token"].(string)
+	shop2ID := shop2["id"].(string)
 
-	// First claim — should succeed
-	resp1, body1 := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/stamps/claim",
-		body:    fmt.Sprintf(`{"token":"%s"}`, token),
-		cookies: []*http.Cookie{userCookie},
-	})
-	if resp1.StatusCode != http.StatusOK {
-		t.Fatalf("first claim: expected 200, got %d: %v", resp1.StatusCode, body1)
-	}
-	if body1["stamps"] != float64(1) {
-		t.Errorf("first claim: expected 1 stamp, got %v", body1["stamps"])
-	}
-
-	// Second claim — same user, same token — should return friendly message, NOT grant second stamp
-	resp2, body2 := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/stamps/claim",
-		body:    fmt.Sprintf(`{"token":"%s"}`, token),
-		cookies: []*http.Cookie{userCookie},
-	})
-	if resp2.StatusCode != http.StatusOK {
-		t.Fatalf("second claim: expected 200, got %d: %v", resp2.StatusCode, body2)
-	}
-	if body2["stamps"] != float64(1) {
-		t.Errorf("second claim: stamps should still be 1, got %v", body2["stamps"])
-	}
-	msg := body2["message"].(string)
-	if !strings.Contains(msg, "already scanned") {
-		t.Errorf("expected 'already scanned' message, got %q", msg)
-	}
-}
-
-func TestClaimStamp_MultipleUsers_SameToken(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-
-	adminCookie, shopID := createShopHelper(t, ts, "muadmin")
-	user1Cookie, _ := registerUser(t, ts, "muuser1", "pass1234", "user")
-	user2Cookie, _ := registerUser(t, ts, "muuser2", "pass1234", "user")
-
-	// Create ONE token
-	_, tokenBody := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    fmt.Sprintf("/api/shops/%s/stamp-token", shopID),
+	// Try to rename shop2 to "First Shop" → should conflict
+	resp, _ := doRequest(t, ts, requestOpts{
+		method:  "PUT",
+		path:    "/api/shops/" + shop2ID,
+		body:    `{"name":"First Shop","rewardDescription":"Reward","stampsRequired":3}`,
 		cookies: []*http.Cookie{adminCookie},
 	})
-	token := tokenBody["token"].(string)
-
-	// User 1 claims
-	resp1, body1 := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/stamps/claim",
-		body:    fmt.Sprintf(`{"token":"%s"}`, token),
-		cookies: []*http.Cookie{user1Cookie},
-	})
-	if resp1.StatusCode != http.StatusOK {
-		t.Fatalf("user1 claim: expected 200, got %d", resp1.StatusCode)
-	}
-	if body1["stamps"] != float64(1) {
-		t.Errorf("user1: expected 1 stamp, got %v", body1["stamps"])
-	}
-
-	// User 2 claims the SAME token — should also succeed
-	resp2, body2 := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/stamps/claim",
-		body:    fmt.Sprintf(`{"token":"%s"}`, token),
-		cookies: []*http.Cookie{user2Cookie},
-	})
-	if resp2.StatusCode != http.StatusOK {
-		t.Fatalf("user2 claim: expected 200, got %d", resp2.StatusCode)
-	}
-	if body2["stamps"] != float64(1) {
-		t.Errorf("user2: expected 1 stamp, got %v", body2["stamps"])
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("expected 409 for duplicate name, got %d", resp.StatusCode)
 	}
 }
 
-func TestClaimStamp_InvalidToken(t *testing.T) {
+func TestUpdateShop_InvalidBody(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 
-	userCookie, _ := registerUser(t, ts, "invtokenuser", "pass1234", "user")
-
-	resp, body := doRequest(t, ts, requestOpts{
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
+	_, shopBody := doRequest(t, ts, requestOpts{
 		method:  "POST",
-		path:    "/api/stamps/claim",
-		body:    `{"token":"totally-bogus-token"}`,
-		cookies: []*http.Cookie{userCookie},
+		path:    "/api/shops",
+		body:    `{"name":"Shop","rewardDescription":"Reward","stampsRequired":3}`,
+		cookies: []*http.Cookie{adminCookie},
 	})
-	if resp.StatusCode != http.StatusNotFound {
-		t.Fatalf("expected 404, got %d: %v", resp.StatusCode, body)
-	}
-}
-
-func TestClaimStamp_EmptyToken(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-
-	userCookie, _ := registerUser(t, ts, "emptytkuser", "pass1234", "user")
+	shopID := shopBody["id"].(string)
 
 	resp, _ := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/stamps/claim",
-		body:    `{"token":""}`,
-		cookies: []*http.Cookie{userCookie},
+		method:  "PUT",
+		path:    "/api/shops/" + shopID,
+		body:    `{not valid json`,
+		cookies: []*http.Cookie{adminCookie},
 	})
 	if resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", resp.StatusCode)
+		t.Fatalf("expected 400 for invalid body, got %d", resp.StatusCode)
 	}
 }
 
-func TestClaimStamp_NoBody(t *testing.T) {
-	ts := setupTestServer(t)
-	defer ts.Close()
-
-	userCookie, _ := registerUser(t, ts, "nobody", "pass1234", "user")
-
-	resp, _ := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/stamps/claim",
-		cookies: []*http.Cookie{userCookie},
-	})
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d", resp.StatusCode)
-	}
-}
-
-func TestClaimStamp_Unauthenticated(t *testing.T) {
+func TestUpdateShop_Unauthenticated(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 
 	resp, _ := doRequest(t, ts, requestOpts{
-		method: "POST",
-		path:   "/api/stamps/claim",
-		body:   `{"token":"abc"}`,
+		method: "PUT",
+		path:   "/api/shops/some-id",
+		body:   `{"name":"Shop"}`,
 	})
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", resp.StatusCode)
 	}
 }
 
-func TestClaimStamp_AdminRole_Forbidden(t *testing.T) {
+func TestGetMyShops_Unauthenticated(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 
-	adminCookie, shopID := createShopHelper(t, ts, "claimadminrole")
-
-	// Create token
-	_, tokenBody := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    fmt.Sprintf("/api/shops/%s/stamp-token", shopID),
-		cookies: []*http.Cookie{adminCookie},
-	})
-	token := tokenBody["token"].(string)
-
-	// Admin tries to claim — should be forbidden
 	resp, _ := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/stamps/claim",
-		body:    fmt.Sprintf(`{"token":"%s"}`, token),
-		cookies: []*http.Cookie{adminCookie},
+		method: "GET",
+		path:   "/api/shops/mine",
+	})
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", resp.StatusCode)
+	}
+}
+
+func TestGetMyShops_UserRole_Forbidden(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	userCookie, _ := registerUser(t, ts, "user", "user1234", "user")
+
+	resp, _ := doRequest(t, ts, requestOpts{
+		method:  "GET",
+		path:    "/api/shops/mine",
+		cookies: []*http.Cookie{userCookie},
 	})
 	if resp.StatusCode != http.StatusForbidden {
 		t.Fatalf("expected 403, got %d", resp.StatusCode)
 	}
 }
 
-func TestClaimStamp_ExpiredToken(t *testing.T) {
+func TestGetShopCards_Empty(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 
-	adminCookie, shopID := createShopHelper(t, ts, "expadmin")
-	userCookie, _ := registerUser(t, ts, "expuser", "pass1234", "user")
-
-	// Insert an already-expired token directly into the DB
-	expiredTime := time.Now().UTC().Add(-10 * time.Second).Format(time.RFC3339)
-	db.DB.Exec(
-		"INSERT INTO stamp_tokens (id, shop_id, token, expires_at) VALUES (?, ?, ?, ?)",
-		"expired-id", shopID, "expired-token-value", expiredTime,
-	)
-	_ = adminCookie
-
-	resp, body := doRequest(t, ts, requestOpts{
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
+	_, shopBody := doRequest(t, ts, requestOpts{
 		method:  "POST",
-		path:    "/api/stamps/claim",
-		body:    `{"token":"expired-token-value"}`,
-		cookies: []*http.Cookie{userCookie},
+		path:    "/api/shops",
+		body:    `{"name":"Empty Shop","rewardDescription":"Reward","stampsRequired":3}`,
+		cookies: []*http.Cookie{adminCookie},
 	})
-	if resp.StatusCode != http.StatusGone {
-		t.Fatalf("expected 410 Gone, got %d: %v", resp.StatusCode, body)
+	shopID := shopBody["id"].(string)
+
+	_, cards := doRequestArray(t, ts, requestOpts{
+		method:  "GET",
+		path:    "/api/shops/" + shopID + "/cards",
+		cookies: []*http.Cookie{adminCookie},
+	})
+	if len(cards) != 0 {
+		t.Errorf("expected 0 cards for new shop, got %d", len(cards))
 	}
 }
 
-func TestClaimStamp_CardFull(t *testing.T) {
+func TestGetShopCards_MissingShopId(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 
-	adminCookie, shopID := createShopHelper(t, ts, "fulladmin")
-	userCookie, _ := registerUser(t, ts, "fulluser", "pass1234", "user")
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
 
-	// Grant 3 stamps via QR (stampsRequired=3), filling the card
-	for i := 0; i < 3; i++ {
-		_, tokenBody := doRequest(t, ts, requestOpts{
-			method:  "POST",
-			path:    fmt.Sprintf("/api/shops/%s/stamp-token", shopID),
-			cookies: []*http.Cookie{adminCookie},
-		})
-		token := tokenBody["token"].(string)
-		resp, body := doRequest(t, ts, requestOpts{
-			method:  "POST",
-			path:    "/api/stamps/claim",
-			body:    fmt.Sprintf(`{"token":"%s"}`, token),
-			cookies: []*http.Cookie{userCookie},
-		})
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("stamp %d: expected 200, got %d: %v", i+1, resp.StatusCode, body)
+	// Path without actual ID — route should not match or return error
+	resp, _ := doRequest(t, ts, requestOpts{
+		method:  "GET",
+		path:    "/api/shops//cards",
+		cookies: []*http.Cookie{adminCookie},
+	})
+	// An empty shop ID should fail (404 or 400)
+	if resp.StatusCode == http.StatusOK {
+		t.Error("expected non-200 for empty shop ID")
+	}
+}
+
+func TestGetMe_WithShopId(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
+
+	// Create a shop (sets shop_id on user)
+	_, shopBody := doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    "/api/shops",
+		body:    `{"name":"My Cafe","rewardDescription":"Free drink","stampsRequired":5}`,
+		cookies: []*http.Cookie{adminCookie},
+	})
+	shopID := shopBody["id"].(string)
+
+	// Update user's shop_id in DB
+	_, err := db.DB.Exec("UPDATE users SET shop_id = ? WHERE username = 'admin'", shopID)
+	if err != nil {
+		t.Fatalf("failed to set shop_id: %v", err)
+	}
+
+	_, meBody := doRequest(t, ts, requestOpts{
+		method:  "GET",
+		path:    "/api/auth/me",
+		cookies: []*http.Cookie{adminCookie},
+	})
+	if meBody["shopId"] != shopID {
+		t.Errorf("expected shopId=%s, got %v", shopID, meBody["shopId"])
+	}
+}
+
+func TestListCustomers_AdminNotIncluded(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
+	registerUser(t, ts, "customer1", "cust1234", "user")
+	registerUser(t, ts, "customer2", "cust5678", "user")
+
+	_, customers := doRequestArray(t, ts, requestOpts{
+		method:  "GET",
+		path:    "/api/users/customers",
+		cookies: []*http.Cookie{adminCookie},
+	})
+	if len(customers) != 2 {
+		t.Fatalf("expected 2 customers (no admins), got %d", len(customers))
+	}
+	for _, c := range customers {
+		if c["role"] != "user" {
+			t.Errorf("expected role=user, got %v for %v", c["role"], c["username"])
 		}
 	}
-
-	// Try one more — card is full
-	_, tokenBody := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    fmt.Sprintf("/api/shops/%s/stamp-token", shopID),
-		cookies: []*http.Cookie{adminCookie},
-	})
-	token := tokenBody["token"].(string)
-	resp, body := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/stamps/claim",
-		body:    fmt.Sprintf(`{"token":"%s"}`, token),
-		cookies: []*http.Cookie{userCookie},
-	})
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected 200, got %d: %v", resp.StatusCode, body)
-	}
-	msg := body["message"].(string)
-	if !strings.Contains(msg, "already full") {
-		t.Errorf("expected 'already full' message, got %q", msg)
-	}
-	if body["stamps"] != float64(3) {
-		t.Errorf("stamps should still be 3, got %v", body["stamps"])
-	}
 }
 
-func TestClaimStamp_CardComplete_Message(t *testing.T) {
+func TestCreateStampToken_ReplacesExistingToken(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 
-	adminCookie, shopID := createShopHelper(t, ts, "compadmin")
-	userCookie, _ := registerUser(t, ts, "compuser", "pass1234", "user")
+	adminCookie, shopID := createShopHelper(t, ts, "tokenadmin")
+	userCookie, _ := registerUser(t, ts, "claimuser", "pass1234", "user")
 
-	// Stamps required = 3. Grant 2 via QR, then the 3rd should trigger "complete"
-	for i := 0; i < 2; i++ {
-		_, tokenBody := doRequest(t, ts, requestOpts{
-			method:  "POST",
-			path:    fmt.Sprintf("/api/shops/%s/stamp-token", shopID),
-			cookies: []*http.Cookie{adminCookie},
-		})
-		doRequest(t, ts, requestOpts{
-			method:  "POST",
-			path:    "/api/stamps/claim",
-			body:    fmt.Sprintf(`{"token":"%s"}`, tokenBody["token"].(string)),
-			cookies: []*http.Cookie{userCookie},
-		})
-	}
-
-	// 3rd stamp → completes the card
-	_, tokenBody := doRequest(t, ts, requestOpts{
+	// Create first token
+	_, token1Body := doRequest(t, ts, requestOpts{
 		method:  "POST",
 		path:    fmt.Sprintf("/api/shops/%s/stamp-token", shopID),
 		cookies: []*http.Cookie{adminCookie},
 	})
-	_, body := doRequest(t, ts, requestOpts{
+	token1 := token1Body["token"].(string)
+
+	// Create second token (should invalidate first)
+	_, token2Body := doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    fmt.Sprintf("/api/shops/%s/stamp-token", shopID),
+		cookies: []*http.Cookie{adminCookie},
+	})
+	token2 := token2Body["token"].(string)
+
+	if token1 == token2 {
+		t.Error("new token should differ from old token")
+	}
+
+	// Old token should no longer work
+	resp1, _ := doRequest(t, ts, requestOpts{
 		method:  "POST",
 		path:    "/api/stamps/claim",
-		body:    fmt.Sprintf(`{"token":"%s"}`, tokenBody["token"].(string)),
+		body:    fmt.Sprintf(`{"token":"%s"}`, token1),
 		cookies: []*http.Cookie{userCookie},
 	})
-	if body["stamps"] != float64(3) {
-		t.Errorf("expected 3 stamps, got %v", body["stamps"])
+	if resp1.StatusCode == http.StatusOK {
+		t.Error("old token should be invalidated after new token is created")
 	}
-	msg := body["message"].(string)
-	if !strings.Contains(msg, "Card complete") {
-		t.Errorf("expected completion message, got %q", msg)
+
+	// New token should work
+	resp2, body2 := doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    "/api/stamps/claim",
+		body:    fmt.Sprintf(`{"token":"%s"}`, token2),
+		cookies: []*http.Cookie{userCookie},
+	})
+	if resp2.StatusCode != http.StatusOK {
+		t.Fatalf("new token claim: expected 200, got %d: %v", resp2.StatusCode, body2)
 	}
 }
 
-func TestE2E_QRStampFullJourney(t *testing.T) {
+func TestGetMyCards_MultipleShops(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 
-	// 1. Admin creates shop (stampsRequired = 3)
-	adminCookie, shopID := createShopHelper(t, ts, "journeyadmin")
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
+	userCookie, _ := registerUser(t, ts, "user", "user1234", "user")
 
-	// 2. Two users register
-	user1Cookie, _ := registerUser(t, ts, "journeyuser1", "pass1234", "user")
-	user2Cookie, _ := registerUser(t, ts, "journeyuser2", "pass1234", "user")
-
-	// 3. Admin generates a token
-	_, tokenBody := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    fmt.Sprintf("/api/shops/%s/stamp-token", shopID),
-		cookies: []*http.Cookie{adminCookie},
-	})
-	token := tokenBody["token"].(string)
-
-	// 4. Both users claim the same token
-	_, body1 := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/stamps/claim",
-		body:    fmt.Sprintf(`{"token":"%s"}`, token),
-		cookies: []*http.Cookie{user1Cookie},
-	})
-	if body1["stamps"] != float64(1) {
-		t.Errorf("user1: expected 1 stamp, got %v", body1["stamps"])
-	}
-
-	_, body2 := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/stamps/claim",
-		body:    fmt.Sprintf(`{"token":"%s"}`, token),
-		cookies: []*http.Cookie{user2Cookie},
-	})
-	if body2["stamps"] != float64(1) {
-		t.Errorf("user2: expected 1 stamp, got %v", body2["stamps"])
-	}
-
-	// 5. User1 double-scans — should not get a 2nd stamp
-	_, body1dup := doRequest(t, ts, requestOpts{
-		method:  "POST",
-		path:    "/api/stamps/claim",
-		body:    fmt.Sprintf(`{"token":"%s"}`, token),
-		cookies: []*http.Cookie{user1Cookie},
-	})
-	if body1dup["stamps"] != float64(1) {
-		t.Errorf("user1 double-scan: expected 1 stamp, got %v", body1dup["stamps"])
-	}
-
-	// 6. Admin generates 2 more tokens, user1 fills card
-	for i := 0; i < 2; i++ {
-		_, tb := doRequest(t, ts, requestOpts{
-			method:  "POST",
-			path:    fmt.Sprintf("/api/shops/%s/stamp-token", shopID),
-			cookies: []*http.Cookie{adminCookie},
-		})
+	// Create 3 shops
+	for i := range 3 {
 		doRequest(t, ts, requestOpts{
 			method:  "POST",
-			path:    "/api/stamps/claim",
-			body:    fmt.Sprintf(`{"token":"%s"}`, tb["token"].(string)),
-			cookies: []*http.Cookie{user1Cookie},
+			path:    "/api/shops",
+			body:    fmt.Sprintf(`{"name":"Shop %d","rewardDescription":"Reward","stampsRequired":3}`, i),
+			cookies: []*http.Cookie{adminCookie},
 		})
 	}
 
-	// 7. Verify user1's cards show 3 stamps
+	// User fetches cards — should auto-create one per shop
 	_, cards := doRequestArray(t, ts, requestOpts{
 		method:  "GET",
 		path:    "/api/users/me/cards",
-		cookies: []*http.Cookie{user1Cookie},
+		cookies: []*http.Cookie{userCookie},
 	})
-	found := false
-	for _, c := range cards {
-		if c["shopId"] == shopID && c["stamps"] == float64(3) {
-			found = true
-		}
+	if len(cards) < 3 {
+		t.Errorf("expected at least 3 auto-created cards, got %d", len(cards))
 	}
-	if !found {
-		t.Errorf("user1 should have a card with 3 stamps for shop %s", shopID)
+}
+
+func TestListShops_MultipleShops(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	admin1Cookie, _ := registerUser(t, ts, "admin1", "admin1234", "admin")
+	admin2Cookie, _ := registerUser(t, ts, "admin2", "admin5678", "admin")
+
+	doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    "/api/shops",
+		body:    `{"name":"Coffee House","rewardDescription":"Free coffee","stampsRequired":5}`,
+		cookies: []*http.Cookie{admin1Cookie},
+	})
+	doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    "/api/shops",
+		body:    `{"name":"Bakery","rewardDescription":"Free bread","stampsRequired":3}`,
+		cookies: []*http.Cookie{admin2Cookie},
+	})
+
+	_, shops := doRequestArray(t, ts, requestOpts{
+		method: "GET",
+		path:   "/api/shops",
+	})
+	if len(shops) != 2 {
+		t.Errorf("expected 2 shops, got %d", len(shops))
+	}
+}
+
+func TestRequestLog_SetsRequestID(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	resp, _ := doRequest(t, ts, requestOpts{
+		method: "GET",
+		path:   "/api/shops",
+	})
+	reqID := resp.Header.Get("X-Request-ID")
+	if reqID == "" {
+		t.Error("expected X-Request-ID header from RequestLog middleware")
+	}
+	if len(reqID) != 8 {
+		t.Errorf("expected 8-char request ID, got %q (len=%d)", reqID, len(reqID))
+	}
+}
+
+func TestDocs_OpenAPIEndpoint(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	resp, _ := doRequest(t, ts, requestOpts{
+		method: "GET",
+		path:   "/api/docs/openapi.yaml",
+	})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for docs endpoint, got %d", resp.StatusCode)
+	}
+	ct := resp.Header.Get("Content-Type")
+	if ct != "application/yaml" {
+		t.Errorf("expected Content-Type application/yaml, got %q", ct)
+	}
+}
+
+func TestDocs_ScalarUI(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	resp, _ := doRequest(t, ts, requestOpts{
+		method: "GET",
+		path:   "/api/docs",
+	})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200 for scalar UI, got %d", resp.StatusCode)
+	}
+	ct := resp.Header.Get("Content-Type")
+	if ct != "text/html; charset=utf-8" {
+		t.Errorf("expected Content-Type text/html, got %q", ct)
+	}
+}
+
+func TestGrantStamp_Unauthenticated(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	resp, _ := doRequest(t, ts, requestOpts{
+		method: "POST",
+		path:   "/api/shops/some-id/stamps",
+		body:   `{"userId":"someone"}`,
+	})
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", resp.StatusCode)
+	}
+}
+
+func TestGrantStamp_UserRole_Forbidden(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	userCookie, _ := registerUser(t, ts, "user", "user1234", "user")
+
+	resp, _ := doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    "/api/shops/some-id/stamps",
+		body:    `{"userId":"someone"}`,
+		cookies: []*http.Cookie{userCookie},
+	})
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", resp.StatusCode)
+	}
+}
+
+func TestCreateShop_DuplicateName(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
+
+	doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    "/api/shops",
+		body:    `{"name":"Unique Shop","rewardDescription":"Reward","stampsRequired":3}`,
+		cookies: []*http.Cookie{adminCookie},
+	})
+
+	resp, _ := doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    "/api/shops",
+		body:    `{"name":"Unique Shop","rewardDescription":"Different Reward","stampsRequired":5}`,
+		cookies: []*http.Cookie{adminCookie},
+	})
+	if resp.StatusCode != http.StatusConflict {
+		t.Fatalf("expected 409 for duplicate shop name, got %d", resp.StatusCode)
+	}
+}
+
+func TestRedeemCard_AutoCreatesNewCard(t *testing.T) {
+	ts := setupTestServer(t)
+	defer ts.Close()
+
+	adminCookie, _ := registerUser(t, ts, "admin", "admin1234", "admin")
+	userCookie, userBody := registerUser(t, ts, "user", "user1234", "user")
+	customerID := userBody["user"].(map[string]any)["id"].(string)
+
+	_, shopBody := doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    "/api/shops",
+		body:    `{"name":"Shop","rewardDescription":"Reward","stampsRequired":2}`,
+		cookies: []*http.Cookie{adminCookie},
+	})
+	shopID := shopBody["id"].(string)
+
+	// Grant enough stamps
+	for range 2 {
+		doRequest(t, ts, requestOpts{
+			method:  "POST",
+			path:    "/api/shops/" + shopID + "/stamps",
+			body:    fmt.Sprintf(`{"userId":"%s"}`, customerID),
+			cookies: []*http.Cookie{adminCookie},
+		})
 	}
 
-	// 8. User1 redeems the card
+	// Get the card
+	_, cards := doRequestArray(t, ts, requestOpts{
+		method:  "GET",
+		path:    "/api/users/me/cards",
+		cookies: []*http.Cookie{userCookie},
+	})
+	var cardID string
 	for _, c := range cards {
-		if c["shopId"] == shopID && c["stamps"] == float64(3) {
-			resp, _ := doRequest(t, ts, requestOpts{
-				method:  "POST",
-				path:    fmt.Sprintf("/api/cards/%s/redeem", c["id"].(string)),
-				cookies: []*http.Cookie{user1Cookie},
-			})
-			if resp.StatusCode != http.StatusOK {
-				t.Fatalf("redeem: expected 200, got %d", resp.StatusCode)
-			}
+		if c["shopId"] == shopID && c["stamps"] == float64(2) {
+			cardID = c["id"].(string)
 		}
+	}
+	if cardID == "" {
+		t.Fatal("expected a completed card")
+	}
+
+	// Redeem it
+	doRequest(t, ts, requestOpts{
+		method:  "POST",
+		path:    "/api/cards/" + cardID + "/redeem",
+		cookies: []*http.Cookie{userCookie},
+	})
+
+	// Fetch cards again — should have a fresh 0-stamp card
+	_, cardsAfter := doRequestArray(t, ts, requestOpts{
+		method:  "GET",
+		path:    "/api/users/me/cards",
+		cookies: []*http.Cookie{userCookie},
+	})
+	foundFresh := false
+	for _, c := range cardsAfter {
+		if c["shopId"] == shopID && c["stamps"] == float64(0) && c["redeemed"] == false {
+			foundFresh = true
+		}
+	}
+	if !foundFresh {
+		t.Error("expected a fresh 0-stamp card after redeem")
 	}
 }

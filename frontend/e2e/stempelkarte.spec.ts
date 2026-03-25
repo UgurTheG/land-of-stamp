@@ -6,7 +6,7 @@
  * This avoids React 19 form-action timing issues in controlled components.
  */
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Browser } from '@playwright/test';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -255,31 +255,40 @@ test.describe('User Dashboard', () => {
 test.describe('Admin Shop Management', () => {
   test('can create a shop', async ({ page }) => {
     await registerViaAPI(page, 'admin');
+    // Open the create-shop modal
+    await page.getByRole('button', { name: /Create Your First Stamp Card/i }).click();
     await page.getByPlaceholder('My Awesome Shop').fill('E2E Coffee');
     await page.getByPlaceholder(/Tell customers/i).fill('Best coffee for testing');
     await page.getByPlaceholder(/e\.g\./i).fill('1 free test latte');
-    await page.getByRole('button', { name: /Create Shop/i }).click();
-    await expect(page.getByRole('button', { name: /Save Changes/i })).toBeVisible({ timeout: 5_000 });
+    // Submit inside the modal (button text is "Create Stamp Card")
+    await page.locator('form button[type="submit"]').click();
+    // After creation the modal closes and the shop card appears in the list
+    await expect(page.getByRole('heading', { name: 'E2E Coffee' })).toBeVisible({ timeout: 5_000 });
   });
 
   test('can update shop details', async ({ page }) => {
     await registerViaAPI(page, 'admin');
+    // Create shop via modal
+    await page.getByRole('button', { name: /Create Your First Stamp Card/i }).click();
     await page.getByPlaceholder('My Awesome Shop').fill('Old Shop Name');
     await page.getByPlaceholder(/e\.g\./i).fill('Old reward');
-    await page.getByRole('button', { name: /Create Shop/i }).click();
-    await expect(page.getByRole('button', { name: /Save Changes/i })).toBeVisible({ timeout: 5_000 });
+    await page.locator('form button[type="submit"]').click();
+    await expect(page.getByRole('heading', { name: 'Old Shop Name' })).toBeVisible({ timeout: 5_000 });
 
+    // Open the edit modal
+    await page.getByRole('button', { name: /Edit/i }).click();
     await page.getByPlaceholder('My Awesome Shop').clear();
     await page.getByPlaceholder('My Awesome Shop').fill('Updated Shop Name');
     await page.getByRole('button', { name: /Save Changes/i }).click();
-    // Wait for the save to complete — the input should still have the updated value
+    // Wait for the save to complete and the updated name to appear in the card
     await page.waitForTimeout(1_000);
-    await expect(page.getByPlaceholder('My Awesome Shop')).toHaveValue('Updated Shop Name');
+    await expect(page.getByRole('heading', { name: 'Updated Shop Name' })).toBeVisible();
   });
 
   test('shop settings tab is shown by default', async ({ page }) => {
     await registerViaAPI(page, 'admin');
-    await expect(page.getByText('Shop Configuration')).toBeVisible();
+    // The default tab is "Stamp Cards" — with no shops it shows the empty state
+    await expect(page.getByText('No stamp cards yet')).toBeVisible();
   });
 });
 
@@ -288,21 +297,32 @@ test.describe('Admin Shop Management', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test.describe('Admin Stamp Granting', () => {
-  test('can switch to Stamps tab and see customer list', async ({ page, context }) => {
+  test('can switch to Stamps tab and see customer list', async ({ browser }) => {
+    const adminContext = await browser.newContext();
+    const customerContext = await browser.newContext();
+
+    const page = await adminContext.newPage();
     await registerViaAPI(page, 'admin');
 
-    await page.getByPlaceholder('My Awesome Shop').fill('Stamp Test Shop');
-    await page.getByPlaceholder(/e\.g\./i).fill('Free stamp reward');
-    await page.getByRole('button', { name: /Create Shop/i }).click();
-    await expect(page.getByRole('button', { name: /Save Changes/i })).toBeVisible({ timeout: 5_000 });
+    // Create shop via API for reliability
+    const shop = await createShopViaAPI(page, 'Stamp Test Shop');
 
-    // Register a customer in a new page (shares context cookies won't overlap)
-    const customerPage = await context.newPage();
+    // Register a customer in a separate context so admin session is preserved
+    const customerPage = await customerContext.newPage();
     await registerViaAPI(customerPage, 'user');
     await customerPage.close();
+    await customerContext.close();
+
+    // Reload so the admin page picks up the shop + customer
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: shop.name })).toBeVisible({ timeout: 5_000 });
 
     await page.getByRole('button', { name: /Grant Stamps/i }).click();
     await expect(page.getByPlaceholder(/search/i)).toBeVisible({ timeout: 5_000 });
+
+    await page.close();
+    await adminContext.close();
   });
 });
 
@@ -316,20 +336,20 @@ test.describe('Full E2E Journey', () => {
     const adminContext = await browser.newContext();
     const userContext = await browser.newContext();
 
-    // 1. Admin registers and creates a shop
+    // 1. Admin registers and creates a shop via API
     const adminPage = await adminContext.newPage();
     await registerViaAPI(adminPage, 'admin');
 
-    await adminPage.getByPlaceholder('My Awesome Shop').fill('Journey Café');
-    await adminPage.getByPlaceholder(/Tell customers/i).fill('Your favorite café');
-    await adminPage.getByPlaceholder(/e\.g\./i).fill('1 free espresso');
-    const stampsInput = adminPage.locator('input[type="number"]');
-    await stampsInput.clear();
-    await stampsInput.fill('2');
-    await adminPage.getByRole('button', { name: /Create Shop/i }).click();
-    await expect(adminPage.getByRole('button', { name: /Save Changes/i })).toBeVisible({
-      timeout: 5_000,
+    const resp = await adminPage.context().request.post(`${API_BASE}/api/shops`, {
+      headers: { 'Content-Type': 'application/json' },
+      data: { name: 'Journey Café', description: 'Your favorite café', rewardDescription: '1 free espresso', stampsRequired: 2, color: '#6366f1' },
     });
+    expect(resp.ok()).toBeTruthy();
+
+    // Reload admin page so it picks up the shop
+    await adminPage.reload();
+    await adminPage.waitForLoadState('networkidle');
+    await expect(adminPage.getByRole('heading', { name: 'Journey Café' })).toBeVisible({ timeout: 5_000 });
 
     // 2. User registers and sees the shop card
     const userPage = await userContext.newPage();
@@ -437,10 +457,10 @@ test.describe('Cookie Security', () => {
 test.describe('Admin Statistics', () => {
   test('statistics tab renders without errors', async ({ page }) => {
     await registerViaAPI(page, 'admin');
-    await page.getByPlaceholder('My Awesome Shop').fill('Stats Shop');
-    await page.getByPlaceholder(/e\.g\./i).fill('Free reward');
-    await page.getByRole('button', { name: /Create Shop/i }).click();
-    await expect(page.getByRole('button', { name: /Save Changes/i })).toBeVisible({ timeout: 5_000 });
+    const shop = await createShopViaAPI(page, 'Stats Shop');
+    await page.reload();
+    await page.waitForLoadState('networkidle');
+    await expect(page.getByRole('heading', { name: shop.name })).toBeVisible({ timeout: 5_000 });
 
     await page.getByRole('button', { name: /Statistics/i }).click();
     await expect(page.getByText(/Total Stamps/i)).toBeVisible({ timeout: 3_000 });
@@ -519,14 +539,20 @@ test.describe('API Edge Cases', () => {
 //  QR CODE — ADMIN TAB
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/** Helper: create a shop via API from the admin's context and return shopId. */
-async function createShopViaAPI(page: Page, name = 'QR E2E Shop'): Promise<string> {
+/** Helper: create a shop via API from the admin's context and return { id, name }. */
+async function createShopViaAPI(page: Page, name?: string): Promise<{ id: string; name: string }> {
+  const shopName = name ?? `QR E2E Shop ${uid()}`;
   const resp = await page.context().request.post(`${API_BASE}/api/shops`, {
     headers: { 'Content-Type': 'application/json' },
-    data: { name, rewardDescription: 'Free test item', stampsRequired: 3, color: '#6366f1' },
+    data: { name: shopName, rewardDescription: 'Free test item', stampsRequired: 3, color: '#6366f1' },
   });
+  if (!resp.ok()) {
+    const text = await resp.text();
+    throw new Error(`createShopViaAPI failed (${resp.status()}): ${text}`);
+  }
   const body = await resp.json();
-  return body.id;
+  if (!body.id) throw new Error(`createShopViaAPI: response missing id: ${JSON.stringify(body)}`);
+  return { id: body.id, name: shopName };
 }
 
 /** Helper: generate a stamp token via API and return the token string. */
@@ -534,39 +560,49 @@ async function createStampTokenViaAPI(page: Page, shopId: string): Promise<strin
   const resp = await page.context().request.post(`${API_BASE}/api/shops/${shopId}/stamp-token`, {
     headers: { 'Content-Type': 'application/json' },
   });
+  if (!resp.ok()) {
+    const text = await resp.text();
+    throw new Error(`createStampTokenViaAPI failed (${resp.status()}): ${text}`);
+  }
   const body = await resp.json();
+  if (!body.token) throw new Error(`createStampTokenViaAPI: response missing token: ${JSON.stringify(body)}`);
   return body.token;
+}
+
+/** Helper: register admin, create a shop via API, reload page so the shop is visible. */
+async function setupAdminWithShop(page: Page): Promise<{ id: string; name: string }> {
+  await registerViaAPI(page, 'admin');
+  const shop = await createShopViaAPI(page);
+  await page.reload();
+  await page.waitForLoadState('networkidle');
+  // Wait for the shop data to render in the selector before interacting with tabs
+  await expect(page.getByRole('heading', { name: shop.name })).toBeVisible({ timeout: 5_000 });
+  return shop;
+}
+
+/** Helper: open QR tab and click Generate. */
+async function openQRAndGenerate(page: Page): Promise<void> {
+  await page.getByRole('button', { name: /QR Code/i }).click();
+  await expect(page.getByRole('button', { name: /Generate QR Code/i })).toBeVisible({ timeout: 5_000 });
+  await page.getByRole('button', { name: /Generate QR Code/i }).click();
 }
 
 test.describe('Admin QR Code Tab', () => {
   test('QR Code tab is visible after creating a shop', async ({ page }) => {
-    await registerViaAPI(page, 'admin');
-    await createShopViaAPI(page);
-    await page.reload();
-    await page.waitForLoadState('networkidle');
-
+    await setupAdminWithShop(page);
     const qrTab = page.getByRole('button', { name: /QR Code/i });
     await expect(qrTab).toBeVisible();
   });
 
   test('QR Code tab shows generate button', async ({ page }) => {
-    await registerViaAPI(page, 'admin');
-    await createShopViaAPI(page);
-    await page.reload();
-    await page.waitForLoadState('networkidle');
-
+    await setupAdminWithShop(page);
     await page.getByRole('button', { name: /QR Code/i }).click();
     await expect(page.getByRole('button', { name: /Generate QR Code/i })).toBeVisible({ timeout: 5_000 });
   });
 
   test('generates a QR code with timer on click', async ({ page }) => {
-    await registerViaAPI(page, 'admin');
-    await createShopViaAPI(page);
-    await page.reload();
-    await page.waitForLoadState('networkidle');
-
-    await page.getByRole('button', { name: /QR Code/i }).click();
-    await page.getByRole('button', { name: /Generate QR Code/i }).click();
+    await setupAdminWithShop(page);
+    await openQRAndGenerate(page);
 
     // QR SVG should appear
     await expect(page.locator('svg').first()).toBeVisible({ timeout: 5_000 });
@@ -577,20 +613,15 @@ test.describe('Admin QR Code Tab', () => {
   });
 
   test('shows instruction text for phone camera', async ({ page }) => {
-    await registerViaAPI(page, 'admin');
-    await createShopViaAPI(page);
-    await page.reload();
-    await page.waitForLoadState('networkidle');
-
-    await page.getByRole('button', { name: /QR Code/i }).click();
-    await page.getByRole('button', { name: /Generate QR Code/i }).click();
+    await setupAdminWithShop(page);
+    await openQRAndGenerate(page);
     await expect(page.getByText(/phone camera/i)).toBeVisible({ timeout: 5_000 });
   });
 
   test('QR Code tab shows no-shop message if shop not created', async ({ page }) => {
     await registerViaAPI(page, 'admin');
     await page.getByRole('button', { name: /QR Code/i }).click();
-    await expect(page.getByText(/No shop configured/i)).toBeVisible({ timeout: 3_000 });
+    await expect(page.getByText(/No shop selected/i)).toBeVisible({ timeout: 3_000 });
   });
 });
 
@@ -598,32 +629,43 @@ test.describe('Admin QR Code Tab', () => {
 //  QR CODE — CLAIM PAGE (/claim/:token)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/** Helper: create separate admin + user contexts, register both, create shop + token.
+ *  Caller must close all returned pages/contexts when done. */
+async function setupClaimTest(browser: Browser) {
+  const adminContext = await browser.newContext();
+  const userContext = await browser.newContext();
+
+  const adminPage = await adminContext.newPage();
+  await registerViaAPI(adminPage, 'admin');
+  const shop = await createShopViaAPI(adminPage);
+  const token = await createStampTokenViaAPI(adminPage, shop.id);
+
+  const userPage = await userContext.newPage();
+  await registerViaAPI(userPage, 'user');
+
+  return { adminContext, userContext, adminPage, userPage, shopId: shop.id, shopName: shop.name, token };
+}
+
+/** Helper: close all pages and contexts from setupClaimTest. */
+async function teardownClaimTest(ctx: Awaited<ReturnType<typeof setupClaimTest>>) {
+  await ctx.adminPage.close();
+  await ctx.userPage.close();
+  await ctx.adminContext.close();
+  await ctx.userContext.close();
+}
+
 test.describe('Claim Page', () => {
   test('successfully claims a stamp via /claim/:token URL', async ({ browser }) => {
-    const adminContext = await browser.newContext();
-    const userContext = await browser.newContext();
+    const ctx = await setupClaimTest(browser);
 
-    const adminPage = await adminContext.newPage();
-    await registerViaAPI(adminPage, 'admin');
-    const shopId = await createShopViaAPI(adminPage);
-    const token = await createStampTokenViaAPI(adminPage, shopId);
+    await ctx.userPage.goto(`/claim/${ctx.token}`);
+    await ctx.userPage.waitForLoadState('networkidle');
 
-    const userPage = await userContext.newPage();
-    await registerViaAPI(userPage, 'user');
+    await expect(ctx.userPage.getByRole('heading', { name: /Stamp Collected/i })).toBeVisible({ timeout: 10_000 });
+    await expect(ctx.userPage.getByText(ctx.shopName)).toBeVisible();
+    await expect(ctx.userPage.getByText('1 / 3 stamps')).toBeVisible();
 
-    // Navigate to the claim URL
-    await userPage.goto(`/claim/${token}`);
-    await userPage.waitForLoadState('networkidle');
-
-    // Should show success
-    await expect(userPage.getByRole('heading', { name: /Stamp Collected/i })).toBeVisible({ timeout: 10_000 });
-    await expect(userPage.getByText('QR E2E Shop')).toBeVisible();
-    await expect(userPage.getByText('1 / 3 stamps')).toBeVisible();
-
-    await adminPage.close();
-    await userPage.close();
-    await adminContext.close();
-    await userContext.close();
+    await teardownClaimTest(ctx);
   });
 
   test('shows error for invalid token', async ({ page }) => {
@@ -635,31 +677,18 @@ test.describe('Claim Page', () => {
   });
 
   test('double-scan shows friendly already-scanned message', async ({ browser }) => {
-    const adminContext = await browser.newContext();
-    const userContext = await browser.newContext();
-
-    const adminPage = await adminContext.newPage();
-    await registerViaAPI(adminPage, 'admin');
-    const shopId = await createShopViaAPI(adminPage);
-    const token = await createStampTokenViaAPI(adminPage, shopId);
-
-    const userPage = await userContext.newPage();
-    await registerViaAPI(userPage, 'user');
+    const ctx = await setupClaimTest(browser);
 
     // First claim
-    await userPage.goto(`/claim/${token}`);
-    await expect(userPage.getByRole('heading', { name: /Stamp Collected/i })).toBeVisible({ timeout: 10_000 });
+    await ctx.userPage.goto(`/claim/${ctx.token}`);
+    await expect(ctx.userPage.getByRole('heading', { name: /Stamp Collected/i })).toBeVisible({ timeout: 10_000 });
 
     // Second claim (same token, same user)
-    await userPage.goto(`/claim/${token}`);
-    await userPage.waitForLoadState('networkidle');
-    // Should show success with "already scanned" message, not an error
-    await expect(userPage.getByText(/already scanned/i)).toBeVisible({ timeout: 10_000 });
+    await ctx.userPage.goto(`/claim/${ctx.token}`);
+    await ctx.userPage.waitForLoadState('networkidle');
+    await expect(ctx.userPage.getByText(/already scanned/i)).toBeVisible({ timeout: 10_000 });
 
-    await adminPage.close();
-    await userPage.close();
-    await adminContext.close();
-    await userContext.close();
+    await teardownClaimTest(ctx);
   });
 
   test('redirects to login when not authenticated', async ({ page }) => {
@@ -674,8 +703,8 @@ test.describe('Claim Page', () => {
     // Admin creates shop + token
     const adminPage = await adminContext.newPage();
     await registerViaAPI(adminPage, 'admin');
-    const shopId = await createShopViaAPI(adminPage);
-    const token = await createStampTokenViaAPI(adminPage, shopId);
+    const shop = await createShopViaAPI(adminPage);
+    const token = await createStampTokenViaAPI(adminPage, shop.id);
 
     // User registers in a fresh context (so we have credentials)
     const setupPage = await userContext.newPage();
@@ -800,12 +829,12 @@ test.describe('QR API Edge Cases', () => {
 
     const adminPage = await adminContext.newPage();
     await registerViaAPI(adminPage, 'admin');
-    const shopId = await createShopViaAPI(adminPage);
+    const shop = await createShopViaAPI(adminPage);
 
     const userPage = await userContext.newPage();
     await registerViaAPI(userPage, 'user');
 
-    const resp = await userPage.context().request.post(`${API_BASE}/api/shops/${shopId}/stamp-token`);
+    const resp = await userPage.context().request.post(`${API_BASE}/api/shops/${shop.id}/stamp-token`);
     expect(resp.status()).toBe(403);
 
     await adminPage.close();
@@ -834,8 +863,8 @@ test.describe('QR API Edge Cases', () => {
 
   test('admin cannot claim stamps (403)', async ({ page }) => {
     await registerViaAPI(page, 'admin');
-    const shopId = await createShopViaAPI(page);
-    const token = await createStampTokenViaAPI(page, shopId);
+    const shop = await createShopViaAPI(page);
+    const token = await createStampTokenViaAPI(page, shop.id);
 
     const resp = await page.context().request.post(`${API_BASE}/api/stamps/claim`, {
       headers: { 'Content-Type': 'application/json' },
@@ -851,8 +880,8 @@ test.describe('QR API Edge Cases', () => {
 
     const adminPage = await adminCtx.newPage();
     await registerViaAPI(adminPage, 'admin');
-    const shopId = await createShopViaAPI(adminPage);
-    const token = await createStampTokenViaAPI(adminPage, shopId);
+    const shop = await createShopViaAPI(adminPage);
+    const token = await createStampTokenViaAPI(adminPage, shop.id);
 
     const user1Page = await user1Ctx.newPage();
     await registerViaAPI(user1Page, 'user');
@@ -888,8 +917,8 @@ test.describe('QR API Edge Cases', () => {
 
     const adminPage = await adminCtx.newPage();
     await registerViaAPI(adminPage, 'admin');
-    const shopId = await createShopViaAPI(adminPage);
-    const token = await createStampTokenViaAPI(adminPage, shopId);
+    const shop = await createShopViaAPI(adminPage);
+    const token = await createStampTokenViaAPI(adminPage, shop.id);
 
     const userPage = await userCtx.newPage();
     await registerViaAPI(userPage, 'user');

@@ -137,7 +137,7 @@ export default function AdminDashboard() {
   const handleSelectShop = (shop: Shop) => {
     setSelectedShopId(shop.id);
     setShopSelectorOpen(false);
-    loadCardsForShop(shop.id);
+    void loadCardsForShop(shop.id);
   };
 
   const handleNewShop = () => {

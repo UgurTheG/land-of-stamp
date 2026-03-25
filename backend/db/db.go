@@ -1,3 +1,4 @@
+// Package db provides SQLite database initialization, migration, and lifecycle management.
 package db
 
 import (
@@ -5,11 +6,13 @@ import (
 	"database/sql"
 	"log/slog"
 
-	_ "modernc.org/sqlite"
+	_ "modernc.org/sqlite" // SQLite driver for database/sql
 )
 
+// DB is the global database connection pool.
 var DB *sql.DB
 
+// Init opens the SQLite database at the given path and runs migrations.
 func Init(ctx context.Context, path string) {
 	var err error
 	DB, err = sql.Open("sqlite", path)
@@ -78,10 +81,12 @@ func migrate(ctx context.Context) {
 	slog.InfoContext(ctx, "database migrations complete", "tables", 5)
 }
 
+// Close gracefully closes the database connection.
 func Close(ctx context.Context) {
 	if DB != nil {
-		DB.Close()
+		if err := DB.Close(); err != nil {
+			slog.ErrorContext(ctx, "failed to close database", "error", err)
+		}
 		slog.InfoContext(ctx, "database connection closed")
 	}
 }
-

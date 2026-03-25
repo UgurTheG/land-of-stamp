@@ -1,0 +1,255 @@
+version: "2"
+# ── Run settings ────────────────────────────────────────
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+# ── Formatters ──────────────────────────────────────────
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - land-of-stamp-backend
+# ── Linters ─────────────────────────────────────────────
+linters:
+  enable:
+    # ── Bug catchers ──
+    - errcheck
+    - govet
+    - staticcheck
+    - bodyclose
+    - durationcheck
+    - err113
+    - errchkjson
+    - errorlint
+    - exhaustive
+    - fatcontext
+    - forcetypeassert
+    - makezero
+    - musttag
+    - nilerr
+    - nilnesserr
+    - noctx
+    - rowserrcheck
+    - sqlclosecheck
+    - spancheck
+    # ── Security ──
+    - gosec
+    - bidichk
+    # ── Performance ──
+    - ineffassign
+    - copyloopvar
+    - intrange
+    - prealloc
+    - perfsprint
+    - unconvert
+    - unused
+    - wastedassign
+    - mirror
+    # ── Style & readability ──
+    - asciicheck
+    - canonicalheader
+    - containedctx
+    - contextcheck
+    - decorder
+    - dogsled
+    - dupl
+    - dupword
+    - errname
+    - exptostd
+    - gocheckcompilerdirectives
+    - goconst
+    - gocritic
+    - godot
+    - goprintffuncname
+    - iface
+    - importas
+    - inamedparam
+    - loggercheck
+    - misspell
+    - modernize
+    - nakedret
+    - nestif
+    - nolintlint
+    - nosprintfhostport
+    - predeclared
+    - reassign
+    - recvcheck
+    - revive
+    - sloglint
+    - tagliatelle
+    - tagalign
+    - testableexamples
+    - thelper
+    - tparallel
+    - unparam
+    - usestdlibvars
+    - usetesting
+    - whitespace
+    # ── Complexity ──
+    - cyclop
+    - funlen
+    - gocognit
+    - gocyclo
+    - maintidx
+    # ── Module hygiene ──
+    - gomoddirectives
+  # Explicitly disabled with reasons:
+  #
+  # exhaustruct       - requiring every struct field is too noisy for proto-generated types
+  # gochecknoglobals  - we use package-level vars intentionally (db.DB, auth.jwtKey)
+  # gochecknoinits    - we don't use init(), but no need to lint for it
+  # godox             - TODO/FIXME comments are fine during development
+  # ireturn           - returning interfaces is idiomatic in Go (http.Handler etc.)
+  # lll               - line length limits are handled by the formatter
+  # mnd               - magic number detection is too aggressive for HTTP status codes
+  # nlreturn          - blank-line-before-return is pure style preference, too noisy
+  # noinlineerr       - inline error handling (if err := ...) is idiomatic Go
+  # nonamedreturns    - named returns are useful for documentation
+  # paralleltest      - not all tests benefit from t.Parallel()
+  # testpackage       - same-package tests are fine for internal testing
+  # varnamelen        - short var names like w, r, s are idiomatic in Go
+  # wrapcheck         - wrapping every error from stdlib is overkill
+  # wsl_v5            - whitespace style rules are too opinionated
+  # funcorder         - function ordering is a preference, not a bug
+  # depguard          - no banned packages for this project
+  # gomodguard        - no banned modules for this project
+  # goheader          - no file header requirement
+  # gosmopolitan      - no i18n requirements
+  # forbidigo         - no banned identifiers
+  # grouper           - import grouping handled by goimports
+  # interfacebloat    - no interface size limits needed
+  # iotamixing        - we don't use iota
+  settings:
+    cyclop:
+      max-complexity: 20
+    funlen:
+      lines: 140
+      statements: 75
+      ignore-comments: true
+    gocognit:
+      min-complexity: 25
+    gocyclo:
+      min-complexity: 20
+    maintidx:
+      under: 20
+    nestif:
+      min-complexity: 5
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+    dupl:
+      threshold: 150
+    errcheck:
+      check-type-assertions: false
+      check-blank: false
+    errorlint:
+      errorf: true
+      asserts: true
+      comparison: true
+    exhaustive:
+      default-signifies-exhaustive: true
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+        - opinionated
+    gosec:
+      excludes:
+        - G104  # unhandled errors — already covered by errcheck
+        - G304  # file path from variable — intentional in our server
+        - G703  # path traversal via taint — we sanitise with filepath.Clean
+        - G705  # XSS via taint — proto bytes are safe JSON, not user HTML
+    govet:
+      enable-all: true
+      disable:
+        - shadow  # too noisy — flags standard Go `if err :=` patterns
+    nakedret:
+      max-func-lines: 20
+    prealloc:
+      simple: true
+    revive:
+      severity: warning
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
+        - name: exported
+          arguments: ["checkPrivateReceivers"]
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unreachable-code
+        - name: redefines-builtin-id
+        - name: unused-parameter
+    sloglint:
+      kv-only: false
+      attr-only: false
+      context: "scope"
+    tagliatelle:
+      case:
+        rules:
+          json: camel
+          yaml: snake
+    tagalign:
+      sort: true
+    unparam:
+      check-exported: false
+  exclusions:
+    rules:
+      # Don't check complexity / length / noise in test files
+      - path: _test\.go
+        linters:
+          - funlen
+          - gocognit
+          - gocyclo
+          - cyclop
+          - dupl
+          - errcheck
+          - gosec
+          - maintidx
+          - bodyclose
+          - noctx
+          - forcetypeassert
+          - contextcheck
+          - goconst
+          - unparam
+          - unconvert
+          - intrange
+          - usetesting
+          - revive
+          - sqlclosecheck
+          - gocritic
+          - modernize
+          - usestdlibvars
+      # Generated protobuf code — skip everything
+      - path: gen/
+        linters:
+          - all
+      # Allow dot-imports in tests (for testify etc.)
+      - path: _test\.go
+        text: "dot-imports"
+      # The embed directive requires a blank import
+      - source: "//go:embed"
+        linters:
+          - revive
+# ── Issue settings ──────────────────────────────────────
+issues:
+  max-issues-per-linter: 50
+  max-same-issues: 5

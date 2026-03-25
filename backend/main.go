@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
+	"time"
 
 	"land-of-stamp-backend/auth"
 	"land-of-stamp-backend/db"
@@ -18,7 +20,37 @@ import (
 func main() {
 	ctx := context.Background()
 
-	// ── Configure slog (JSON structured logging) ──
+	initLogging()
+	initJWT(ctx)
+
+	// ── SQLite database ──
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "land-of-stamp.db"
+	}
+	db.Init(ctx, dbPath)
+	defer db.Close(ctx)
+
+	mux := buildMux()
+	serveFrontend(ctx, mux)
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	srv := &http.Server{
+		Addr:              ":" + port,
+		Handler:           middleware.RequestLog(middleware.CORS(mux)),
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+	slog.InfoContext(ctx, "server starting", "port", port, "url", "http://localhost:"+port)
+	if err := srv.ListenAndServe(); err != nil {
+		slog.ErrorContext(ctx, "server failed", "error", err)
+	}
+}
+
+func initLogging() {
 	var level slog.Level
 	switch os.Getenv("LOG_LEVEL") {
 	case "debug":
@@ -31,8 +63,9 @@ func main() {
 		level = slog.LevelInfo
 	}
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level})))
+}
 
-	// ── JWT secret ──
+func initJWT(ctx context.Context) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		b := make([]byte, 32)
@@ -44,15 +77,9 @@ func main() {
 		slog.InfoContext(ctx, "generated random JWT secret (set JWT_SECRET env var to persist across restarts)")
 	}
 	auth.Init(secret)
+}
 
-	// ── SQLite database ──
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "land-of-stamp.db"
-	}
-	db.Init(ctx, dbPath)
-	defer db.Close(ctx)
-
+func buildMux() *http.ServeMux {
 	mux := http.NewServeMux()
 
 	// ── Public routes ──
@@ -93,7 +120,10 @@ func main() {
 	mux.Handle("/api/users/customers", middleware.Auth(middleware.AdminOnly(admin)))
 	mux.Handle("POST /api/shops", middleware.Auth(middleware.AdminOnly(admin)))
 
-	// ── Serve frontend static files in production ──
+	return mux
+}
+
+func serveFrontend(ctx context.Context, mux *http.ServeMux) {
 	distDir := os.Getenv("DIST_DIR")
 	if distDir == "" {
 		distDir = "../frontend/dist"
@@ -102,25 +132,12 @@ func main() {
 		slog.InfoContext(ctx, "serving frontend", "dir", distDir)
 		fs := http.FileServer(http.Dir(distDir))
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			path := distDir + "/" + r.URL.Path
+			path := filepath.Join(distDir, filepath.Clean(r.URL.Path))
 			if _, err := os.Stat(path); err != nil {
-				http.ServeFile(w, r, distDir+"/index.html")
+				http.ServeFile(w, r, filepath.Join(distDir, "index.html"))
 				return
 			}
 			fs.ServeHTTP(w, r)
 		})
 	}
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	handler := middleware.RequestLog(middleware.CORS(mux))
-	slog.InfoContext(ctx, "server starting", "port", port, "url", "http://localhost:"+port)
-	if err := http.ListenAndServe(":"+port, handler); err != nil {
-		slog.ErrorContext(ctx, "server failed", "error", err)
-		os.Exit(1)
-	}
 }
-

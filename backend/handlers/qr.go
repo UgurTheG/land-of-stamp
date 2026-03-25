@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"land-of-stamp-backend/db"
-	pb "land-of-stamp-backend/gen/pb"
+	"land-of-stamp-backend/gen/pb"
 	"land-of-stamp-backend/middleware"
 
 	"github.com/google/uuid"
@@ -27,28 +27,8 @@ func generateToken() (string, error) {
 // The token is valid for 60 seconds and can be claimed once by any user.
 func CreateStampToken(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	claims := middleware.GetUser(r)
-	if claims == nil {
-		jsonError(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	shopID := r.PathValue("id")
+	shopID, _ := verifyShopOwner(ctx, w, r)
 	if shopID == "" {
-		jsonError(w, "shop id required", http.StatusBadRequest)
-		return
-	}
-
-	// Verify admin owns this shop
-	var ownerID string
-	err := db.DB.QueryRowContext(ctx, "SELECT owner_id FROM shops WHERE id = ?", shopID).Scan(&ownerID)
-	if err != nil {
-		slog.WarnContext(ctx, "qr: shop not found", "shop", shopID, "error", err)
-		jsonError(w, "shop not found", http.StatusNotFound)
-		return
-	}
-	if ownerID != claims.UserID {
-		jsonError(w, "you don't own this shop", http.StatusForbidden)
 		return
 	}
 
@@ -75,7 +55,7 @@ func CreateStampToken(w http.ResponseWriter, r *http.Request) {
 	token, err := generateToken()
 	if err != nil {
 		slog.ErrorContext(ctx, "qr: failed to generate random token", "error", err)
-		jsonError(w, "failed to create token", http.StatusInternalServerError)
+		jsonError(ctx, w, "failed to create token", http.StatusInternalServerError)
 		return
 	}
 	expiresAt := time.Now().UTC().Add(60 * time.Second)
@@ -87,12 +67,12 @@ func CreateStampToken(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		slog.ErrorContext(ctx, "qr: failed to create stamp token", "error", err)
-		jsonError(w, "failed to create token", http.StatusInternalServerError)
+		jsonError(ctx, w, "failed to create token", http.StatusInternalServerError)
 		return
 	}
 
 	slog.InfoContext(ctx, "stamp token created", "shop", shopID, "expires", expiresAt)
-	writeProto(w, http.StatusCreated, &pb.StampToken{
+	writeProto(ctx, w, http.StatusCreated, &pb.StampToken{
 		Token:     token,
 		ExpiresAt: expiresAt.Format(time.RFC3339),
 		ShopId:    shopID,
@@ -105,19 +85,19 @@ func ClaimStamp(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	claims := middleware.GetUser(r)
 	if claims == nil {
-		jsonError(w, "unauthorized", http.StatusUnauthorized)
+		jsonError(ctx, w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	if claims.Role != "user" {
-		jsonError(w, "only customers can claim stamps", http.StatusForbidden)
+	if claims.Role != RoleUser {
+		jsonError(ctx, w, "only customers can claim stamps", http.StatusForbidden)
 		return
 	}
 
 	var req pb.ClaimStampRequest
 	if err := readProto(r, &req); err != nil || req.Token == "" {
 		slog.WarnContext(ctx, "qr: invalid claim request", "error", err)
-		jsonError(w, "token is required", http.StatusBadRequest)
+		jsonError(ctx, w, "token is required", http.StatusBadRequest)
 		return
 	}
 
@@ -129,7 +109,7 @@ func ClaimStamp(w http.ResponseWriter, r *http.Request) {
 	).Scan(&tokenID, &shopID, &expiresAtStr)
 	if err != nil {
 		slog.InfoContext(ctx, "qr: invalid or expired token", "token_prefix", req.Token[:min(8, len(req.Token))], "error", err)
-		jsonError(w, "invalid or expired QR code", http.StatusNotFound)
+		jsonError(ctx, w, "invalid or expired QR code", http.StatusNotFound)
 		return
 	}
 
@@ -137,7 +117,7 @@ func ClaimStamp(w http.ResponseWriter, r *http.Request) {
 	expiresAt, err := time.Parse(time.RFC3339, expiresAtStr)
 	if err != nil || time.Now().UTC().After(expiresAt) {
 		slog.InfoContext(ctx, "qr: token expired", "token_id", tokenID, "expires_at", expiresAtStr)
-		jsonError(w, "this QR code has expired — ask for a new one", http.StatusGone)
+		jsonError(ctx, w, "this QR code has expired — ask for a new one", http.StatusGone)
 		return
 	}
 
@@ -153,7 +133,7 @@ func ClaimStamp(w http.ResponseWriter, r *http.Request) {
 		var stampsRequired int32
 		if err := db.DB.QueryRowContext(ctx, "SELECT name, stamps_required FROM shops WHERE id = ?", shopID).Scan(&shopName, &stampsRequired); err != nil {
 			slog.ErrorContext(ctx, "qr: failed to get shop info for already-claimed response", "shop", shopID, "error", err)
-			jsonError(w, "failed to get shop information", http.StatusInternalServerError)
+			jsonError(ctx, w, "failed to get shop information", http.StatusInternalServerError)
 			return
 		}
 		var stamps int32
@@ -164,7 +144,7 @@ func ClaimStamp(w http.ResponseWriter, r *http.Request) {
 			slog.WarnContext(ctx, "qr: failed to get stamp count for already-claimed response", "user", claims.UserID, "shop", shopID, "error", err)
 		}
 
-		writeProto(w, http.StatusOK, &pb.ClaimStampResponse{
+		writeProto(ctx, w, http.StatusOK, &pb.ClaimStampResponse{
 			ShopName:       shopName,
 			Stamps:         stamps,
 			StampsRequired: stampsRequired,
@@ -180,7 +160,7 @@ func ClaimStamp(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		slog.ErrorContext(ctx, "qr: failed to record claim", "error", err)
-		jsonError(w, "failed to claim stamp", http.StatusInternalServerError)
+		jsonError(ctx, w, "failed to claim stamp", http.StatusInternalServerError)
 		return
 	}
 
@@ -189,7 +169,7 @@ func ClaimStamp(w http.ResponseWriter, r *http.Request) {
 	var stampsRequired int32
 	if err := db.DB.QueryRowContext(ctx, "SELECT name, stamps_required FROM shops WHERE id = ?", shopID).Scan(&shopName, &stampsRequired); err != nil {
 		slog.ErrorContext(ctx, "qr: failed to get shop info", "shop", shopID, "error", err)
-		jsonError(w, "failed to get shop information", http.StatusInternalServerError)
+		jsonError(ctx, w, "failed to get shop information", http.StatusInternalServerError)
 		return
 	}
 
@@ -208,13 +188,13 @@ func ClaimStamp(w http.ResponseWriter, r *http.Request) {
 			cardID, claims.UserID, shopID,
 		); err != nil {
 			slog.ErrorContext(ctx, "qr: failed to create card for claim", "user", claims.UserID, "shop", shopID, "error", err)
-			jsonError(w, "failed to create stamp card", http.StatusInternalServerError)
+			jsonError(ctx, w, "failed to create stamp card", http.StatusInternalServerError)
 			return
 		}
 	}
 
 	if stamps >= stampsRequired {
-		writeProto(w, http.StatusOK, &pb.ClaimStampResponse{
+		writeProto(ctx, w, http.StatusOK, &pb.ClaimStampResponse{
 			ShopName:       shopName,
 			Stamps:         stamps,
 			StampsRequired: stampsRequired,
@@ -226,7 +206,7 @@ func ClaimStamp(w http.ResponseWriter, r *http.Request) {
 	stamps++
 	if _, err := db.DB.ExecContext(ctx, "UPDATE stamp_cards SET stamps = ? WHERE id = ?", stamps, cardID); err != nil {
 		slog.ErrorContext(ctx, "qr: failed to update stamp count", "card", cardID, "error", err)
-		jsonError(w, "failed to update stamp count", http.StatusInternalServerError)
+		jsonError(ctx, w, "failed to update stamp count", http.StatusInternalServerError)
 		return
 	}
 	slog.InfoContext(ctx, "stamp claimed via QR", "card", cardID, "user", claims.UserID, "shop", shopID, "stamps", stamps)
@@ -236,17 +216,10 @@ func ClaimStamp(w http.ResponseWriter, r *http.Request) {
 		msg = "Card complete! 🏆 You can now redeem your reward!"
 	}
 
-	writeProto(w, http.StatusOK, &pb.ClaimStampResponse{
+	writeProto(ctx, w, http.StatusOK, &pb.ClaimStampResponse{
 		ShopName:       shopName,
 		Stamps:         stamps,
 		StampsRequired: stampsRequired,
 		Message:        msg,
 	})
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

@@ -1,3 +1,4 @@
+// Package middleware provides HTTP middleware for authentication, logging, and CORS.
 package middleware
 
 import (
@@ -14,6 +15,7 @@ import (
 
 type contextKey string
 
+// UserKey is the context key used to store authenticated user claims.
 const UserKey contextKey = "user"
 
 // requestIDKey is used to store a unique request ID in the context.
@@ -32,7 +34,7 @@ func RequestLog(next http.Handler) http.Handler {
 		start := time.Now()
 		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(sw, r)
-		slog.InfoContext(r.Context(), "request",
+		slog.InfoContext(ctx, "request",
 			"request_id", reqID,
 			"method", r.Method,
 			"path", r.URL.Path,
@@ -48,6 +50,7 @@ type statusWriter struct {
 	status int
 }
 
+// WriteHeader captures the status code and delegates to the wrapped ResponseWriter.
 func (w *statusWriter) WriteHeader(code int) {
 	w.status = code
 	w.ResponseWriter.WriteHeader(code)
@@ -127,13 +130,8 @@ func CORS(next http.Handler) http.Handler {
 	})
 }
 
+// GetUser extracts the authenticated user claims from the request context.
 func GetUser(r *http.Request) *auth.Claims {
 	claims, _ := r.Context().Value(UserKey).(*auth.Claims)
 	return claims
-}
-
-// GetRequestID returns the request ID from context, if set.
-func GetRequestID(ctx context.Context) string {
-	id, _ := ctx.Value(requestIDKey).(string)
-	return id
 }

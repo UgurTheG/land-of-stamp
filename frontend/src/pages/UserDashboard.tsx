@@ -89,7 +89,7 @@ export default function UserDashboard() {
           </div>
           <button
             onClick={() => navigate('/scan')}
-            className="shrink-0 flex items-center gap-2 bg-gradient-to-r from-accent to-amber-400 text-surface font-bold px-5 py-3 rounded-2xl hover:scale-[1.03] active:scale-[0.98] transition-transform cursor-pointer shadow-lg shadow-accent/30"
+            className="shrink-0 flex items-center gap-2 bg-linear-to-r from-accent to-amber-400 text-surface font-bold px-5 py-3 rounded-2xl hover:scale-[1.03] active:scale-[0.98] transition-transform cursor-pointer shadow-lg shadow-accent/30"
           >
             <ScanLine className="w-5 h-5" />
             <span className="hidden sm:inline">Scan QR</span>
@@ -111,7 +111,7 @@ export default function UserDashboard() {
           ].map((stat, i) => (
             <div
               key={i}
-              className="bg-gradient-to-br from-white/[0.07] to-white/[0.02] border border-white/10 rounded-2xl p-4"
+              className="bg-linear-to-br from-white/7 to-white/2 border border-white/10 rounded-2xl p-4"
             >
               <stat.icon className={`w-5 h-5 ${stat.color} mb-2`} />
               <div className="text-2xl font-bold text-white">{stat.value}</div>

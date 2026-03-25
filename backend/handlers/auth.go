@@ -1,6 +1,8 @@
+// Package handlers implements the HTTP handler functions for all API endpoints.
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
@@ -12,13 +14,19 @@ import (
 
 	"land-of-stamp-backend/auth"
 	"land-of-stamp-backend/db"
-	pb "land-of-stamp-backend/gen/pb"
+	"land-of-stamp-backend/gen/pb"
 	"land-of-stamp-backend/middleware"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+)
+
+// Role constants used across handlers.
+const (
+	RoleUser  = "user"
+	RoleAdmin = "admin"
 )
 
 // protojson marshaler configured to emit fields even when they have zero values,
@@ -76,34 +84,34 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	username, password, ok := parseBasicAuth(r)
 	if !ok {
 		slog.WarnContext(ctx, "register: missing basic auth header")
-		jsonError(w, "missing Authorization: Basic header", http.StatusBadRequest)
+		jsonError(ctx, w, "missing Authorization: Basic header", http.StatusBadRequest)
 		return
 	}
 	if len(username) < 2 {
-		jsonError(w, "username must be at least 2 characters", http.StatusBadRequest)
+		jsonError(ctx, w, "username must be at least 2 characters", http.StatusBadRequest)
 		return
 	}
 	if len(password) < 4 {
-		jsonError(w, "password must be at least 4 characters", http.StatusBadRequest)
+		jsonError(ctx, w, "password must be at least 4 characters", http.StatusBadRequest)
 		return
 	}
 
 	var req pb.RegisterRequest
 	if r.Body != nil {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
 			slog.WarnContext(ctx, "register: failed to decode request body", "error", err)
-			jsonError(w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
+			jsonError(ctx, w, fmt.Sprintf("invalid request body: %v", err), http.StatusBadRequest)
 			return
 		}
 	}
-	if req.Role != "user" && req.Role != "admin" {
-		req.Role = "user"
+	if req.Role != RoleUser && req.Role != RoleAdmin {
+		req.Role = RoleUser
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		slog.ErrorContext(ctx, "register: bcrypt failed", "error", err)
-		jsonError(w, "internal error", http.StatusInternalServerError)
+		jsonError(ctx, w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
@@ -114,20 +122,20 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	)
 	if err != nil {
 		slog.InfoContext(ctx, "register: username taken", "username", username)
-		jsonError(w, "username already taken", http.StatusConflict)
+		jsonError(ctx, w, "username already taken", http.StatusConflict)
 		return
 	}
 
 	token, err := auth.GenerateToken(id, username, req.Role)
 	if err != nil {
 		slog.ErrorContext(ctx, "register: token generation failed", "error", err)
-		jsonError(w, "failed to generate token", http.StatusInternalServerError)
+		jsonError(ctx, w, "failed to generate token", http.StatusInternalServerError)
 		return
 	}
 
 	setTokenCookie(w, token)
 	slog.InfoContext(ctx, "user registered", "id", id, "username", username, "role", req.Role)
-	writeProto(w, http.StatusCreated, &pb.AuthResponse{
+	writeProto(ctx, w, http.StatusCreated, &pb.AuthResponse{
 		User: &pb.User{Id: id, Username: username, Role: req.Role},
 	})
 }
@@ -139,7 +147,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	username, password, ok := parseBasicAuth(r)
 	if !ok {
 		slog.WarnContext(ctx, "login: missing basic auth header")
-		jsonError(w, "missing Authorization: Basic header", http.StatusBadRequest)
+		jsonError(ctx, w, "missing Authorization: Basic header", http.StatusBadRequest)
 		return
 	}
 
@@ -151,20 +159,20 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	).Scan(&id, &passwordHash, &role, &shopID)
 	if err != nil {
 		slog.InfoContext(ctx, "login: user not found", "username", username)
-		jsonError(w, "invalid username or password", http.StatusUnauthorized)
+		jsonError(ctx, w, "invalid username or password", http.StatusUnauthorized)
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password)); err != nil {
 		slog.InfoContext(ctx, "login: wrong password", "username", username)
-		jsonError(w, "invalid username or password", http.StatusUnauthorized)
+		jsonError(ctx, w, "invalid username or password", http.StatusUnauthorized)
 		return
 	}
 
 	token, err := auth.GenerateToken(id, username, role)
 	if err != nil {
 		slog.ErrorContext(ctx, "login: token generation failed", "error", err)
-		jsonError(w, "failed to generate token", http.StatusInternalServerError)
+		jsonError(ctx, w, "failed to generate token", http.StatusInternalServerError)
 		return
 	}
 
@@ -175,7 +183,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 
 	setTokenCookie(w, token)
 	slog.InfoContext(ctx, "user logged in", "id", id, "username", username, "role", role)
-	writeProto(w, http.StatusOK, &pb.AuthResponse{User: user})
+	writeProto(ctx, w, http.StatusOK, &pb.AuthResponse{User: user})
 }
 
 // Logout clears the auth cookie.
@@ -183,14 +191,15 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	clearTokenCookie(w)
 	slog.InfoContext(ctx, "user logged out")
-	writeJSON(w, http.StatusOK, map[string]string{"status": "logged out"})
+	writeJSON(ctx, w, http.StatusOK, map[string]string{"status": "logged out"})
 }
 
+// GetMe returns the currently authenticated user's profile.
 func GetMe(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	claims := middleware.GetUser(r)
 	if claims == nil {
-		jsonError(w, "unauthorized", http.StatusUnauthorized)
+		jsonError(ctx, w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -203,51 +212,70 @@ func GetMe(w http.ResponseWriter, r *http.Request) {
 	if shopID.Valid {
 		user.ShopId = &shopID.String
 	}
-	writeProto(w, http.StatusOK, user)
+	writeProto(ctx, w, http.StatusOK, user)
 }
 
-func jsonError(w http.ResponseWriter, msg string, code int) {
+func jsonError(ctx context.Context, w http.ResponseWriter, msg string, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]string{"error": msg})
+	if err := json.NewEncoder(w).Encode(map[string]string{"error": msg}); err != nil {
+		slog.ErrorContext(ctx, "jsonError: encode failed", "error", err)
+	}
 }
 
-func writeJSON(w http.ResponseWriter, code int, data any) {
+func writeJSON(ctx context.Context, w http.ResponseWriter, code int, data any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(data)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		slog.ErrorContext(ctx, "writeJSON: encode failed", "error", err)
+	}
 }
 
 // writeProto marshals a proto message to JSON using protojson (camelCase keys).
-func writeProto(w http.ResponseWriter, code int, msg proto.Message) {
+func writeProto(ctx context.Context, w http.ResponseWriter, code int, msg proto.Message) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	b, err := pjson.Marshal(msg)
 	if err != nil {
-		slog.Error("writeProto: marshal failed", "error", err)
+		slog.ErrorContext(ctx, "writeProto: marshal failed", "error", err)
 		return
 	}
-	w.Write(b)
+	if _, err := w.Write(b); err != nil {
+		slog.ErrorContext(ctx, "writeProto: write failed", "error", err)
+	}
 }
 
 // writeProtoList marshals a slice of proto messages as a JSON array with camelCase keys.
-func writeProtoList(w http.ResponseWriter, code int, msgs []proto.Message) {
+func writeProtoList(ctx context.Context, w http.ResponseWriter, msgs []proto.Message) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	w.Write([]byte("["))
+	w.WriteHeader(http.StatusOK)
+	if _, err := w.Write([]byte("[")); err != nil {
+		slog.ErrorContext(ctx, "writeProtoList: write failed", "error", err)
+		return
+	}
 	for i, msg := range msgs {
 		if i > 0 {
-			w.Write([]byte(","))
+			if _, err := w.Write([]byte(",")); err != nil {
+				slog.ErrorContext(ctx, "writeProtoList: write separator failed", "error", err)
+				return
+			}
 		}
 		b, err := pjson.Marshal(msg)
 		if err != nil {
-			slog.Error("writeProtoList: marshal failed", "index", i, "error", err)
-			w.Write([]byte("null"))
+			slog.ErrorContext(ctx, "writeProtoList: marshal failed", "index", i, "error", err)
+			if _, err := w.Write([]byte("null")); err != nil {
+				slog.ErrorContext(ctx, "writeProtoList: write null failed", "error", err)
+			}
 			continue
 		}
-		w.Write(b)
+		if _, err := w.Write(b); err != nil {
+			slog.ErrorContext(ctx, "writeProtoList: write failed", "error", err)
+			return
+		}
 	}
-	w.Write([]byte("]"))
+	if _, err := w.Write([]byte("]")); err != nil {
+		slog.ErrorContext(ctx, "writeProtoList: write closing bracket failed", "error", err)
+	}
 }
 
 // readProto reads the request body and unmarshals it into a proto message using protojson.
@@ -259,4 +287,3 @@ func readProto(r *http.Request, msg proto.Message) error {
 	}
 	return pjsonUnmarshal.Unmarshal(body, msg)
 }
-

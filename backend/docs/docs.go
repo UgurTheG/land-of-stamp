@@ -5,6 +5,7 @@ package docs
 
 import (
 	_ "embed"
+	"log/slog"
 	"net/http"
 )
 
@@ -18,12 +19,16 @@ func Register(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/docs/openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/yaml")
 		w.Header().Set("Cache-Control", "no-cache")
-		w.Write(specYAML)
+		if _, err := w.Write(specYAML); err != nil {
+			slog.ErrorContext(r.Context(), "docs: failed to write openapi spec", "error", err)
+		}
 	})
 
 	mux.HandleFunc("GET /api/docs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write([]byte(scalarHTML))
+		if _, err := w.Write([]byte(scalarHTML)); err != nil {
+			slog.ErrorContext(r.Context(), "docs: failed to write scalar HTML", "error", err)
+		}
 	})
 }
 
@@ -41,4 +46,3 @@ const scalarHTML = `<!doctype html>
 </body>
 </html>
 `
-

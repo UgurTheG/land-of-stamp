@@ -122,14 +122,25 @@ export default function ScanPage() {
         qrbox: { width: 250, height: 250 },
       };
 
+      let started = false;
       try {
         // Try rear camera first
         await scanner.start({ facingMode: 'environment' }, config, handleScan, () => {});
+        started = true;
       } catch {
         // Fall back to any available camera
         const cameras = await Html5Qrcode.getCameras();
-        if (cameras.length === 0) throw new Error('No cameras found on this device');
-        await scanner.start(cameras[0].id, config, handleScan, () => {});
+        if (cameras.length > 0) {
+          await scanner.start(cameras[0].id, config, handleScan, () => {});
+          started = true;
+        }
+      }
+
+      if (!started) {
+        setErrorMsg('No cameras found on this device');
+        toast.error('No cameras found on this device');
+        setScanState('error');
+        return;
       }
 
       setCameraReady(true);
@@ -147,7 +158,7 @@ export default function ScanPage() {
 
   useEffect(() => {
     return () => {
-      stopScanner();
+      void stopScanner();
     };
   }, [stopScanner]);
 
@@ -209,7 +220,7 @@ export default function ScanPage() {
             <div className="bg-linear-to-br from-white/8 to-white/3 backdrop-blur-xl border border-white/10 rounded-3xl p-5 w-full overflow-hidden">
               {/* Camera viewport */}
               <div className="relative rounded-2xl overflow-hidden bg-black aspect-square">
-                <div id="qr-reader" className="w-full min-h-[300px]" />
+                <div id="qr-reader" className="w-full min-h-75" />
 
                 {/* Scanning overlay */}
                 {cameraReady && (
