@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router';
 import { motion } from 'motion/react';
 import { useAuth } from '../hooks/useAuth';
+import { useLocale } from '../hooks/useLocale';
 import { toast } from 'sonner';
 import { Stamp, User, ShieldCheck, ArrowRight, Eye, EyeOff, UserPlus } from 'lucide-react';
 
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login, register } = useAuth();
+  const { m } = useLocale();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -24,15 +26,15 @@ export default function LoginPage() {
     setError('');
 
     if (!username.trim()) {
-      setError('Please enter a username');
+      setError(m.login.validation.usernameRequired);
       return;
     }
     if (username.trim().length < 2) {
-      setError('Username must be at least 2 characters');
+      setError(m.login.validation.usernameMin);
       return;
     }
     if (!password || password.length < 4) {
-      setError('Password must be at least 4 characters');
+      setError(m.login.validation.passwordMin);
       return;
     }
 
@@ -51,7 +53,7 @@ export default function LoginPage() {
         navigate(user.role === 'admin' ? '/admin' : '/dashboard');
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Something went wrong';
+      const msg = err instanceof Error ? err.message : m.login.validation.genericError;
       setError(msg);
       toast.error(msg);
     } finally {
@@ -75,10 +77,10 @@ export default function LoginPage() {
             </div>
           </Link>
           <h1 className="text-2xl sm:text-3xl font-black text-white mt-4">
-            {isRegister ? 'Create Account' : 'Welcome back'}
+            {isRegister ? m.login.createAccount : m.login.welcomeBack}
           </h1>
           <p className="text-indigo-300 mt-1">
-            {isRegister ? 'Join Länd of Stamp today' : 'Sign in to your Länd of Stamp account'}
+            {isRegister ? m.login.joinToday : m.login.signInAccount}
           </p>
         </div>
 
@@ -98,7 +100,7 @@ export default function LoginPage() {
                   }`}
                 >
                   <User className="w-4 h-4" />
-                  Customer
+                  {m.common.customer}
                 </button>
                 <button
                   type="button"
@@ -110,32 +112,32 @@ export default function LoginPage() {
                   }`}
                 >
                   <ShieldCheck className="w-4 h-4" />
-                  Shop Owner
+                  {m.common.shopOwner}
                 </button>
               </div>
             )}
 
             {/* Username */}
             <div>
-              <label className="block text-sm font-medium text-indigo-200 mb-1.5">Username</label>
+              <label className="block text-sm font-medium text-indigo-200 mb-1.5">{m.common.username}</label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter your username"
+                placeholder={m.login.enterUsername}
                 className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
               />
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-indigo-200 mb-1.5">Password</label>
+              <label className="block text-sm font-medium text-indigo-200 mb-1.5">{m.common.password}</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
+                  placeholder={m.login.enterPassword}
                   className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all pr-12"
                 />
                 <button
@@ -164,15 +166,15 @@ export default function LoginPage() {
               className="w-full flex items-center justify-center gap-2 bg-linear-to-r from-accent to-amber-400 text-surface font-bold py-3.5 rounded-xl hover:shadow-lg hover:shadow-accent/25 transition-all hover:scale-[1.02] text-lg cursor-pointer disabled:opacity-50 disabled:hover:scale-100"
             >
               {loading ? (
-                'Please wait...'
+                m.login.pleaseWait
               ) : isRegister ? (
                 <>
-                  Create Account
+                  {m.login.createAccountButton}
                   <UserPlus className="w-5 h-5" />
                 </>
               ) : (
                 <>
-                  Sign In
+                  {m.login.signInButton}
                   <ArrowRight className="w-5 h-5" />
                 </>
               )}
@@ -182,12 +184,12 @@ export default function LoginPage() {
           {/* Toggle login/register */}
           <div className="mt-6 pt-6 border-t border-white/10 text-center">
             <p className="text-sm text-indigo-400">
-              {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
+              {isRegister ? m.login.alreadyHaveAccount : m.login.dontHaveAccount}{' '}
               <button
                 onClick={() => { setIsRegister(!isRegister); setError(''); }}
                 className="text-accent hover:text-amber-300 font-semibold cursor-pointer"
               >
-                {isRegister ? 'Sign In' : 'Register'}
+                {isRegister ? m.login.signInButton : m.login.register}
               </button>
             </p>
           </div>

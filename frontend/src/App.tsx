@@ -1,7 +1,9 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { AuthProvider } from './context/AuthContext';
+import { LocaleProvider } from './context/LocaleContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { useLocale } from './hooks/useLocale';
 import { useTheme } from './hooks/useTheme';
 import { Toaster } from 'sonner';
 import Navbar from './components/layout/Navbar';
@@ -15,6 +17,7 @@ const ClaimPage = lazy(() => import('./pages/ClaimPage'));
 
 function AppShell() {
   const { theme } = useTheme();
+  const { m } = useLocale();
 
   return (
     <>
@@ -29,7 +32,7 @@ function AppShell() {
 
       <div className="relative z-10 min-h-screen text-white">
         <Navbar />
-        <Suspense fallback={<div className="flex items-center justify-center h-[60vh] text-zinc-400">Loading…</div>}>
+        <Suspense fallback={<div className="flex items-center justify-center h-[60vh] text-zinc-400">{m.common.loading}</div>}>
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
@@ -76,9 +79,11 @@ function App() {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <AuthProvider>
-          <AppShell />
-        </AuthProvider>
+        <LocaleProvider>
+          <AuthProvider>
+            <AppShell />
+          </AuthProvider>
+        </LocaleProvider>
       </ThemeProvider>
     </BrowserRouter>
   );

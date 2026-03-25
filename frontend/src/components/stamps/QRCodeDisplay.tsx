@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
 import { RefreshCw, QrCode, Clock, Sparkles } from 'lucide-react';
+import { useLocale } from '../../hooks/useLocale';
 import { apiCreateStampToken } from '../../lib/api';
 import { toast } from 'sonner';
 
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function QRCodeDisplay({ shopId, shopColor, shopName }: Props) {
+  const { m } = useLocale();
   const [token, setToken] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
@@ -27,13 +29,13 @@ export default function QRCodeDisplay({ shopId, shopColor, shopName }: Props) {
       setToken(result.token);
       setExpiresAt(new Date(result.expiresAt));
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to generate QR code';
+      const msg = e instanceof Error ? e.message : m.qrCodeDisplay.generateFailed;
       setError(msg);
       toast.error(msg);
     } finally {
       setLoading(false);
     }
-  }, [shopId]);
+  }, [m.qrCodeDisplay.generateFailed, shopId]);
 
   // Reset state when the selected shop changes
   useEffect(() => {
@@ -127,10 +129,10 @@ export default function QRCodeDisplay({ shopId, shopColor, shopName }: Props) {
               className="flex items-center gap-2 bg-linear-to-r from-primary to-primary-dark text-white font-bold px-8 py-3.5 rounded-2xl hover:scale-[1.03] active:scale-[0.98] transition-transform cursor-pointer shadow-lg shadow-primary/30"
             >
               <Sparkles className="w-5 h-5" />
-              Generate QR Code
+              {m.qrCodeDisplay.generateButton}
             </button>
             <p className="text-indigo-400 text-sm text-center max-w-xs">
-              Customers scan this QR code with their phone camera to collect a stamp
+              {m.qrCodeDisplay.generateHint}
             </p>
           </motion.div>
         ) : loading ? (
@@ -144,7 +146,7 @@ export default function QRCodeDisplay({ shopId, shopColor, shopName }: Props) {
             <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>
               <RefreshCw className="w-8 h-8 text-primary-light" />
             </motion.div>
-            <p className="text-indigo-300 text-sm">Generating...</p>
+            <p className="text-indigo-300 text-sm">{m.qrCodeDisplay.generating}</p>
           </motion.div>
         ) : (
           <motion.div
@@ -162,8 +164,8 @@ export default function QRCodeDisplay({ shopId, shopColor, shopName }: Props) {
                 We use padding to create the border width, and the
                 inner child masks the centre so only the edges show.
               */}
-              <div
-                className="animated-border-box rounded-2xl p-[3px] relative"
+                <div
+                  className="animated-border-box rounded-2xl p-0.75 relative"
                 style={{ background: borderGradient }}
               >
                 {/* Glow layer behind the border (blurred copy) */}
@@ -224,7 +226,7 @@ export default function QRCodeDisplay({ shopId, shopColor, shopName }: Props) {
               animate={{ opacity: [0.6, 1, 0.6] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              📱 Customers: open your phone camera and point it at this code
+              {m.qrCodeDisplay.phoneCameraHint}
             </motion.p>
 
             {/* Timer */}
@@ -236,7 +238,7 @@ export default function QRCodeDisplay({ shopId, shopColor, shopName }: Props) {
                 >
                   {secondsLeft}s
                 </span>
-                <span className="text-indigo-400">remaining</span>
+                <span className="text-indigo-400">{m.qrCodeDisplay.remaining}</span>
               </div>
 
               {/* Progress bar */}
@@ -259,7 +261,7 @@ export default function QRCodeDisplay({ shopId, shopColor, shopName }: Props) {
               className="flex items-center gap-2 bg-white/10 border border-white/10 text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-white/15 transition-all cursor-pointer text-sm"
             >
               <RefreshCw className="w-4 h-4" />
-              New QR Code
+              {m.qrCodeDisplay.newQrCode}
             </button>
           </motion.div>
         )}

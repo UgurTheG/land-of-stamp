@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../hooks/useAuth';
+import { useLocale } from '../hooks/useLocale';
 import { toast } from 'sonner';
 import {
   apiGetShops,
@@ -14,6 +15,7 @@ import { Stamp, Star, Gift, TrendingUp, History, ChevronDown } from 'lucide-reac
 
 export default function UserDashboard() {
   const { user } = useAuth();
+  const { m, locale } = useLocale();
   const [shops, setShops] = useState<Shop[]>([]);
   const [cards, setCards] = useState<StampCardType[]>([]);
 
@@ -23,10 +25,10 @@ export default function UserDashboard() {
       setShops(s);
       setCards(c);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to refresh data';
+      const msg = e instanceof Error ? e.message : m.userDashboard.errors.refreshFailed;
       toast.error(msg);
     }
-  }, []);
+  }, [m.userDashboard.errors.refreshFailed]);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,20 +38,20 @@ export default function UserDashboard() {
         if (!cancelled) { setShops(s); setCards(c); }
       } catch (e) {
         if (!cancelled) {
-          const msg = e instanceof Error ? e.message : 'Failed to load dashboard';
+          const msg = e instanceof Error ? e.message : m.userDashboard.errors.loadFailed;
           toast.error(msg);
         }
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [m.userDashboard.errors.loadFailed]);
 
   const handleRedeem = async (cardId: string) => {
     try {
       await apiRedeemCard(cardId);
       await refresh();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to redeem card';
+      const msg = e instanceof Error ? e.message : m.userDashboard.errors.redeemFailed;
       toast.error(msg);
     }
   };
@@ -76,9 +78,9 @@ export default function UserDashboard() {
         >
           <div>
             <h1 className="text-3xl sm:text-4xl font-black text-white">
-              Welcome back, <span className="text-accent">{user?.username}</span>! 👋
+              {m.userDashboard.welcomeBack(user?.username ?? '')}
             </h1>
-            <p className="text-indigo-300 mt-2">Here are your loyalty stamp cards</p>
+            <p className="text-indigo-300 mt-2">{m.userDashboard.subtitle}</p>
           </div>
         </motion.div>
 
@@ -90,10 +92,10 @@ export default function UserDashboard() {
           className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10"
         >
           {[
-            { icon: Stamp, label: 'Total Stamps', value: totalStamps, color: 'text-primary-light' },
-            { icon: Star, label: 'Active Cards', value: cards.filter((c) => !c.redeemed).length, color: 'text-accent' },
-            { icon: TrendingUp, label: 'Completed', value: completedCards, color: 'text-emerald-400' },
-            { icon: Gift, label: 'Redeemed', value: redeemedCards, color: 'text-rose-400' },
+            { icon: Stamp, label: m.userDashboard.stats.totalStamps, value: totalStamps, color: 'text-primary-light' },
+            { icon: Star, label: m.userDashboard.stats.activeCards, value: cards.filter((c) => !c.redeemed).length, color: 'text-accent' },
+            { icon: TrendingUp, label: m.userDashboard.stats.completed, value: completedCards, color: 'text-emerald-400' },
+            { icon: Gift, label: m.userDashboard.stats.redeemed, value: redeemedCards, color: 'text-rose-400' },
           ].map((stat, i) => (
             <div
               key={i}
@@ -114,8 +116,8 @@ export default function UserDashboard() {
             className="text-center py-20"
           >
             <Stamp className="w-16 h-16 text-indigo-600 mx-auto mb-4" />
-            <h2 className="text-xl font-bold text-white mb-2">No shops available yet</h2>
-            <p className="text-indigo-400">Check back soon — new partner shops are joining every day!</p>
+            <h2 className="text-xl font-bold text-white mb-2">{m.userDashboard.empty.title}</h2>
+            <p className="text-indigo-400">{m.userDashboard.empty.description}</p>
           </motion.div>
         ) : (
           <div className="grid sm:grid-cols-2 gap-6">
@@ -153,7 +155,7 @@ export default function UserDashboard() {
               className="flex items-center gap-2 text-indigo-300 hover:text-white transition-colors mb-4 cursor-pointer"
             >
               <History className="w-5 h-5" />
-              <span className="font-semibold">Redeemed Rewards ({redeemedCardsList.length})</span>
+              <span className="font-semibold">{m.userDashboard.redeemedRewards(redeemedCardsList.length)}</span>
               <motion.div animate={{ rotate: showHistory ? 180 : 0 }} transition={{ duration: 0.2 }}>
                 <ChevronDown className="w-4 h-4" />
               </motion.div>
@@ -183,12 +185,12 @@ export default function UserDashboard() {
                               <p className="text-xs text-indigo-400 mt-0.5">{shop.rewardDescription}</p>
                             </div>
                             <div className="bg-green-500/20 text-green-400 text-xs font-bold px-2.5 py-1 rounded-full border border-green-500/30">
-                              ✓ Redeemed
+                              {m.userDashboard.redeemedBadge}
                             </div>
                           </div>
                           {card.createdAt && (
                             <p className="text-xs text-indigo-500 mt-2">
-                              {new Date(card.createdAt).toLocaleDateString()}
+                              {new Date(card.createdAt).toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-US')}
                             </p>
                           )}
                         </div>

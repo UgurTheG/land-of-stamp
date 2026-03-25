@@ -1,12 +1,15 @@
 import { Link, useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../../hooks/useAuth';
+import { useLocale } from '../../hooks/useLocale';
 import { useTheme } from '../../hooks/useTheme';
 import { Stamp, LogOut, LayoutDashboard, Home, Menu, X, Sun, Moon } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import LanguageSwitcher from './LanguageSwitcher';
 
 export default function Navbar() {
   const { user, logout, isAuthenticated } = useAuth();
+  const { m } = useLocale();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,11 +31,11 @@ export default function Navbar() {
     }`;
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#080515]/60 backdrop-blur-2xl border-b border-white/[0.06] shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-surface/60 backdrop-blur-2xl border-b border-white/6 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 group">
+          <Link to="/" className="flex items-center gap-2 group" aria-label="Länd of Stamp">
             <div className="w-9 h-9 bg-linear-to-br from-accent to-amber-400 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
               <Stamp className="w-5 h-5 text-surface" />
             </div>
@@ -44,24 +47,27 @@ export default function Navbar() {
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-6">
             <Link to="/" className={navLinkClass('/')}>
-              Home
+              {m.common.home}
             </Link>
             {isAuthenticated && user?.role === 'user' && (
               <Link to="/dashboard" className={navLinkClass('/dashboard')}>
-                My Cards
+                {m.common.myCards}
               </Link>
             )}
             {isAuthenticated && user?.role === 'admin' && (
               <Link to="/admin" className={navLinkClass('/admin')}>
-                Dashboard
+                {m.common.dashboard}
               </Link>
             )}
+
+            <LanguageSwitcher />
 
             {/* Theme toggle */}
             <button
               onClick={toggleTheme}
               className="theme-toggle text-indigo-200"
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              aria-label={theme === 'dark' ? m.navbar.switchToLight : m.navbar.switchToDark}
+              title={theme === 'dark' ? m.navbar.lightMode : m.navbar.darkMode}
             >
               {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
@@ -76,7 +82,7 @@ export default function Navbar() {
                   className="flex items-center gap-1.5 text-indigo-300 hover:text-white transition-colors text-sm cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                  Logout
+                  {m.common.logout}
                 </button>
               </div>
             ) : (
@@ -84,7 +90,7 @@ export default function Navbar() {
                 to="/login"
                 className="bg-accent hover:bg-accent-dark text-surface font-semibold px-5 py-2 rounded-xl transition-all hover:scale-105"
               >
-                Sign In
+                {m.common.signIn}
               </Link>
             )}
           </div>
@@ -106,7 +112,7 @@ export default function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-[#080515]/90 backdrop-blur-2xl border-b border-white/[0.06] overflow-hidden"
+            className="md:hidden bg-surface/90 backdrop-blur-2xl border-b border-white/6 overflow-hidden"
           >
             <div className="px-4 py-4 space-y-3">
               {/* Theme toggle (mobile) */}
@@ -115,15 +121,16 @@ export default function Navbar() {
                 className="flex items-center gap-2 text-indigo-200 hover:text-white py-2 w-full cursor-pointer"
               >
                 {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                {theme === 'dark' ? m.navbar.lightMode : m.navbar.darkMode}
               </button>
+              <LanguageSwitcher fullWidth />
               <Link
                 to="/"
                 onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-2 text-indigo-200 hover:text-white py-2"
               >
                 <Home className="w-4 h-4" />
-                Home
+                {m.common.home}
               </Link>
               {isAuthenticated && user?.role === 'user' && (
                 <Link
@@ -132,7 +139,7 @@ export default function Navbar() {
                   className="flex items-center gap-2 text-indigo-200 hover:text-white py-2"
                 >
                   <LayoutDashboard className="w-4 h-4" />
-                  My Cards
+                  {m.common.myCards}
                 </Link>
               )}
               {isAuthenticated && user?.role === 'admin' && (
@@ -142,7 +149,7 @@ export default function Navbar() {
                   className="flex items-center gap-2 text-indigo-200 hover:text-white py-2"
                 >
                   <LayoutDashboard className="w-4 h-4" />
-                  Dashboard
+                  {m.common.dashboard}
                 </Link>
               )}
               {isAuthenticated ? (
@@ -151,7 +158,7 @@ export default function Navbar() {
                   className="flex items-center gap-2 text-red-400 hover:text-red-300 py-2 w-full cursor-pointer"
                 >
                   <LogOut className="w-4 h-4" />
-                  Logout ({user?.username})
+                  {m.common.logout} ({user?.username})
                 </button>
               ) : (
                 <Link
@@ -159,7 +166,7 @@ export default function Navbar() {
                   onClick={() => setMobileOpen(false)}
                   className="block text-center bg-accent hover:bg-accent-dark text-surface font-semibold px-5 py-2.5 rounded-xl"
                 >
-                  Sign In
+                  {m.common.signIn}
                 </Link>
               )}
             </div>

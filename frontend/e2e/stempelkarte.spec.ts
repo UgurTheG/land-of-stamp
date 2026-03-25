@@ -104,6 +104,13 @@ test.describe('Landing Page', () => {
     await expect(page.getByRole('link', { name: 'Sign In' })).toBeVisible();
   });
 
+  test('language switcher updates landing copy to German', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: 'DE' }).first().click();
+    await expect(page.getByText('Stempel sammeln.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Mehr erfahren' })).toBeVisible();
+  });
+
   test('logged-in user landing page shows dashboard CTAs instead of guest signup copy', async ({ page }) => {
     await registerViaAPI(page, 'user');
     await page.goto('/');

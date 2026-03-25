@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../hooks/useAuth';
+import { useLocale } from '../hooks/useLocale';
 import { toast } from 'sonner';
 import {
   apiGetMyShops,
@@ -37,6 +38,7 @@ type Tab = 'shop' | 'stamps' | 'qr' | 'stats';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const { m } = useLocale();
   const [activeTab, setActiveTab] = useState<Tab>('shop');
   const [saved, setSaved] = useState(false);
   const [stamped, setStamped] = useState<string | null>(null);
@@ -82,11 +84,11 @@ export default function AdminDashboard() {
       const cards = await apiGetShopCards(shopId);
       setShopCards(cards);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to load cards';
+      const msg = e instanceof Error ? e.message : m.admin.toasts.loadCardsFailed;
       toast.error(msg);
       setShopCards([]);
     }
-  }, []);
+  }, [m.admin.toasts.loadCardsFailed]);
 
   const refresh = useCallback(async () => {
     try {
@@ -105,10 +107,10 @@ export default function AdminDashboard() {
         setShopCards([]);
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to refresh data';
+      const msg = e instanceof Error ? e.message : m.admin.toasts.refreshFailed;
       toast.error(msg);
     }
-  }, [selectedShopId]);
+  }, [m.admin.toasts.refreshFailed, selectedShopId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -126,13 +128,13 @@ export default function AdminDashboard() {
         }
       } catch (e) {
         if (!cancelled) {
-          const msg = e instanceof Error ? e.message : 'Failed to load dashboard';
+          const msg = e instanceof Error ? e.message : m.admin.toasts.loadDashboardFailed;
           toast.error(msg);
         }
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [m.admin.toasts.loadDashboardFailed]);
 
   const handleSelectShop = (shop: Shop) => {
     setSelectedShopId(shop.id);
@@ -158,17 +160,17 @@ export default function AdminDashboard() {
       if (editingMode === 'new') {
         const created = await apiCreateShop({ name, description, rewardDescription, stampsRequired, color });
         setSelectedShopId(created.id);
-        toast.success('Stamp card created!');
+        toast.success(m.admin.toasts.cardCreated);
       } else if (editingMode && selectedShop) {
         await apiUpdateShop(selectedShop.id, { name, description, rewardDescription, stampsRequired, color });
-        toast.success('Stamp card updated!');
+        toast.success(m.admin.toasts.cardUpdated);
       }
       setEditingMode(null);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
       await refresh();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to save stamp card';
+      const msg = e instanceof Error ? e.message : m.admin.toasts.saveFailed;
       toast.error(msg);
     }
   };
@@ -181,7 +183,7 @@ export default function AdminDashboard() {
       setTimeout(() => setStamped(null), 1500);
       await loadCardsForShop(selectedShop.id);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to grant stamp';
+      const msg = e instanceof Error ? e.message : m.admin.toasts.grantFailed;
       toast.error(msg);
     }
   };
@@ -195,7 +197,7 @@ export default function AdminDashboard() {
       await apiUpdateStampCount(selectedShop.id, userId, currentStamps - 1);
       await loadCardsForShop(selectedShop.id);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to reduce stamp';
+      const msg = e instanceof Error ? e.message : m.admin.toasts.reduceFailed;
       toast.error(msg);
     }
   };
@@ -215,10 +217,10 @@ export default function AdminDashboard() {
   const colorPresets = ['#6366f1', '#f59e0b', '#ef4444', '#10b981', '#ec4899', '#8b5cf6', '#06b6d4', '#f97316'];
 
   const tabs: { id: Tab; label: string; icon: typeof Store }[] = [
-    { id: 'shop', label: 'Stamp Cards', icon: Settings },
-    { id: 'stamps', label: 'Grant Stamps', icon: Stamp },
-    { id: 'qr', label: 'QR Code', icon: QrCode },
-    { id: 'stats', label: 'Statistics', icon: BarChart3 },
+    { id: 'shop', label: m.admin.tabs.shop, icon: Settings },
+    { id: 'stamps', label: m.admin.tabs.stamps, icon: Stamp },
+    { id: 'qr', label: m.admin.tabs.qr, icon: QrCode },
+    { id: 'stats', label: m.admin.tabs.stats, icon: BarChart3 },
   ];
 
   const hasShop = selectedShop !== null;
@@ -234,12 +236,12 @@ export default function AdminDashboard() {
           className="mb-6"
         >
           <h1 className="text-3xl sm:text-4xl font-black text-white">
-            Shop <span className="text-accent">Dashboard</span> 🏪
+            {m.admin.headerTitle}
           </h1>
           <p className="text-indigo-300 mt-2">
             {shops.length === 0
-              ? 'Create your first stamp card to get started'
-              : `Managing ${shops.length} stamp card${shops.length > 1 ? 's' : ''}`}
+              ? m.admin.headerEmpty
+              : m.admin.headerManaging(shops.length)}
           </p>
         </motion.div>
 
@@ -265,11 +267,11 @@ export default function AdminDashboard() {
                     </div>
                     <div className="text-left">
                       <div className="text-white font-semibold text-sm">{selectedShop.name}</div>
-                      <div className="text-indigo-400 text-xs">{selectedShop.stampsRequired} stamps required</div>
+                      <div className="text-indigo-400 text-xs">{m.admin.stampsRequired(selectedShop.stampsRequired)}</div>
                     </div>
                   </>
                 ) : (
-                  <span className="text-indigo-400 text-sm font-medium">Select a shop…</span>
+                  <span className="text-indigo-400 text-sm font-medium">{m.admin.selectShop}</span>
                 )}
                 <ChevronDown className={`w-4 h-4 text-indigo-400 ml-auto transition-transform ${shopSelectorOpen ? 'rotate-180' : ''}`} />
               </button>
@@ -350,14 +352,14 @@ export default function AdminDashboard() {
                 /* No shops yet */
                 <div className="bg-linear-to-br from-white/8 to-white/3 border border-white/10 rounded-3xl p-10 text-center">
                   <Store className="w-14 h-14 text-indigo-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-white mb-2">No stamp cards yet</h3>
-                  <p className="text-indigo-400 mb-6 max-w-sm mx-auto">Create your first stamp card to start managing rewards for your customers.</p>
+                  <h3 className="text-xl font-bold text-white mb-2">{m.admin.noStampCardsYet}</h3>
+                  <p className="text-indigo-400 mb-6 max-w-sm mx-auto">{m.admin.createFirstStampCardBody}</p>
                   <button
                     onClick={handleNewShop}
                     className="inline-flex items-center gap-2 bg-linear-to-r from-accent to-amber-400 text-surface font-bold px-6 py-3 rounded-xl hover:scale-[1.02] transition-transform cursor-pointer"
                   >
                     <PlusCircle className="w-5 h-5" />
-                    Create Your First Stamp Card
+                    {m.admin.createFirstStampCard}
                   </button>
                 </div>
               ) : (
@@ -366,14 +368,14 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-bold text-white flex items-center gap-2">
                       <Store className="w-5 h-5 text-primary-light" />
-                      My Stamp Cards ({shops.length})
+                      {m.admin.myStampCards(shops.length)}
                     </h3>
                     <button
                       onClick={handleNewShop}
                       className="flex items-center gap-2 bg-linear-to-r from-accent to-amber-400 text-surface font-bold px-4 py-2 rounded-xl hover:scale-[1.02] transition-transform cursor-pointer text-sm"
                     >
                       <PlusCircle className="w-4 h-4" />
-                      Create Stamp Card
+                      {m.admin.createStampCard}
                     </button>
                   </div>
 
@@ -400,12 +402,12 @@ export default function AdminDashboard() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <h4 className="text-white font-bold truncate">{s.name}</h4>
-                            <p className="text-indigo-400 text-xs mt-0.5 truncate">{s.description || 'No description'}</p>
+                            <p className="text-indigo-400 text-xs mt-0.5 truncate">{s.description || m.common.noDescription}</p>
                           </div>
                         </div>
 
                         <div className="mt-3 flex items-center gap-3 text-xs text-indigo-400">
-                          <span className="bg-white/5 px-2 py-1 rounded-lg">{s.stampsRequired} stamps</span>
+                          <span className="bg-white/5 px-2 py-1 rounded-lg">{m.admin.stampsShort(s.stampsRequired)}</span>
                           <span className="bg-white/5 px-2 py-1 rounded-lg truncate flex-1">🎁 {s.rewardDescription}</span>
                         </div>
 
@@ -418,14 +420,14 @@ export default function AdminDashboard() {
                                 : 'bg-white/5 text-indigo-300 hover:bg-white/10'
                             }`}
                           >
-                            {s.id === selectedShopId ? '✓ Selected' : 'Select'}
+                            {s.id === selectedShopId ? m.admin.selected : m.common.select}
                           </button>
                           <button
                             onClick={() => handleEditShop(s)}
                             className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold bg-white/5 text-indigo-300 hover:bg-white/10 hover:text-white rounded-xl transition-all cursor-pointer"
                           >
                             <Pencil className="w-3.5 h-3.5" />
-                            Edit
+                            {m.common.edit}
                           </button>
                         </div>
                       </motion.div>
@@ -447,14 +449,14 @@ export default function AdminDashboard() {
               {!hasShop ? (
                 <div className="bg-linear-to-br from-white/8 to-white/3 border border-white/10 rounded-3xl p-8 text-center">
                   <Store className="w-12 h-12 text-indigo-500 mx-auto mb-3" />
-                  <h3 className="text-lg font-bold text-white mb-2">No shop selected</h3>
-                  <p className="text-indigo-400 mb-4">Create or select a shop first.</p>
+                  <h3 className="text-lg font-bold text-white mb-2">{m.admin.noShopSelected}</h3>
+                  <p className="text-indigo-400 mb-4">{m.admin.createOrSelectShopFirst}</p>
                   <button
                     onClick={() => setActiveTab('shop')}
                     className="inline-flex items-center gap-2 bg-primary text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-primary-dark transition-colors cursor-pointer"
                   >
                     <PlusCircle className="w-4 h-4" />
-                    Set Up Shop
+                    {m.admin.setUpShop}
                   </button>
                 </div>
               ) : (
@@ -464,9 +466,9 @@ export default function AdminDashboard() {
                       <Stamp className="w-5 h-5 text-accent" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-white">Grant Stamps</h2>
+                      <h2 className="text-xl font-bold text-white">{m.admin.grantStamps}</h2>
                       <p className="text-sm text-indigo-400">
-                        Managing stamps for <span className="text-white font-medium">{selectedShop.name}</span>
+                        {m.admin.managingStampsFor} <span className="text-white font-medium">{selectedShop.name}</span>
                       </p>
                     </div>
                   </div>
@@ -478,7 +480,7 @@ export default function AdminDashboard() {
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Search customers..."
+                      placeholder={m.admin.searchCustomers}
                       className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder:text-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                     />
                   </div>
@@ -486,7 +488,7 @@ export default function AdminDashboard() {
                   {filteredCustomers.length === 0 ? (
                     <div className="text-center py-10">
                       <UsersIcon className="w-10 h-10 text-indigo-600 mx-auto mb-2" />
-                      <p className="text-indigo-400">No customers found</p>
+                      <p className="text-indigo-400">{m.admin.noCustomersFound}</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -518,7 +520,7 @@ export default function AdminDashboard() {
                                 </span>
                                 {isComplete && (
                                   <span className="text-xs bg-accent/20 text-accent px-2 py-0.5 rounded-full font-medium">
-                                    Complete!
+                                        {m.admin.complete}
                                   </span>
                                 )}
                               </div>
@@ -548,7 +550,7 @@ export default function AdminDashboard() {
                                     ? 'bg-white/5 text-indigo-500 cursor-not-allowed'
                                     : 'bg-red-500/15 text-red-400 hover:bg-red-500/25'
                                 }`}
-                                title="Remove stamp"
+                                title={m.admin.removeStamp}
                               >
                                 <MinusCircle className="w-4 h-4" />
                               </button>
@@ -566,12 +568,12 @@ export default function AdminDashboard() {
                                 {stamped === customer.id ? (
                                   <>
                                     <CheckCircle className="w-4 h-4" />
-                                    Done
+                                    {m.admin.done}
                                   </>
                                 ) : (
                                   <>
                                     <PlusCircle className="w-4 h-4" />
-                                    Stamp
+                                    {m.admin.stamp}
                                   </>
                                 )}
                               </button>
@@ -597,14 +599,14 @@ export default function AdminDashboard() {
               {!hasShop ? (
                 <div className="bg-linear-to-br from-white/8 to-white/3 border border-white/10 rounded-3xl p-8 text-center">
                   <Store className="w-12 h-12 text-indigo-500 mx-auto mb-3" />
-                  <h3 className="text-lg font-bold text-white mb-2">No shop selected</h3>
-                  <p className="text-indigo-400 mb-4">Create or select a shop first.</p>
+                  <h3 className="text-lg font-bold text-white mb-2">{m.admin.noShopSelected}</h3>
+                  <p className="text-indigo-400 mb-4">{m.admin.createOrSelectShopFirst}</p>
                   <button
                     onClick={() => setActiveTab('shop')}
                     className="inline-flex items-center gap-2 bg-primary text-white font-semibold px-5 py-2.5 rounded-xl hover:bg-primary-dark transition-colors cursor-pointer"
                   >
                     <PlusCircle className="w-4 h-4" />
-                    Set Up Shop
+                    {m.admin.setUpShop}
                   </button>
                 </div>
               ) : (
@@ -614,9 +616,9 @@ export default function AdminDashboard() {
                       <QrCode className="w-5 h-5 text-primary-light" />
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold text-white">QR Code Stamps</h2>
+                      <h2 className="text-xl font-bold text-white">{m.admin.qrCodeStamps}</h2>
                       <p className="text-sm text-indigo-400">
-                        Generate a QR code for <span className="text-white font-medium">{selectedShop.name}</span>
+                        {m.admin.generateQrFor} <span className="text-white font-medium">{selectedShop.name}</span>
                       </p>
                     </div>
                   </div>
@@ -637,17 +639,17 @@ export default function AdminDashboard() {
               {!hasShop ? (
                 <div className="bg-linear-to-br from-white/8 to-white/3 border border-white/10 rounded-3xl p-8 text-center">
                   <BarChart3 className="w-12 h-12 text-indigo-500 mx-auto mb-3" />
-                  <h3 className="text-lg font-bold text-white mb-2">No data yet</h3>
-                  <p className="text-indigo-400">Create or select a shop to see statistics.</p>
+                  <h3 className="text-lg font-bold text-white mb-2">{m.admin.noDataYet}</h3>
+                  <p className="text-indigo-400">{m.admin.createOrSelectShopToSeeStatistics}</p>
                 </div>
               ) : (
                 <div className="space-y-6">
                   {/* Stat cards */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                     {[
-                      { label: 'Total Stamps Given', value: totalStampsGiven, icon: Stamp, color: 'text-accent' },
-                      { label: 'Completed Cards', value: completedCards, icon: CheckCircle, color: 'text-emerald-400' },
-                      { label: 'Active Customers', value: activeCustomers, icon: UsersIcon, color: 'text-primary-light' },
+                      { label: m.admin.stats.totalStampsGiven, value: totalStampsGiven, icon: Stamp, color: 'text-accent' },
+                      { label: m.admin.stats.completedCards, value: completedCards, icon: CheckCircle, color: 'text-emerald-400' },
+                      { label: m.admin.stats.activeCustomers, value: activeCustomers, icon: UsersIcon, color: 'text-primary-light' },
                     ].map((stat, i) => (
                       <motion.div
                         key={i}
@@ -666,10 +668,10 @@ export default function AdminDashboard() {
                   {/* Customer breakdown */}
                   <div className="bg-linear-to-br from-white/8 to-white/3 border border-white/10 rounded-3xl p-6 sm:p-8">
                     <h3 className="text-lg font-bold text-white mb-4">
-                      Customer Progress — {selectedShop.name}
+                      {m.admin.customerProgress(selectedShop.name)}
                     </h3>
                     {shopCards.length === 0 ? (
-                      <p className="text-indigo-400 text-center py-8">No customer activity yet</p>
+                      <p className="text-indigo-400 text-center py-8">{m.admin.noCustomerActivityYet}</p>
                     ) : (
                       <div className="space-y-3">
                         {shopCards
@@ -745,17 +747,17 @@ export default function AdminDashboard() {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-white">
-                      {editingMode === 'new' ? 'Create Stamp Card' : 'Edit Stamp Card'}
+                      {editingMode === 'new' ? m.admin.createModalTitle : m.admin.editModalTitle}
                     </h2>
                     <p className="text-sm text-indigo-400">
-                      {editingMode === 'new' ? 'Set up a new stamp card with its rewards' : `Editing ${selectedShop?.name ?? ''}`}
+                      {editingMode === 'new' ? m.admin.createModalDescription : m.admin.editing(selectedShop?.name ?? '')}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setEditingMode(null)}
                   className="text-indigo-400 hover:text-white transition-colors cursor-pointer p-2 rounded-xl hover:bg-white/10"
-                  title="Close"
+                  title={m.common.close}
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -764,30 +766,30 @@ export default function AdminDashboard() {
               <form action={handleSaveShop} className="space-y-5">
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-indigo-200 mb-1.5">Shop Name</label>
-                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="My Awesome Shop" required className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+                    <label className="block text-sm font-medium text-indigo-200 mb-1.5">{m.admin.form.shopName}</label>
+                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder={m.admin.form.shopNamePlaceholder} required className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-indigo-200 mb-1.5">Stamps Required</label>
+                    <label className="block text-sm font-medium text-indigo-200 mb-1.5">{m.admin.form.stampsRequired}</label>
                     <input type="number" value={stampsRequired} onChange={(e) => setStampsRequired(Math.max(2, Math.min(20, +e.target.value)))} min={2} max={20} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-indigo-200 mb-1.5">Description</label>
-                  <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Tell customers about your shop..." rows={2} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none" />
+                  <label className="block text-sm font-medium text-indigo-200 mb-1.5">{m.admin.form.description}</label>
+                  <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder={m.admin.form.descriptionPlaceholder} rows={2} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none" />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-indigo-200 mb-1.5">
                     <Gift className="w-4 h-4 inline mr-1" />
-                    Reward Description
+                    {m.admin.form.rewardDescription}
                   </label>
-                  <input type="text" value={rewardDescription} onChange={(e) => setRewardDescription(e.target.value)} placeholder="e.g. 1 free coffee of your choice!" required className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
+                  <input type="text" value={rewardDescription} onChange={(e) => setRewardDescription(e.target.value)} placeholder={m.admin.form.rewardPlaceholder} required className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-indigo-400/50 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-indigo-200 mb-1.5">Brand Color</label>
+                  <label className="block text-sm font-medium text-indigo-200 mb-1.5">{m.admin.form.brandColor}</label>
                   <div className="flex items-center gap-3 flex-wrap">
                     {colorPresets.map((c) => (
                       <button key={c} type="button" onClick={() => setColor(c)} className={`w-9 h-9 rounded-xl transition-all cursor-pointer ${color === c ? 'ring-2 ring-white ring-offset-2 ring-offset-surface scale-110' : 'hover:scale-110'}`} style={{ backgroundColor: c }} />
@@ -799,16 +801,16 @@ export default function AdminDashboard() {
                 <div className="flex items-center gap-3 pt-2">
                   <button type="submit" className="flex items-center gap-2 bg-linear-to-r from-accent to-amber-400 text-surface font-bold px-6 py-3 rounded-xl hover:scale-[1.02] transition-transform cursor-pointer">
                     <Save className="w-4 h-4" />
-                    {editingMode === 'new' ? 'Create Stamp Card' : 'Save Changes'}
+                    {editingMode === 'new' ? m.admin.saveCreate : m.admin.saveEdit}
                   </button>
                   <button type="button" onClick={() => setEditingMode(null)} className="text-indigo-400 hover:text-white text-sm font-medium transition-colors cursor-pointer">
-                    Cancel
+                    {m.common.cancel}
                   </button>
                   <AnimatePresence>
                     {saved && (
                       <motion.span initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} className="flex items-center gap-1 text-emerald-400 text-sm font-medium">
                         <CheckCircle className="w-4 h-4" />
-                        Saved!
+                        {m.common.saved}
                       </motion.span>
                     )}
                   </AnimatePresence>

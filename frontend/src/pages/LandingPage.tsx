@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { Link } from 'react-router';
 import { motion, useScroll, useTransform } from 'motion/react';
 import { useAuth } from '../hooks/useAuth';
+import { useLocale } from '../hooks/useLocale';
 import {
   Stamp,
   Gift,
@@ -17,6 +18,7 @@ import {
 
 export default function LandingPage() {
   const { isAuthenticated, user } = useAuth();
+  const { m } = useLocale();
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: containerRef });
 
@@ -28,55 +30,57 @@ export default function LandingPage() {
   const features = [
     {
       icon: Stamp,
-      title: 'Digital Stamps',
-      desc: 'Collect stamps digitally — no more lost paper cards. Every visit counts.',
+      title: m.landing.features[0].title,
+      desc: m.landing.features[0].desc,
       color: 'from-indigo-500 to-purple-500',
     },
     {
       icon: Gift,
-      title: 'Custom Rewards',
-      desc: 'Shop owners set their own rewards. Free coffee, discounts, exclusive perks.',
+      title: m.landing.features[1].title,
+      desc: m.landing.features[1].desc,
       color: 'from-amber-500 to-orange-500',
     },
     {
       icon: Shield,
-      title: 'Secure & Simple',
-      desc: 'Easy sign-in, tamper-proof tracking. Your loyalty, your data.',
+      title: m.landing.features[2].title,
+      desc: m.landing.features[2].desc,
       color: 'from-emerald-500 to-teal-500',
     },
     {
       icon: Smartphone,
-      title: 'Works Everywhere',
-      desc: 'Optimized for every device — phone, tablet, or desktop. Always accessible.',
+      title: m.landing.features[3].title,
+      desc: m.landing.features[3].desc,
       color: 'from-rose-500 to-pink-500',
     },
   ];
 
   const stats = [
-    { icon: Users, value: '10K+', label: 'Happy Users' },
-    { icon: Store, value: '500+', label: 'Partner Shops' },
-    { icon: Stamp, value: '1M+', label: 'Stamps Collected' },
-    { icon: Gift, value: '50K+', label: 'Rewards Redeemed' },
+    { icon: Users, value: '10K+', label: m.landing.stats[0] },
+    { icon: Store, value: '500+', label: m.landing.stats[1] },
+    { icon: Stamp, value: '1M+', label: m.landing.stats[2] },
+    { icon: Gift, value: '50K+', label: m.landing.stats[3] },
   ];
 
   const isAdmin = user?.role === 'admin';
   const primaryHref = isAuthenticated ? (isAdmin ? '/admin' : '/dashboard') : '/login';
-  const primaryLabel = isAuthenticated ? (isAdmin ? 'Open Dashboard' : 'Go to My Cards') : 'Get Started';
+  const primaryLabel = isAuthenticated
+    ? (isAdmin ? m.landing.heroPrimaryAdmin : m.landing.heroPrimaryUser)
+    : m.landing.heroPrimaryGuest;
   const bottomHeading = isAuthenticated
     ? isAdmin
-      ? 'Ready to manage your stamp cards?'
-      : 'Ready to keep collecting?'
-    : 'Ready to start collecting?';
+      ? m.landing.bottomAdmin.heading
+      : m.landing.bottomUser.heading
+    : m.landing.bottomGuest.heading;
   const bottomBody = isAuthenticated
     ? isAdmin
-      ? 'Jump back into your shop dashboard, manage rewards, and generate fresh QR codes for customers.'
-      : 'Head back to your stamp cards, check your progress, and see how close you are to your next reward.'
-    : 'Join thousands of happy customers and shop owners. Your next reward is just a few stamps away.';
+      ? m.landing.bottomAdmin.body
+      : m.landing.bottomUser.body
+    : m.landing.bottomGuest.body;
   const bottomLabel = isAuthenticated
     ? isAdmin
-      ? 'Go to Admin Dashboard'
-      : 'View My Cards'
-    : 'Sign Up Now';
+      ? m.landing.bottomAdmin.button
+      : m.landing.bottomUser.button
+    : m.landing.bottomGuest.button;
 
   return (
     <div ref={containerRef} className="min-h-screen">
@@ -130,7 +134,7 @@ export default function LandingPage() {
           >
             <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 mb-6">
               <Sparkles className="w-4 h-4 text-accent" />
-              <span className="text-sm text-indigo-200">Your Digital Loyalty Companion</span>
+              <span className="text-sm text-indigo-200">{m.landing.badge}</span>
             </div>
           </motion.div>
 
@@ -140,10 +144,10 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.1 }}
             className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white leading-tight tracking-tight mb-6"
           >
-            Collect Stamps.
+            {m.landing.titleLine1}
             <br />
             <span className="text-transparent bg-clip-text bg-linear-to-r from-accent via-amber-300 to-orange-400">
-              Earn Rewards.
+              {m.landing.titleLine2}
             </span>
           </motion.h1>
 
@@ -153,8 +157,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="text-lg sm:text-xl text-indigo-200 max-w-2xl mx-auto mb-10"
           >
-            The modern digital stamp card for your favorite shops. No paper, no hassle — just pure
-            loyalty rewards at your fingertips.
+            {m.landing.heroDescription}
           </motion.p>
 
           <motion.div
@@ -174,7 +177,7 @@ export default function LandingPage() {
               onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
               className="flex items-center gap-2 text-indigo-200 hover:text-white font-medium px-6 py-4 rounded-2xl border border-white/10 hover:bg-white/5 transition-all cursor-pointer"
             >
-              Learn More
+              {m.landing.learnMore}
               <ChevronDown className="w-5 h-5" />
             </button>
           </motion.div>
@@ -193,7 +196,7 @@ export default function LandingPage() {
                 </div>
                 <div>
                   <h3 className="text-white font-bold text-sm">Café Sonnenschein</h3>
-                  <p className="text-xs text-indigo-300">5 / 8 stamps</p>
+                  <p className="text-xs text-indigo-300">{m.stampCard.stamps(5, 8)}</p>
                 </div>
               </div>
               <div className="grid grid-cols-8 gap-2">
@@ -265,11 +268,10 @@ export default function LandingPage() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl sm:text-5xl font-black text-white mb-4">
-              Why <span className="text-accent">Länd of Stamp</span>?
+              {m.landing.whyTitle}
             </h2>
             <p className="text-indigo-300 text-lg max-w-2xl mx-auto">
-              Everything you need for a seamless loyalty experience — for customers and shop owners
-              alike.
+              {m.landing.whyDescription}
             </p>
           </motion.div>
 
@@ -308,15 +310,15 @@ export default function LandingPage() {
             className="text-center mb-16"
           >
             <h2 className="text-3xl sm:text-5xl font-black text-white mb-4">
-              How it <span className="text-accent">Works</span>
+              {m.landing.howItWorksTitle}
             </h2>
           </motion.div>
 
           <div className="grid sm:grid-cols-3 gap-8">
             {[
-              { title: 'Visit a Shop', desc: 'Go to any participating shop and make a purchase.', emoji: '🏪' },
-              {  title: 'Get Stamped', desc: 'The shop owner grants you a digital stamp instantly.', emoji: '✅' },
-              { title: 'Earn Rewards', desc: 'Collect all stamps and redeem your exclusive reward!', emoji: '🎁' },
+              { title: m.landing.steps[0].title, desc: m.landing.steps[0].desc, emoji: '🏪' },
+              { title: m.landing.steps[1].title, desc: m.landing.steps[1].desc, emoji: '✅' },
+              { title: m.landing.steps[2].title, desc: m.landing.steps[2].desc, emoji: '🎁' },
             ].map((item, i) => (
               <motion.div
                 key={i}
@@ -375,7 +377,7 @@ export default function LandingPage() {
               Länd of <span className="text-accent">Stamp</span>
             </span>
           </div>
-          <p className="text-indigo-400 text-sm">© 2026 Länd of Stamp. All rights reserved.</p>
+          <p className="text-indigo-400 text-sm">{m.landing.footerRights}</p>
         </div>
       </footer>
     </div>

@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, PartyPopper } from 'lucide-react';
 import StampSlot from './StampSlot';
+import { useLocale } from '../../hooks/useLocale';
 import type { Shop, StampCard as StampCardType } from '../../lib/api';
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function StampCard({ shop, card, onRedeem }: Props) {
+  const { m } = useLocale();
   const isComplete = card.stamps >= shop.stampsRequired;
   const progress = Math.min((card.stamps / shop.stampsRequired) * 100, 100);
 
@@ -37,9 +39,7 @@ export default function StampCard({ shop, card, onRedeem }: Props) {
       {/* Progress bar */}
       <div className="mb-4">
         <div className="flex justify-between text-xs text-indigo-300 mb-1.5">
-          <span>
-            {card.stamps} / {shop.stampsRequired} stamps
-          </span>
+          <span>{m.stampCard.stamps(card.stamps, shop.stampsRequired)}</span>
           <span>{Math.round(progress)}%</span>
         </div>
         <div className="h-2 bg-white/10 rounded-full overflow-hidden">
@@ -72,7 +72,7 @@ export default function StampCard({ shop, card, onRedeem }: Props) {
       <div className="flex items-center gap-2 text-sm bg-white/5 rounded-xl px-3 py-2">
         <PartyPopper className="w-4 h-4 text-accent shrink-0" />
         <span className="text-indigo-200">
-          <span className="text-white font-medium">Reward:</span> {shop.rewardDescription}
+          <span className="text-white font-medium">{m.stampCard.reward}</span> {shop.rewardDescription}
         </span>
       </div>
 
@@ -100,7 +100,7 @@ export default function StampCard({ shop, card, onRedeem }: Props) {
               transition={{ delay: 0.4 }}
               className="text-xl font-bold text-white text-center mb-2"
             >
-              🎉 Congratulations!
+              {m.stampCard.congratulations}
             </motion.h3>
             <motion.p
               initial={{ opacity: 0, y: 10 }}
@@ -108,7 +108,7 @@ export default function StampCard({ shop, card, onRedeem }: Props) {
               transition={{ delay: 0.5 }}
               className="text-indigo-300 text-center mb-4"
             >
-              You've earned: <span className="text-accent font-semibold">{shop.rewardDescription}</span>
+              {m.stampCard.earned} <span className="text-accent font-semibold">{shop.rewardDescription}</span>
             </motion.p>
             {onRedeem && (
               <motion.button
@@ -118,7 +118,7 @@ export default function StampCard({ shop, card, onRedeem }: Props) {
                 onClick={onRedeem}
                 className="bg-linear-to-r from-accent to-amber-400 text-surface font-bold px-6 py-3 rounded-xl hover:scale-105 transition-transform cursor-pointer"
               >
-                Redeem Reward
+                {m.stampCard.redeemReward}
               </motion.button>
             )}
           </motion.div>
@@ -128,7 +128,7 @@ export default function StampCard({ shop, card, onRedeem }: Props) {
       {/* Redeemed badge */}
       {card.redeemed && (
         <div className="absolute top-4 right-4 bg-green-500/20 text-green-400 text-xs font-bold px-3 py-1 rounded-full border border-green-500/30">
-          ✓ Redeemed
+          {m.stampCard.redeemed}
         </div>
       )}
     </motion.div>

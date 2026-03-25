@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useParams, useNavigate } from 'react-router';
+import { useLocale } from '../hooks/useLocale';
 import { apiClaimStamp, type ClaimStampResponse } from '../lib/api';
 import { toast } from 'sonner';
 import {
@@ -17,6 +18,7 @@ type ClaimState = 'loading' | 'success' | 'error';
 
 export default function ClaimPage() {
   const { token } = useParams<{ token: string }>();
+  const { m } = useLocale();
   const navigate = useNavigate();
   const [state, setState] = useState<ClaimState>('loading');
   const [result, setResult] = useState<ClaimStampResponse | null>(null);
@@ -33,13 +35,13 @@ export default function ClaimPage() {
         setResult(claim);
         setState('success');
       } catch (e) {
-        const msg = e instanceof Error ? e.message : 'Failed to claim stamp';
+        const msg = e instanceof Error ? e.message : m.claim.claimFailed;
         setErrorMsg(msg);
         toast.error(msg);
         setState('error');
       }
     })();
-  }, [token]);
+  }, [m.claim.claimFailed, token]);
 
   // Floating stamp particles for success animation (stable across re-renders)
   const particles = useMemo(
@@ -81,7 +83,7 @@ export default function ClaimPage() {
                 transition={{ delay: 0.3 }}
                 className="text-indigo-300 mt-6 text-lg font-medium"
               >
-                Claiming your stamp...
+                {m.claim.claiming}
               </motion.p>
             </motion.div>
           )}
@@ -155,8 +157,8 @@ export default function ClaimPage() {
                   >
                     <h2 className="text-2xl font-black text-white mb-1">
                       {result.stamps >= result.stampsRequired
-                        ? 'Card Complete! 🏆'
-                        : 'Stamp Collected! 🎉'}
+                        ? m.claim.cardComplete
+                        : m.claim.stampCollected}
                     </h2>
                     <p className="text-indigo-300 text-lg font-medium">{result.shopName}</p>
                   </motion.div>
@@ -192,7 +194,7 @@ export default function ClaimPage() {
                     transition={{ delay: 1 }}
                     className="text-sm text-indigo-400 mt-4"
                   >
-                    {result.stamps} / {result.stampsRequired} stamps
+                    {m.claim.stamps(result.stamps, result.stampsRequired)}
                   </motion.p>
 
                   {/* Message */}
@@ -218,7 +220,7 @@ export default function ClaimPage() {
                     className="w-full flex items-center justify-center gap-2 bg-linear-to-r from-accent to-amber-400 text-surface font-bold px-6 py-3.5 rounded-xl hover:scale-[1.02] transition-transform cursor-pointer"
                   >
                     <ArrowLeft className="w-4 h-4" />
-                    Go to My Cards
+                    {m.claim.goToMyCards}
                   </button>
                 </motion.div>
               </div>
@@ -246,7 +248,7 @@ export default function ClaimPage() {
                   </motion.div>
 
                   <div className="text-center">
-                    <h2 className="text-xl font-bold text-white mb-2">Couldn't Claim Stamp</h2>
+                    <h2 className="text-xl font-bold text-white mb-2">{m.claim.couldntClaim}</h2>
                     <p className="text-red-300 text-sm max-w-xs">{errorMsg}</p>
                   </div>
 
@@ -255,7 +257,7 @@ export default function ClaimPage() {
                     className="w-full flex items-center justify-center gap-2 bg-white/10 border border-white/10 text-white font-semibold px-6 py-3 rounded-xl hover:bg-white/15 transition-all cursor-pointer"
                   >
                     <ArrowLeft className="w-4 h-4" />
-                    Go to Dashboard
+                    {m.claim.goToDashboard}
                   </button>
                 </div>
               </div>
