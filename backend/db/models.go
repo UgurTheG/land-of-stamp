@@ -18,6 +18,7 @@ type User struct {
 	Username      string    `gorm:"uniqueIndex;type:text;not null"`
 	PasswordHash  string    `gorm:"type:text;not null;default:''"`
 	Role          string    `gorm:"type:text;not null;check:role IN ('user','admin')"`
+	RoleChosen    bool      `gorm:"column:role_chosen;type:boolean;not null;default:false"`
 	OAuthProvider string    `gorm:"column:oauth_provider;type:text;not null;default:''"` // "google" | "github" | ""
 	OAuthID       string    `gorm:"column:oauth_id;type:text;not null;default:''"`       // provider's user ID
 	UUID          uuid.UUID `gorm:"type:text;uniqueIndex;not null"`

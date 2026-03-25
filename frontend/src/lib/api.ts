@@ -6,6 +6,7 @@ import { AuthService, ShopService, StampService } from '../gen/proto/stempelkart
 import {
   LogoutRequestSchema,
   GetMeRequestSchema,
+  ChooseRoleRequestSchema,
   ListShopsRequestSchema,
   CreateShopRequestSchema,
   UpdateShopRequestSchema,
@@ -68,6 +69,10 @@ export async function apiLogout(): Promise<void> {
 
 export async function apiGetMe(): Promise<User> {
   return authClient.getMe(create(GetMeRequestSchema, {}));
+}
+
+export async function apiChooseRole(role: 'user' | 'admin'): Promise<User> {
+  return authClient.chooseRole(create(ChooseRoleRequestSchema, { role }));
 }
 
 // ── Shops ──────────────────────────────────────────────

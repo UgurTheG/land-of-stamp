@@ -15,6 +15,7 @@ const UserDashboard = lazy(() => import('./pages/UserDashboard'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const ClaimPage = lazy(() => import('./pages/ClaimPage'));
 const OAuthCallbackPage = lazy(() => import('./pages/OAuthCallbackPage'));
+const ChooseRolePage = lazy(() => import('./pages/ChooseRolePage'));
 
 function AppShell() {
   const { theme } = useTheme();
@@ -38,6 +39,14 @@ function AppShell() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/login/oauth-callback" element={<OAuthCallbackPage />} />
+            <Route
+              path="/choose-role"
+              element={
+                <ProtectedRoute>
+                  <ChooseRolePage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/dashboard"
               element={

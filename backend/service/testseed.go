@@ -58,9 +58,10 @@ func handleSeedUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := db.User{
-		UUID:     uuid.New(),
-		Username: req.Username,
-		Role:     req.Role,
+		UUID:       uuid.New(),
+		Username:   req.Username,
+		Role:       req.Role,
+		RoleChosen: true,
 	}
 	if err := db.DB.Create(&user).Error; err != nil {
 		slog.Error("test seed: create user failed", "error", err)

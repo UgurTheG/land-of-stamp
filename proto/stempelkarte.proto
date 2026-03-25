@@ -39,6 +39,9 @@ message LogoutRequest {}
 
 message GetMeRequest {}
 
+message ChooseRoleRequest {
+  string role = 1; // "user" | "admin"
+}
 
 // ── Shops ──────────────────────────────────────────────
 
@@ -171,6 +174,7 @@ service DocsService {
 service AuthService {
   rpc Logout(LogoutRequest) returns (StatusResponse);
   rpc GetMe(GetMeRequest) returns (User);
+  rpc ChooseRole(ChooseRoleRequest) returns (User);
 }
 
 service ShopService {
