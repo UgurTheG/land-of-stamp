@@ -4,6 +4,14 @@ import StampSlot from './StampSlot';
 import { useLocale } from '../../hooks/useLocale';
 import type { Shop, StampCard as StampCardType } from '../../lib/api';
 
+// Pre-computed random particle values (generated once at module load, not during render).
+const CELEBRATION_PARTICLES = [...Array(12)].map((_, i) => ({
+  startX: `${10 + (i % 4) * 25 + Math.random() * 15}%`,
+  driftX: (Math.random() - 0.5) * 80,
+  rotate: Math.random() * 360,
+  duration: 2.5 + Math.random(),
+}));
+
 // Helper function to get progress bar color based on progress percentage
 const getProgressColor = (progress: number): string => {
   if (progress < 33) return '#ef4444'; // Red for 0-33%
@@ -21,6 +29,7 @@ export default function StampCard({ shop, card, onRedeem }: Props) {
   const { m } = useLocale();
   const isComplete = card.stamps >= shop.stampsRequired;
   const progress = Math.min((card.stamps / shop.stampsRequired) * 100, 100);
+
 
   return (
     <motion.div
@@ -96,28 +105,25 @@ export default function StampCard({ shop, card, onRedeem }: Props) {
           >
             {/* Celebration particles */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-3xl">
-              {[...Array(12)].map((_, i) => {
-                const startX = `${10 + (i % 4) * 25 + Math.random() * 15}%`;
-                const driftX = (Math.random() - 0.5) * 80;
-                return (
+              {CELEBRATION_PARTICLES.map((p, i) => (
                   <motion.div
                     key={i}
                     initial={{
                       top: '-8%',
-                      left: startX,
+                      left: p.startX,
                       opacity: 1,
                       scale: 1,
                       x: 0,
                     }}
                     animate={{
                       top: '110%',
-                      x: driftX,
+                      x: p.driftX,
                       opacity: 0,
                       scale: 0.4,
-                      rotate: Math.random() * 360,
+                      rotate: p.rotate,
                     }}
                     transition={{
-                      duration: 2.5 + Math.random(),
+                      duration: p.duration,
                       delay: i * 0.12,
                       ease: 'easeOut',
                     }}
@@ -125,8 +131,7 @@ export default function StampCard({ shop, card, onRedeem }: Props) {
                   >
                     {['🎉', '⭐', '🏆', '✨', '🎊', '🌟'][i % 6]}
                   </motion.div>
-                );
-              })}
+              ))}
             </div>
 
             <motion.div

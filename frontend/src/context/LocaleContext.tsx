@@ -1,15 +1,9 @@
-import { createContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { messages, supportedLocales, type Locale } from '../i18n/messages';
-
-interface LocaleContextType {
-  locale: Locale;
-  setLocale: (locale: Locale) => void;
-  m: (typeof messages)[Locale];
-}
+import { LocaleContext } from './localeContext';
 
 const LOCALE_STORAGE_KEY = 'land_of_stamp_locale';
 
-export const LocaleContext = createContext<LocaleContextType | null>(null);
 
 function getInitialLocale(): Locale {
   if (typeof window === 'undefined') return 'en';

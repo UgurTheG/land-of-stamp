@@ -32,7 +32,7 @@ const RPC = {
 } as const;
 
 /** POST a ConnectRPC JSON request. */
-function rpc(ctx: { request: { post: Function } }, url: string, data: Record<string, unknown> = {}) {
+function rpc(ctx: { request: { post: (url: string, options: object) => Promise<import('@playwright/test').APIResponse> } }, url: string, data: Record<string, unknown> = {}) {
   return ctx.request.post(url, {
     headers: { 'Content-Type': 'application/json' },
     data,
@@ -207,7 +207,7 @@ test.describe('User Dashboard', () => {
     const adminPage = await adminCtx.newPage();
     await registerViaAPI(adminPage, 'admin');
     const discoverShopName = `Discoverable Café ${uid()}`;
-    const shop = await createShopViaAPI(adminPage, discoverShopName);
+    await createShopViaAPI(adminPage, discoverShopName);
 
     // User registers and sees empty state
     const userPage = await userCtx.newPage();
