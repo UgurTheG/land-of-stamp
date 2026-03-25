@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"land-of-stamp-backend/apperrors"
 	"land-of-stamp-backend/auth"
 	"land-of-stamp-backend/constants"
 	"land-of-stamp-backend/gen/pb/pbconnect"
@@ -55,19 +56,19 @@ func NewAuthInterceptor() connect.UnaryInterceptorFunc {
 			tokenStr := extractToken(req.Header())
 			if tokenStr == "" {
 				slog.WarnContext(ctx, "auth: no token provided", "procedure", procedure)
-				return nil, connect.NewError(connect.CodeUnauthenticated, nil)
+				return nil, apperrors.ErrUnauthenticated
 			}
 
 			claims, err := auth.ValidateToken(tokenStr)
 			if err != nil {
 				slog.WarnContext(ctx, "auth: invalid token", "procedure", procedure, "error", err)
-				return nil, connect.NewError(connect.CodeUnauthenticated, nil)
+				return nil, apperrors.ErrUnauthenticated
 			}
 
 			// Admin-only check.
 			if adminProcedures[procedure] && claims.Role != constants.RoleAdmin {
 				slog.WarnContext(ctx, "auth: admin access denied", "procedure", procedure, "role", claims.Role)
-				return nil, connect.NewError(connect.CodePermissionDenied, nil)
+				return nil, apperrors.ErrPermissionDenied
 			}
 
 			ctx = context.WithValue(ctx, userKey, claims)

@@ -6,6 +6,7 @@ go_library(
     importpath = "land-of-stamp-backend/interceptor",
     visibility = ["//:__subpackages__"],
     deps = [
+        "//apperrors",
         "//auth",
         "//constants",
         "//gen/pb/pbconnect",

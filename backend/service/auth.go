@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"land-of-stamp-backend/apperrors"
 	"land-of-stamp-backend/constants"
 	"land-of-stamp-backend/db"
 	"land-of-stamp-backend/gen/pb"
@@ -32,13 +33,13 @@ func (s *AuthService) Logout(ctx context.Context, _ *connect.Request[pb.LogoutRe
 func (s *AuthService) GetMe(ctx context.Context, _ *connect.Request[pb.GetMeRequest]) (*connect.Response[pb.User], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
+		return nil, apperrors.ErrUnauthenticated
 	}
 
 	var user db.User
 	if err := db.DB.WithContext(ctx).Where("uuid = ?", claims.UserID).First(&user).Error; err != nil {
 		slog.WarnContext(ctx, "getMe: user not found", "user_id", claims.UserID, "error", err)
-		return nil, connect.NewError(connect.CodeNotFound, nil)
+		return nil, apperrors.ErrNotFound
 	}
 	return connect.NewResponse(user.ToProto()), nil
 }

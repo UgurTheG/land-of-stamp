@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"land-of-stamp-backend/apperrors"
 	"land-of-stamp-backend/auth"
 	"land-of-stamp-backend/constants"
 	"land-of-stamp-backend/db"
@@ -31,13 +32,13 @@ type StampService struct {
 func (s *StampService) GetMyCards(ctx context.Context, _ *connect.Request[pb.GetMyCardsRequest]) (*connect.Response[pb.StampCardList], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
+		return nil, apperrors.ErrUnauthenticated
 	}
 
 	var cards []db.StampCard
 	if err := db.DB.WithContext(ctx).Where("user_id = ?", claims.UserID).Find(&cards).Error; err != nil {
 		slog.ErrorContext(ctx, "stamps: queryCards failed", "error", err)
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 	return connect.NewResponse(cardsToProtoList(cards)), nil
 }
@@ -46,20 +47,18 @@ func (s *StampService) GetMyCards(ctx context.Context, _ *connect.Request[pb.Get
 func (s *StampService) JoinShop(ctx context.Context, req *connect.Request[pb.JoinShopRequest]) (*connect.Response[pb.StampCard], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
+		return nil, apperrors.ErrUnauthenticated
 	}
 	shopID := req.Msg.ShopId
 	if shopID == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, nil)
+		return nil, apperrors.ErrInvalidArgument
 	}
 
-	// Verify shop exists
 	var shop db.Shop
 	if err := db.DB.WithContext(ctx).Where("uuid = ?", shopID).First(&shop).Error; err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, nil)
+		return nil, apperrors.ErrNotFound
 	}
 
-	// Check if user already has an active card
 	var existing db.StampCard
 	if err := db.DB.WithContext(ctx).
 		Where("user_id = ? AND shop_id = ? AND redeemed = ?", claims.UserID, shopID, false).
@@ -73,7 +72,7 @@ func (s *StampService) JoinShop(ctx context.Context, req *connect.Request[pb.Joi
 	}
 	if err := db.DB.WithContext(ctx).Create(&card).Error; err != nil {
 		slog.ErrorContext(ctx, "stamps: join shop failed", "user", claims.UserID, "shop", shopID, "error", err)
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 
 	slog.InfoContext(ctx, "user joined shop", "user", claims.UserID, "shop", shopID)
@@ -85,7 +84,7 @@ func (s *StampService) GetShopCards(ctx context.Context, req *connect.Request[pb
 	claims := interceptor.GetUser(ctx)
 	shopID := req.Msg.ShopId
 	if shopID == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, nil)
+		return nil, apperrors.ErrInvalidArgument
 	}
 	if err := verifyShopOwner(ctx, shopID, claims); err != nil {
 		return nil, err
@@ -94,7 +93,7 @@ func (s *StampService) GetShopCards(ctx context.Context, req *connect.Request[pb
 	var cards []db.StampCard
 	if err := db.DB.WithContext(ctx).Where("shop_id = ?", shopID).Find(&cards).Error; err != nil {
 		slog.ErrorContext(ctx, "stamps: queryCards failed", "error", err)
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 	return connect.NewResponse(cardsToProtoList(cards)), nil
 }
@@ -104,7 +103,7 @@ func (s *StampService) GrantStamp(ctx context.Context, req *connect.Request[pb.G
 	claims := interceptor.GetUser(ctx)
 	shopID := req.Msg.ShopId
 	if shopID == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, nil)
+		return nil, apperrors.ErrInvalidArgument
 	}
 	if err := verifyShopOwner(ctx, shopID, claims); err != nil {
 		return nil, err
@@ -112,7 +111,7 @@ func (s *StampService) GrantStamp(ctx context.Context, req *connect.Request[pb.G
 
 	var shop db.Shop
 	if err := db.DB.WithContext(ctx).Where("uuid = ?", shopID).First(&shop).Error; err != nil {
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 
 	card, err := getOrCreateCard(ctx, req.Msg.UserId, shopID)
@@ -124,7 +123,7 @@ func (s *StampService) GrantStamp(ctx context.Context, req *connect.Request[pb.G
 		card.Stamps++
 		if err := db.DB.WithContext(ctx).Model(&card).Update("stamps", card.Stamps).Error; err != nil {
 			slog.ErrorContext(ctx, "stamps: failed to update", "card", card.UUID, "error", err)
-			return nil, connect.NewError(connect.CodeInternal, nil)
+			return nil, apperrors.ErrInternal
 		}
 		slog.InfoContext(ctx, "stamp granted", "card", card.UUID, "user", req.Msg.UserId, "shop", shopID, "stamps", card.Stamps)
 	}
@@ -137,7 +136,7 @@ func (s *StampService) UpdateStampCount(ctx context.Context, req *connect.Reques
 	claims := interceptor.GetUser(ctx)
 	shopID := req.Msg.ShopId
 	if shopID == "" || req.Msg.UserId == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, nil)
+		return nil, apperrors.ErrInvalidArgument
 	}
 	if err := verifyShopOwner(ctx, shopID, claims); err != nil {
 		return nil, err
@@ -145,7 +144,7 @@ func (s *StampService) UpdateStampCount(ctx context.Context, req *connect.Reques
 
 	var shop db.Shop
 	if err := db.DB.WithContext(ctx).Where("uuid = ?", shopID).First(&shop).Error; err != nil {
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 
 	stamps := min(max(req.Msg.Stamps, 0), shop.StampsRequired)
@@ -157,7 +156,7 @@ func (s *StampService) UpdateStampCount(ctx context.Context, req *connect.Reques
 
 	if err := db.DB.WithContext(ctx).Model(&card).Update("stamps", stamps).Error; err != nil {
 		slog.ErrorContext(ctx, "stamps: failed to update card stamps", "card", card.UUID, "error", err)
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 	card.Stamps = stamps
 
@@ -169,35 +168,34 @@ func (s *StampService) UpdateStampCount(ctx context.Context, req *connect.Reques
 func (s *StampService) RedeemCard(ctx context.Context, req *connect.Request[pb.RedeemCardRequest]) (*connect.Response[pb.StatusResponse], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
+		return nil, apperrors.ErrUnauthenticated
 	}
 	cardID := req.Msg.CardId
 	if cardID == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, nil)
+		return nil, apperrors.ErrInvalidArgument
 	}
 
 	var card db.StampCard
 	if err := db.DB.WithContext(ctx).Where("uuid = ? AND redeemed = ?", cardID, false).First(&card).Error; err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, nil)
+		return nil, apperrors.ErrNotFound
 	}
 	if card.UserID != claims.UserID {
-		return nil, connect.NewError(connect.CodePermissionDenied, nil)
+		return nil, apperrors.ErrPermissionDenied
 	}
 
 	var shop db.Shop
 	if err := db.DB.WithContext(ctx).Where("uuid = ?", card.ShopID).First(&shop).Error; err != nil {
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 	if card.Stamps < shop.StampsRequired {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, nil)
+		return nil, apperrors.ErrFailedPrecondition
 	}
 
 	if err := db.DB.WithContext(ctx).Model(&card).Update("redeemed", true).Error; err != nil {
 		slog.ErrorContext(ctx, "stamps: failed to redeem card", "card", cardID, "error", err)
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 
-	// Auto-create a fresh card
 	freshCard := db.StampCard{UUID: uuid.New(), UserID: claims.UserID, ShopID: card.ShopID}
 	db.DB.WithContext(ctx).Create(&freshCard) // ignore unique constraint error
 
@@ -210,7 +208,7 @@ func (s *StampService) GetShopCustomers(ctx context.Context, req *connect.Reques
 	claims := interceptor.GetUser(ctx)
 	shopID := req.Msg.ShopId
 	if shopID == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, nil)
+		return nil, apperrors.ErrInvalidArgument
 	}
 	if err := verifyShopOwner(ctx, shopID, claims); err != nil {
 		return nil, err
@@ -219,7 +217,7 @@ func (s *StampService) GetShopCustomers(ctx context.Context, req *connect.Reques
 	var userUUIDs []string
 	if err := db.DB.WithContext(ctx).Model(&db.StampCard{}).Where("shop_id = ?", shopID).Distinct("user_id").Pluck("user_id", &userUUIDs).Error; err != nil {
 		slog.ErrorContext(ctx, "stamps: failed to fetch customer IDs", "shop", shopID, "error", err)
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 	if len(userUUIDs) == 0 {
 		return connect.NewResponse(&pb.UserList{}), nil
@@ -228,7 +226,7 @@ func (s *StampService) GetShopCustomers(ctx context.Context, req *connect.Reques
 	var users []db.User
 	if err := db.DB.WithContext(ctx).Where("uuid IN ? AND role = ?", userUUIDs, constants.RoleUser).Find(&users).Error; err != nil {
 		slog.ErrorContext(ctx, "stamps: failed to fetch customers", "shop", shopID, "error", err)
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 	out := make([]*pb.User, len(users))
 	for i := range users {
@@ -244,7 +242,7 @@ func (s *StampService) CreateStampToken(ctx context.Context, req *connect.Reques
 	claims := interceptor.GetUser(ctx)
 	shopID := req.Msg.ShopId
 	if shopID == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, nil)
+		return nil, apperrors.ErrInvalidArgument
 	}
 	if err := verifyShopOwner(ctx, shopID, claims); err != nil {
 		return nil, err
@@ -252,7 +250,6 @@ func (s *StampService) CreateStampToken(ctx context.Context, req *connect.Reques
 
 	now := time.Now().UTC()
 
-	// Soft-delete existing tokens + claims for this shop
 	var tokenUUIDs []string
 	db.DB.WithContext(ctx).Model(&db.StampToken{}).Where("shop_id = ?", shopID).Pluck("uuid", &tokenUUIDs)
 	if len(tokenUUIDs) > 0 {
@@ -260,7 +257,6 @@ func (s *StampService) CreateStampToken(ctx context.Context, req *connect.Reques
 	}
 	db.DB.WithContext(ctx).Where("shop_id = ?", shopID).Delete(&db.StampToken{})
 
-	// Soft-delete globally expired tokens
 	var expiredUUIDs []string
 	db.DB.WithContext(ctx).Model(&db.StampToken{}).Where("expires_at < ?", now).Pluck("uuid", &expiredUUIDs)
 	if len(expiredUUIDs) > 0 {
@@ -271,7 +267,7 @@ func (s *StampService) CreateStampToken(ctx context.Context, req *connect.Reques
 	tokenBytes := make([]byte, constants.RandomTokenBytes)
 	if _, err := rand.Read(tokenBytes); err != nil {
 		slog.ErrorContext(ctx, "qr: failed to generate random token", "error", err)
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 	token := hex.EncodeToString(tokenBytes)
 	expiresAt := now.Add(constants.StampTokenTTL)
@@ -279,7 +275,7 @@ func (s *StampService) CreateStampToken(ctx context.Context, req *connect.Reques
 	st := db.StampToken{UUID: uuid.New(), ShopID: shopID, Token: token, ExpiresAt: expiresAt}
 	if err := db.DB.WithContext(ctx).Create(&st).Error; err != nil {
 		slog.ErrorContext(ctx, "qr: failed to create stamp token", "error", err)
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 
 	slog.InfoContext(ctx, "stamp token created", "shop", shopID, "expires", expiresAt)
@@ -291,7 +287,7 @@ func (s *StampService) GetStampTokenStatus(ctx context.Context, req *connect.Req
 	claims := interceptor.GetUser(ctx)
 	shopID := req.Msg.ShopId
 	if shopID == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, nil)
+		return nil, apperrors.ErrInvalidArgument
 	}
 	if err := verifyShopOwner(ctx, shopID, claims); err != nil {
 		return nil, err
@@ -302,11 +298,10 @@ func (s *StampService) GetStampTokenStatus(ctx context.Context, req *connect.Req
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return connect.NewResponse(&pb.StampTokenStatusResponse{Active: false}), nil
 		}
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 
 	if time.Now().UTC().After(st.ExpiresAt) {
-		// Cleanup expired
 		var tokenUUIDs []string
 		db.DB.WithContext(ctx).Model(&db.StampToken{}).Where("shop_id = ?", shopID).Pluck("uuid", &tokenUUIDs)
 		if len(tokenUUIDs) > 0 {
@@ -326,27 +321,26 @@ func (s *StampService) GetStampTokenStatus(ctx context.Context, req *connect.Req
 func (s *StampService) ClaimStamp(ctx context.Context, req *connect.Request[pb.ClaimStampRequest]) (*connect.Response[pb.ClaimStampResponse], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
+		return nil, apperrors.ErrUnauthenticated
 	}
 	if claims.Role != constants.RoleUser {
-		return nil, connect.NewError(connect.CodePermissionDenied, nil)
+		return nil, apperrors.ErrPermissionDenied
 	}
 	if req.Msg.Token == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, nil)
+		return nil, apperrors.ErrInvalidArgument
 	}
 
 	var st db.StampToken
 	if err := db.DB.WithContext(ctx).Where("token = ?", req.Msg.Token).First(&st).Error; err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, nil)
+		return nil, apperrors.ErrNotFound
 	}
 	if time.Now().UTC().After(st.ExpiresAt) {
-		return nil, connect.NewError(connect.CodeFailedPrecondition, nil)
+		return nil, apperrors.ErrFailedPrecondition
 	}
 
 	shopUUID := st.ShopID
 	tokenUUID := st.UUID.String()
 
-	// Check if already claimed
 	var existingClaim db.StampTokenClaim
 	if err := db.DB.WithContext(ctx).Where("token_id = ? AND user_id = ?", tokenUUID, claims.UserID).First(&existingClaim).Error; err == nil {
 		var shop db.Shop
@@ -359,16 +353,15 @@ func (s *StampService) ClaimStamp(ctx context.Context, req *connect.Request[pb.C
 		}), nil
 	}
 
-	// Record the claim
 	claim := db.StampTokenClaim{TokenID: tokenUUID, UserID: claims.UserID}
 	if err := db.DB.WithContext(ctx).Create(&claim).Error; err != nil {
 		slog.ErrorContext(ctx, "qr: failed to record claim", "error", err)
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 
 	var shop db.Shop
 	if err := db.DB.WithContext(ctx).Where("uuid = ?", shopUUID).First(&shop).Error; err != nil {
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 
 	card, cerr := getOrCreateCard(ctx, claims.UserID, shopUUID)
@@ -386,10 +379,9 @@ func (s *StampService) ClaimStamp(ctx context.Context, req *connect.Request[pb.C
 	card.Stamps++
 	if err := db.DB.WithContext(ctx).Model(&card).Update("stamps", card.Stamps).Error; err != nil {
 		slog.ErrorContext(ctx, "qr: failed to update stamp count", "card", card.UUID, "error", err)
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 
-	// Soft-delete the token + claims after successful claim
 	db.DB.WithContext(ctx).Where("token_id = ?", tokenUUID).Delete(&db.StampTokenClaim{})
 	db.DB.WithContext(ctx).Delete(&st)
 
@@ -408,14 +400,14 @@ func (s *StampService) ClaimStamp(ctx context.Context, req *connect.Request[pb.C
 
 func verifyShopOwner(ctx context.Context, shopID string, claims *auth.Claims) *connect.Error {
 	if claims == nil {
-		return connect.NewError(connect.CodeUnauthenticated, nil)
+		return apperrors.ErrUnauthenticated
 	}
 	var shop db.Shop
 	if err := db.DB.WithContext(ctx).Where("uuid = ?", shopID).First(&shop).Error; err != nil {
-		return connect.NewError(connect.CodeNotFound, nil)
+		return apperrors.ErrNotFound
 	}
 	if shop.OwnerID != claims.UserID {
-		return connect.NewError(connect.CodePermissionDenied, nil)
+		return apperrors.ErrPermissionDenied
 	}
 	return nil
 }
@@ -429,7 +421,7 @@ func getOrCreateCard(ctx context.Context, userID, shopID string) (*db.StampCard,
 		card = db.StampCard{UUID: uuid.New(), UserID: userID, ShopID: shopID}
 		if err := db.DB.WithContext(ctx).Create(&card).Error; err != nil {
 			slog.ErrorContext(ctx, "stamps: failed to create card", "user", userID, "shop", shopID, "error", err)
-			return nil, connect.NewError(connect.CodeInternal, nil)
+			return nil, apperrors.ErrInternal
 		}
 	}
 	return &card, nil

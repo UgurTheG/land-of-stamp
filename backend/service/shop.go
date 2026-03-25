@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"land-of-stamp-backend/apperrors"
 	"land-of-stamp-backend/constants"
 	"land-of-stamp-backend/db"
 	"land-of-stamp-backend/gen/pb"
@@ -25,7 +26,7 @@ func (s *ShopService) ListShops(ctx context.Context, _ *connect.Request[pb.ListS
 	var shops []db.Shop
 	if err := db.DB.WithContext(ctx).Find(&shops).Error; err != nil {
 		slog.ErrorContext(ctx, "shops: failed to list", "error", err)
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 	out := make([]*pb.Shop, len(shops))
 	for i := range shops {
@@ -38,12 +39,12 @@ func (s *ShopService) ListShops(ctx context.Context, _ *connect.Request[pb.ListS
 func (s *ShopService) CreateShop(ctx context.Context, req *connect.Request[pb.CreateShopRequest]) (*connect.Response[pb.Shop], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
+		return nil, apperrors.ErrUnauthenticated
 	}
 	msg := req.Msg
 
 	if msg.Name == "" || msg.RewardDescription == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, nil)
+		return nil, apperrors.ErrInvalidArgument
 	}
 	if msg.StampsRequired < constants.MinStampsRequired || msg.StampsRequired > constants.MaxStampsRequired {
 		msg.StampsRequired = constants.DefaultStampsRequired
@@ -63,10 +64,10 @@ func (s *ShopService) CreateShop(ctx context.Context, req *connect.Request[pb.Cr
 	}
 	if err := db.DB.WithContext(ctx).Create(&shop).Error; err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "unique") {
-			return nil, connect.NewError(connect.CodeAlreadyExists, nil)
+			return nil, apperrors.ErrAlreadyExists
 		}
 		slog.ErrorContext(ctx, "shops: create failed", "error", err)
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 
 	slog.InfoContext(ctx, "shop created", "uuid", shop.UUID, "name", msg.Name, "owner", claims.UserID)
@@ -77,20 +78,20 @@ func (s *ShopService) CreateShop(ctx context.Context, req *connect.Request[pb.Cr
 func (s *ShopService) UpdateShop(ctx context.Context, req *connect.Request[pb.UpdateShopRequest]) (*connect.Response[pb.Shop], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
+		return nil, apperrors.ErrUnauthenticated
 	}
 	msg := req.Msg
 
 	if msg.Id == "" {
-		return nil, connect.NewError(connect.CodeInvalidArgument, nil)
+		return nil, apperrors.ErrInvalidArgument
 	}
 
 	var shop db.Shop
 	if err := db.DB.WithContext(ctx).Where("uuid = ?", msg.Id).First(&shop).Error; err != nil {
-		return nil, connect.NewError(connect.CodeNotFound, nil)
+		return nil, apperrors.ErrNotFound
 	}
 	if shop.OwnerID != claims.UserID {
-		return nil, connect.NewError(connect.CodePermissionDenied, nil)
+		return nil, apperrors.ErrPermissionDenied
 	}
 
 	result := db.DB.WithContext(ctx).
@@ -105,10 +106,10 @@ func (s *ShopService) UpdateShop(ctx context.Context, req *connect.Request[pb.Up
 		})
 	if result.Error != nil {
 		if strings.Contains(result.Error.Error(), "UNIQUE") || strings.Contains(result.Error.Error(), "unique") {
-			return nil, connect.NewError(connect.CodeAlreadyExists, nil)
+			return nil, apperrors.ErrAlreadyExists
 		}
 		slog.ErrorContext(ctx, "shops: update failed", "uuid", msg.Id, "error", result.Error)
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 
 	slog.InfoContext(ctx, "shop updated", "uuid", msg.Id, "name", msg.Name)
@@ -123,13 +124,13 @@ func (s *ShopService) UpdateShop(ctx context.Context, req *connect.Request[pb.Up
 func (s *ShopService) GetMyShops(ctx context.Context, _ *connect.Request[pb.GetMyShopsRequest]) (*connect.Response[pb.ShopList], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {
-		return nil, connect.NewError(connect.CodeUnauthenticated, nil)
+		return nil, apperrors.ErrUnauthenticated
 	}
 
 	var shops []db.Shop
 	if err := db.DB.WithContext(ctx).Where("owner_id = ?", claims.UserID).Find(&shops).Error; err != nil {
 		slog.ErrorContext(ctx, "shops: fetch my shops failed", "error", err)
-		return nil, connect.NewError(connect.CodeInternal, nil)
+		return nil, apperrors.ErrInternal
 	}
 	out := make([]*pb.Shop, len(shops))
 	for i := range shops {

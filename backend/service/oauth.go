@@ -271,11 +271,11 @@ func fetchGoogleUser(ctx context.Context, token *oauth2.Token) (*oauthUserInfo, 
 	client := oauth2.NewClient(ctx, oauth2.StaticTokenSource(token))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, constants.GoogleUserURL, http.NoBody)
 	if err != nil {
-		return nil, fmt.Errorf("google userinfo request create: %w", err)
+		return nil, fmt.Errorf("%w: %w", apperrors.ErrGoogleRequest, err)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("google userinfo request: %w", err)
+		return nil, fmt.Errorf("%w: %w", apperrors.ErrGoogleRequest, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -285,7 +285,7 @@ func fetchGoogleUser(ctx context.Context, token *oauth2.Token) (*oauthUserInfo, 
 		Name  string `json:"name"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return nil, fmt.Errorf("google userinfo decode: %w", err)
+		return nil, fmt.Errorf("%w: %w", apperrors.ErrGoogleDecode, err)
 	}
 	username := data.Name
 	if username == "" {
@@ -298,11 +298,11 @@ func fetchGitHubUser(ctx context.Context, token *oauth2.Token) (*oauthUserInfo, 
 	client := oauth2.NewClient(ctx, oauth2.StaticTokenSource(token))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, constants.GitHubUserURL, http.NoBody)
 	if err != nil {
-		return nil, fmt.Errorf("github user request create: %w", err)
+		return nil, fmt.Errorf("%w: %w", apperrors.ErrGitHubRequest, err)
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("github user request: %w", err)
+		return nil, fmt.Errorf("%w: %w", apperrors.ErrGitHubRequest, err)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
@@ -312,7 +312,7 @@ func fetchGitHubUser(ctx context.Context, token *oauth2.Token) (*oauthUserInfo, 
 		ID    int    `json:"id"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return nil, fmt.Errorf("github user decode: %w", err)
+		return nil, fmt.Errorf("%w: %w", apperrors.ErrGitHubDecode, err)
 	}
 	return &oauthUserInfo{
 		ID:       strconv.Itoa(data.ID),
@@ -339,7 +339,7 @@ func extractAppleUser(token *oauth2.Token, userJSON string) (*oauthUserInfo, err
 	}
 	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
-		return nil, fmt.Errorf("decode Apple id_token payload: %w", err)
+		return nil, fmt.Errorf("%w: %w", apperrors.ErrAppleIDTokenDecode, err)
 	}
 
 	var claims struct {
@@ -347,7 +347,7 @@ func extractAppleUser(token *oauth2.Token, userJSON string) (*oauthUserInfo, err
 		Email string `json:"email"`
 	}
 	if err := json.Unmarshal(payload, &claims); err != nil {
-		return nil, fmt.Errorf("parse Apple id_token claims: %w", err)
+		return nil, fmt.Errorf("%w: %w", apperrors.ErrAppleIDTokenParse, err)
 	}
 
 	// Try to get the user's name from the `user` form param (first login only)
