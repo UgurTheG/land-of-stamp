@@ -293,9 +293,9 @@ export default function LandingPage() {
 
           <div className="grid sm:grid-cols-3 gap-8">
             {[
-              { step: '01', title: 'Visit a Shop', desc: 'Go to any participating shop and make a purchase.', emoji: '🏪' },
-              { step: '02', title: 'Get Stamped', desc: 'The shop owner grants you a digital stamp instantly.', emoji: '✅' },
-              { step: '03', title: 'Earn Rewards', desc: 'Collect all stamps and redeem your exclusive reward!', emoji: '🎁' },
+              { title: 'Visit a Shop', desc: 'Go to any participating shop and make a purchase.', emoji: '🏪' },
+              {  title: 'Get Stamped', desc: 'The shop owner grants you a digital stamp instantly.', emoji: '✅' },
+              { title: 'Earn Rewards', desc: 'Collect all stamps and redeem your exclusive reward!', emoji: '🎁' },
             ].map((item, i) => (
               <motion.div
                 key={i}
@@ -306,7 +306,6 @@ export default function LandingPage() {
                 className="text-center"
               >
                 <div className="text-5xl mb-4">{item.emoji}</div>
-                <div className="text-accent font-mono text-sm mb-2">{item.step}</div>
                 <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
                 <p className="text-indigo-300">{item.desc}</p>
               </motion.div>
