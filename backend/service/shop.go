@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"land-of-stamp-backend/constants"
 	"land-of-stamp-backend/db"
 	"land-of-stamp-backend/gen/pb"
 	"land-of-stamp-backend/gen/pb/pbconnect"
@@ -19,6 +20,7 @@ type ShopService struct {
 	pbconnect.UnimplementedShopServiceHandler
 }
 
+// ListShops returns all shops in the system.
 func (s *ShopService) ListShops(ctx context.Context, _ *connect.Request[pb.ListShopsRequest]) (*connect.Response[pb.ShopList], error) {
 	var shops []db.Shop
 	if err := db.DB.WithContext(ctx).Find(&shops).Error; err != nil {
@@ -32,6 +34,7 @@ func (s *ShopService) ListShops(ctx context.Context, _ *connect.Request[pb.ListS
 	return connect.NewResponse(&pb.ShopList{Shops: out}), nil
 }
 
+// CreateShop creates a new shop owned by the authenticated admin.
 func (s *ShopService) CreateShop(ctx context.Context, req *connect.Request[pb.CreateShopRequest]) (*connect.Response[pb.Shop], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {
@@ -42,11 +45,11 @@ func (s *ShopService) CreateShop(ctx context.Context, req *connect.Request[pb.Cr
 	if msg.Name == "" || msg.RewardDescription == "" {
 		return nil, connect.NewError(connect.CodeInvalidArgument, nil)
 	}
-	if msg.StampsRequired < 2 || msg.StampsRequired > 20 {
-		msg.StampsRequired = 8
+	if msg.StampsRequired < constants.MinStampsRequired || msg.StampsRequired > constants.MaxStampsRequired {
+		msg.StampsRequired = constants.DefaultStampsRequired
 	}
 	if msg.Color == "" {
-		msg.Color = "#6366f1"
+		msg.Color = constants.DefaultShopColor
 	}
 
 	shop := db.Shop{
@@ -70,6 +73,7 @@ func (s *ShopService) CreateShop(ctx context.Context, req *connect.Request[pb.Cr
 	return connect.NewResponse(shop.ToProto()), nil
 }
 
+// UpdateShop updates an existing shop's details (owner only).
 func (s *ShopService) UpdateShop(ctx context.Context, req *connect.Request[pb.UpdateShopRequest]) (*connect.Response[pb.Shop], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {
@@ -115,6 +119,7 @@ func (s *ShopService) UpdateShop(ctx context.Context, req *connect.Request[pb.Up
 	}), nil
 }
 
+// GetMyShops returns all shops owned by the authenticated admin.
 func (s *ShopService) GetMyShops(ctx context.Context, _ *connect.Request[pb.GetMyShopsRequest]) (*connect.Response[pb.ShopList], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"land-of-stamp-backend/constants"
+
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -37,7 +39,7 @@ func GenerateToken(userID, username, role string) (string, error) {
 		Username: username,
 		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(72 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(constants.JWTExpiry)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}

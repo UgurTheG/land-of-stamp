@@ -39,7 +39,7 @@ func setupTestServer(t *testing.T) *httptest.Server {
 	mux.Handle(p, h)
 	p, h = pbconnect.NewStampServiceHandler(&service.StampService{}, opts)
 	mux.Handle(p, h)
-	p, h = pbconnect.NewDocsServiceHandler(&docs.DocsService{}, opts)
+	p, h = pbconnect.NewDocsServiceHandler(&docs.Service{}, opts)
 	mux.Handle(p, h)
 	return httptest.NewServer(middleware.RequestLog(middleware.CORS(mux)))
 }
@@ -135,7 +135,6 @@ var ctx = context.Background()
 // ═══════════════════════════════════════════════════════════════════════════════
 //  AUTH TESTS
 // ═══════════════════════════════════════════════════════════════════════════════
-
 
 func TestLogout(t *testing.T) {
 	ts := setupTestServer(t)
@@ -1020,7 +1019,7 @@ func TestGetMyCards_MultipleShops(t *testing.T) {
 	aTk, _ := regUser(t, c, "admin", "admin1234", "admin")
 	uTk, _ := regUser(t, c, "user", "user1234", "user")
 
-	var shopIDs []string
+	shopIDs := make([]string, 0, 3)
 	for i := range 3 {
 		cr, _ := c.shop.CreateShop(ctx, ck(&pb.CreateShopRequest{
 			Name: fmt.Sprintf("Shop %d", i), RewardDescription: "Reward", StampsRequired: 3,

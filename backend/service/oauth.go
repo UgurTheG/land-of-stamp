@@ -10,10 +10,12 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"land-of-stamp-backend/auth"
@@ -26,20 +28,31 @@ import (
 	"gorm.io/gorm"
 )
 
+// Sentinel errors for OAuth operations.
+var (
+	errNoIDToken            = errors.New("no id_token in Apple token response")
+	errMalformedIDToken     = errors.New("malformed Apple id_token")
+	errUniqueUsernameFailed = errors.New("could not create unique username")
+)
+
+// maxAppleFormSize limits the request body size for Apple's form_post callback.
+const maxAppleFormSize = 1 << 20 // 1 MB
+
 // ── Provider endpoints ─────────────────────────────────
 
 var googleEndpoint = oauth2.Endpoint{
-	AuthURL:  "https://accounts.google.com/o/oauth2/auth",
-	TokenURL: "https://oauth2.googleapis.com/token",
+	AuthURL:  constants.GoogleAuthURL,
+	TokenURL: constants.GoogleTokenURL,
 }
 
 var appleEndpoint = oauth2.Endpoint{
-	AuthURL:  "https://appleid.apple.com/auth/authorize",
-	TokenURL: "https://appleid.apple.com/auth/token",
+	AuthURL:  constants.AppleAuthURL,
+	TokenURL: constants.AppleTokenURL,
 }
 
 // ── OAuthService holds configs for each provider ───────
 
+// OAuthService manages OAuth2 configurations and handlers for supported identity providers.
 type OAuthService struct {
 	google      *oauth2.Config
 	github      *oauth2.Config
@@ -66,7 +79,7 @@ func NewOAuthService() *OAuthService {
 			ClientID:     id,
 			ClientSecret: os.Getenv(constants.EnvGoogleSecret),
 			Endpoint:     googleEndpoint,
-			RedirectURL:  redirectBase + "/auth/google/callback",
+			RedirectURL:  redirectBase + constants.GoogleCallbackRoute,
 			Scopes:       []string{"openid", "email", "profile"},
 		}
 		slog.Info("oauth: Google provider enabled")
@@ -76,7 +89,7 @@ func NewOAuthService() *OAuthService {
 			ClientID:     id,
 			ClientSecret: os.Getenv(constants.EnvGitHubSecret),
 			Endpoint:     github.Endpoint,
-			RedirectURL:  redirectBase + "/auth/github/callback",
+			RedirectURL:  redirectBase + constants.GitHubCallbackRoute,
 			Scopes:       []string{"read:user", "user:email"},
 		}
 		slog.Info("oauth: GitHub provider enabled")
@@ -86,7 +99,7 @@ func NewOAuthService() *OAuthService {
 			ClientID:     id,
 			ClientSecret: os.Getenv(constants.EnvAppleSecret),
 			Endpoint:     appleEndpoint,
-			RedirectURL:  redirectBase + "/auth/apple/callback",
+			RedirectURL:  redirectBase + constants.AppleCallbackRoute,
 			Scopes:       []string{"name", "email"},
 		}
 		slog.Info("oauth: Apple provider enabled")
@@ -102,19 +115,19 @@ func (s *OAuthService) Enabled() (google, gh, apple bool) {
 // Register mounts the OAuth HTTP routes on the mux.
 func (s *OAuthService) Register(mux *http.ServeMux) {
 	if s.google != nil {
-		mux.HandleFunc("GET /auth/google", s.handleLogin(s.google, nil))
-		mux.HandleFunc("GET /auth/google/callback", s.handleCallback(constants.ProviderGoogle, s.google, fetchGoogleUser))
+		mux.HandleFunc(constants.GoogleLoginRoute, s.handleLogin(s.google, nil))
+		mux.HandleFunc(constants.GoogleCallbackMux, s.handleCallback(constants.ProviderGoogle, s.google, fetchGoogleUser))
 	}
 	if s.github != nil {
-		mux.HandleFunc("GET /auth/github", s.handleLogin(s.github, nil))
-		mux.HandleFunc("GET /auth/github/callback", s.handleCallback(constants.ProviderGitHub, s.github, fetchGitHubUser))
+		mux.HandleFunc(constants.GitHubLoginRoute, s.handleLogin(s.github, nil))
+		mux.HandleFunc(constants.GitHubCallbackMux, s.handleCallback(constants.ProviderGitHub, s.github, fetchGitHubUser))
 	}
 	if s.apple != nil {
 		// Apple requires response_mode=form_post and sends callback as POST.
-		mux.HandleFunc("GET /auth/apple", s.handleLogin(s.apple, []oauth2.AuthCodeOption{
+		mux.HandleFunc(constants.AppleLoginRoute, s.handleLogin(s.apple, []oauth2.AuthCodeOption{
 			oauth2.SetAuthURLParam("response_mode", "form_post"),
 		}))
-		mux.HandleFunc("POST /auth/apple/callback", s.handleAppleCallback())
+		mux.HandleFunc(constants.AppleCallbackMux, s.handleAppleCallback())
 	}
 }
 
@@ -203,6 +216,7 @@ func (s *OAuthService) handleCallback(provider string, cfg *oauth2.Config, fetch
 // Apple sends code, state, and optionally a `user` JSON blob (first login only) as form fields.
 func (s *OAuthService) handleAppleCallback() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxAppleFormSize)
 		if err := r.ParseForm(); err != nil {
 			slog.Error("oauth: apple form parse failed", "error", err)
 			http.Redirect(w, r, s.frontendURL+constants.OAuthErrorPath+"?error=oauth_exchange", http.StatusTemporaryRedirect)
@@ -261,11 +275,15 @@ func (s *OAuthService) handleAppleCallback() http.HandlerFunc {
 
 func fetchGoogleUser(ctx context.Context, token *oauth2.Token) (*oauthUserInfo, error) {
 	client := oauth2.NewClient(ctx, oauth2.StaticTokenSource(token))
-	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, constants.GoogleUserURL, http.NoBody)
+	if err != nil {
+		return nil, fmt.Errorf("google userinfo request create: %w", err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("google userinfo request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var data struct {
 		ID    string `json:"id"`
@@ -284,22 +302,26 @@ func fetchGoogleUser(ctx context.Context, token *oauth2.Token) (*oauthUserInfo, 
 
 func fetchGitHubUser(ctx context.Context, token *oauth2.Token) (*oauthUserInfo, error) {
 	client := oauth2.NewClient(ctx, oauth2.StaticTokenSource(token))
-	resp, err := client.Get("https://api.github.com/user")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, constants.GitHubUserURL, http.NoBody)
+	if err != nil {
+		return nil, fmt.Errorf("github user request create: %w", err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("github user request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var data struct {
-		ID    int    `json:"id"`
 		Login string `json:"login"`
 		Email string `json:"email"`
+		ID    int    `json:"id"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
 		return nil, fmt.Errorf("github user decode: %w", err)
 	}
 	return &oauthUserInfo{
-		ID:       fmt.Sprintf("%d", data.ID),
+		ID:       strconv.Itoa(data.ID),
 		Username: data.Login,
 		Email:    data.Email,
 	}, nil
@@ -312,14 +334,14 @@ func extractAppleUser(token *oauth2.Token, userJSON string) (*oauthUserInfo, err
 	// The ID token is a JWT in the Extra data
 	idTokenRaw, ok := token.Extra("id_token").(string)
 	if !ok || idTokenRaw == "" {
-		return nil, fmt.Errorf("no id_token in Apple token response")
+		return nil, errNoIDToken
 	}
 
 	// Decode JWT payload (second segment) without verification —
 	// we just exchanged the code server-side so the token is trustworthy.
 	parts := strings.SplitN(idTokenRaw, ".", 3)
 	if len(parts) < 2 {
-		return nil, fmt.Errorf("malformed Apple id_token")
+		return nil, errMalformedIDToken
 	}
 	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
 	if err != nil {
@@ -371,13 +393,13 @@ func upsertOAuthUser(ctx context.Context, provider, oauthID, username string) (*
 	if err == nil {
 		return &user, nil // existing OAuth user
 	}
-	if err != gorm.ErrRecordNotFound {
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, err
 	}
 
 	// New OAuth user — ensure unique username
 	candidateName := username
-	for attempt := 0; attempt < 5; attempt++ {
+	for range constants.MaxUsernameRetries {
 		user = db.User{
 			UUID:          uuid.New(),
 			Username:      candidateName,
@@ -392,20 +414,19 @@ func upsertOAuthUser(ctx context.Context, provider, oauthID, username string) (*
 		// Username conflict — try with suffix
 		candidateName = fmt.Sprintf("%s_%s_%s", username, provider, randomShort())
 	}
-	return nil, fmt.Errorf("could not create unique username for %s/%s", provider, oauthID)
+	return nil, fmt.Errorf("%w for %s/%s", errUniqueUsernameFailed, provider, oauthID)
 }
 
 // ── Utilities ──────────────────────────────────────────
 
 func randomState() string {
-	b := make([]byte, 16)
+	b := make([]byte, constants.RandomStateBytes)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
 }
 
 func randomShort() string {
-	b := make([]byte, 3)
+	b := make([]byte, constants.RandomShortBytes)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
 }
-

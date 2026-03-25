@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // StampService implements pbconnect.StampServiceHandler.
@@ -25,6 +27,7 @@ type StampService struct {
 
 // ── Cards ──────────────────────────────────────────────
 
+// GetMyCards returns all stamp cards belonging to the authenticated user.
 func (s *StampService) GetMyCards(ctx context.Context, _ *connect.Request[pb.GetMyCardsRequest]) (*connect.Response[pb.StampCardList], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {
@@ -39,6 +42,7 @@ func (s *StampService) GetMyCards(ctx context.Context, _ *connect.Request[pb.Get
 	return connect.NewResponse(cardsToProtoList(cards)), nil
 }
 
+// JoinShop creates a new stamp card for the authenticated user in the given shop.
 func (s *StampService) JoinShop(ctx context.Context, req *connect.Request[pb.JoinShopRequest]) (*connect.Response[pb.StampCard], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {
@@ -76,6 +80,7 @@ func (s *StampService) JoinShop(ctx context.Context, req *connect.Request[pb.Joi
 	return connect.NewResponse(card.ToProto()), nil
 }
 
+// GetShopCards returns all stamp cards for a shop (admin/owner only).
 func (s *StampService) GetShopCards(ctx context.Context, req *connect.Request[pb.GetShopCardsRequest]) (*connect.Response[pb.StampCardList], error) {
 	claims := interceptor.GetUser(ctx)
 	shopID := req.Msg.ShopId
@@ -94,6 +99,7 @@ func (s *StampService) GetShopCards(ctx context.Context, req *connect.Request[pb
 	return connect.NewResponse(cardsToProtoList(cards)), nil
 }
 
+// GrantStamp increments the stamp count on a user's card for a shop (admin/owner only).
 func (s *StampService) GrantStamp(ctx context.Context, req *connect.Request[pb.GrantStampRequest]) (*connect.Response[pb.StampCard], error) {
 	claims := interceptor.GetUser(ctx)
 	shopID := req.Msg.ShopId
@@ -126,6 +132,7 @@ func (s *StampService) GrantStamp(ctx context.Context, req *connect.Request[pb.G
 	return connect.NewResponse(card.ToProto()), nil
 }
 
+// UpdateStampCount sets the stamp count on a user's card to an exact value (admin/owner only).
 func (s *StampService) UpdateStampCount(ctx context.Context, req *connect.Request[pb.UpdateStampCountRequest]) (*connect.Response[pb.StampCard], error) {
 	claims := interceptor.GetUser(ctx)
 	shopID := req.Msg.ShopId
@@ -141,13 +148,7 @@ func (s *StampService) UpdateStampCount(ctx context.Context, req *connect.Reques
 		return nil, connect.NewError(connect.CodeInternal, nil)
 	}
 
-	stamps := req.Msg.Stamps
-	if stamps < 0 {
-		stamps = 0
-	}
-	if stamps > shop.StampsRequired {
-		stamps = shop.StampsRequired
-	}
+	stamps := min(max(req.Msg.Stamps, 0), shop.StampsRequired)
 
 	card, err := getOrCreateCard(ctx, req.Msg.UserId, shopID)
 	if err != nil {
@@ -164,6 +165,7 @@ func (s *StampService) UpdateStampCount(ctx context.Context, req *connect.Reques
 	return connect.NewResponse(card.ToProto()), nil
 }
 
+// RedeemCard marks a fully-stamped card as redeemed and creates a fresh replacement card.
 func (s *StampService) RedeemCard(ctx context.Context, req *connect.Request[pb.RedeemCardRequest]) (*connect.Response[pb.StatusResponse], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {
@@ -203,6 +205,7 @@ func (s *StampService) RedeemCard(ctx context.Context, req *connect.Request[pb.R
 	return connect.NewResponse(&pb.StatusResponse{Status: constants.StatusRedeemed}), nil
 }
 
+// GetShopCustomers returns all users who have a stamp card for a shop (admin/owner only).
 func (s *StampService) GetShopCustomers(ctx context.Context, req *connect.Request[pb.GetShopCustomersRequest]) (*connect.Response[pb.UserList], error) {
 	claims := interceptor.GetUser(ctx)
 	shopID := req.Msg.ShopId
@@ -236,6 +239,7 @@ func (s *StampService) GetShopCustomers(ctx context.Context, req *connect.Reques
 
 // ── QR Tokens ──────────────────────────────────────────
 
+// CreateStampToken generates a new short-lived QR stamp token for a shop (admin/owner only).
 func (s *StampService) CreateStampToken(ctx context.Context, req *connect.Request[pb.CreateStampTokenRequest]) (*connect.Response[pb.StampToken], error) {
 	claims := interceptor.GetUser(ctx)
 	shopID := req.Msg.ShopId
@@ -264,7 +268,7 @@ func (s *StampService) CreateStampToken(ctx context.Context, req *connect.Reques
 	}
 	db.DB.WithContext(ctx).Where("expires_at < ?", now).Delete(&db.StampToken{})
 
-	tokenBytes := make([]byte, 16)
+	tokenBytes := make([]byte, constants.RandomTokenBytes)
 	if _, err := rand.Read(tokenBytes); err != nil {
 		slog.ErrorContext(ctx, "qr: failed to generate random token", "error", err)
 		return nil, connect.NewError(connect.CodeInternal, nil)
@@ -282,6 +286,7 @@ func (s *StampService) CreateStampToken(ctx context.Context, req *connect.Reques
 	return connect.NewResponse(st.ToProtoToken()), nil
 }
 
+// GetStampTokenStatus checks whether an active stamp token exists for a shop.
 func (s *StampService) GetStampTokenStatus(ctx context.Context, req *connect.Request[pb.GetStampTokenStatusRequest]) (*connect.Response[pb.StampTokenStatusResponse], error) {
 	claims := interceptor.GetUser(ctx)
 	shopID := req.Msg.ShopId
@@ -294,7 +299,10 @@ func (s *StampService) GetStampTokenStatus(ctx context.Context, req *connect.Req
 
 	var st db.StampToken
 	if err := db.DB.WithContext(ctx).Where("shop_id = ?", shopID).First(&st).Error; err != nil {
-		return connect.NewResponse(&pb.StampTokenStatusResponse{Active: false}), nil
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return connect.NewResponse(&pb.StampTokenStatusResponse{Active: false}), nil
+		}
+		return nil, connect.NewError(connect.CodeInternal, nil)
 	}
 
 	if time.Now().UTC().After(st.ExpiresAt) {
@@ -314,6 +322,7 @@ func (s *StampService) GetStampTokenStatus(ctx context.Context, req *connect.Req
 	}), nil
 }
 
+// ClaimStamp lets a user claim a stamp via a QR token.
 func (s *StampService) ClaimStamp(ctx context.Context, req *connect.Request[pb.ClaimStampRequest]) (*connect.Response[pb.ClaimStampResponse], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {
@@ -346,7 +355,7 @@ func (s *StampService) ClaimStamp(ctx context.Context, req *connect.Request[pb.C
 		db.DB.WithContext(ctx).Where("user_id = ? AND shop_id = ? AND redeemed = ?", claims.UserID, shopUUID, false).First(&card)
 		return connect.NewResponse(&pb.ClaimStampResponse{
 			ShopName: shop.Name, Stamps: card.Stamps, StampsRequired: shop.StampsRequired,
-			Message: "You already scanned this QR code! ✅",
+			Message: constants.MsgAlreadyScanned,
 		}), nil
 	}
 
@@ -370,7 +379,7 @@ func (s *StampService) ClaimStamp(ctx context.Context, req *connect.Request[pb.C
 	if card.Stamps >= shop.StampsRequired {
 		return connect.NewResponse(&pb.ClaimStampResponse{
 			ShopName: shop.Name, Stamps: card.Stamps, StampsRequired: shop.StampsRequired,
-			Message: "Your card is already full! Redeem your reward first.",
+			Message: constants.MsgCardFull,
 		}), nil
 	}
 
@@ -386,9 +395,9 @@ func (s *StampService) ClaimStamp(ctx context.Context, req *connect.Request[pb.C
 
 	slog.InfoContext(ctx, "stamp claimed via QR", "card", card.UUID, "user", claims.UserID, "shop", shopUUID, "stamps", card.Stamps)
 
-	msg := "Stamp collected! 🎉"
+	msg := constants.MsgStampCollected
 	if card.Stamps >= shop.StampsRequired {
-		msg = "Card complete! 🏆 You can now redeem your reward!"
+		msg = constants.MsgCardComplete
 	}
 	return connect.NewResponse(&pb.ClaimStampResponse{
 		ShopName: shop.Name, Stamps: card.Stamps, StampsRequired: shop.StampsRequired, Message: msg,

@@ -20,7 +20,7 @@ type AuthService struct {
 	pbconnect.UnimplementedAuthServiceHandler
 }
 
-
+// Logout clears the authentication cookie and logs the user out.
 func (s *AuthService) Logout(ctx context.Context, _ *connect.Request[pb.LogoutRequest]) (*connect.Response[pb.StatusResponse], error) {
 	slog.InfoContext(ctx, "user logged out")
 	resp := connect.NewResponse(&pb.StatusResponse{Status: constants.StatusLoggedOut})
@@ -28,6 +28,7 @@ func (s *AuthService) Logout(ctx context.Context, _ *connect.Request[pb.LogoutRe
 	return resp, nil
 }
 
+// GetMe returns the currently authenticated user's profile.
 func (s *AuthService) GetMe(ctx context.Context, _ *connect.Request[pb.GetMeRequest]) (*connect.Response[pb.User], error) {
 	claims := interceptor.GetUser(ctx)
 	if claims == nil {
@@ -48,6 +49,7 @@ func cookieSecure() bool {
 	return os.Getenv(constants.EnvCookieSecure) == "true"
 }
 
+// SetTokenCookie sets the JWT authentication cookie on the response.
 func SetTokenCookie(h http.Header, token string) {
 	secure := cookieSecure()
 	sameSite := http.SameSiteStrictMode
@@ -66,6 +68,7 @@ func SetTokenCookie(h http.Header, token string) {
 	h.Add("Set-Cookie", cookie.String())
 }
 
+// ClearTokenCookie removes the JWT authentication cookie from the response.
 func ClearTokenCookie(h http.Header) {
 	secure := cookieSecure()
 	sameSite := http.SameSiteStrictMode

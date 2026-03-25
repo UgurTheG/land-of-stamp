@@ -78,12 +78,13 @@ func handleSeedUser(w http.ResponseWriter, r *http.Request) {
 
 	SetTokenCookie(w.Header(), token)
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(seedResponse{
+	if err := json.NewEncoder(w).Encode(seedResponse{
 		User: seedUserResponse{
 			ID:       uid,
 			Username: user.Username,
 			Role:     user.Role,
 		},
-	})
+	}); err != nil {
+		slog.Error("test seed: failed to encode response", "error", err)
+	}
 }
-

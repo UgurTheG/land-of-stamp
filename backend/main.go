@@ -4,14 +4,13 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"land-of-stamp-backend/constants"
 	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 
 	"land-of-stamp-backend/auth"
+	"land-of-stamp-backend/constants"
 	"land-of-stamp-backend/db"
 	"land-of-stamp-backend/docs"
 	"land-of-stamp-backend/gen/pb/pbconnect"
@@ -47,7 +46,7 @@ func main() {
 	srv := &http.Server{
 		Addr:              ":" + port,
 		Handler:           middleware.RequestLog(middleware.CORS(mux)),
-		ReadHeaderTimeout: 10 * time.Second,
+		ReadHeaderTimeout: constants.ReadHeaderTimeout,
 	}
 	slog.InfoContext(ctx, "server starting (gRPC + Connect + gRPC-Web)", "port", port, "url", "http://localhost:"+port)
 	if err := srv.ListenAndServe(); err != nil {
@@ -73,7 +72,7 @@ func initLogging() {
 func initJWT(ctx context.Context) {
 	secret := os.Getenv(constants.EnvJWTSecret)
 	if secret == "" {
-		b := make([]byte, 32)
+		b := make([]byte, constants.JWTSecretBytes)
 		if _, err := rand.Read(b); err != nil {
 			slog.ErrorContext(ctx, "failed to generate random JWT secret", "error", err)
 			os.Exit(1)
@@ -94,7 +93,7 @@ func buildMux() *http.ServeMux {
 	authPath, authHandler := pbconnect.NewAuthServiceHandler(&service.AuthService{}, opts)
 	shopPath, shopHandler := pbconnect.NewShopServiceHandler(&service.ShopService{}, opts)
 	stampPath, stampHandler := pbconnect.NewStampServiceHandler(&service.StampService{}, opts)
-	docsPath, docsHandler := pbconnect.NewDocsServiceHandler(&docs.DocsService{}, opts)
+	docsPath, docsHandler := pbconnect.NewDocsServiceHandler(&docs.Service{}, opts)
 
 	mux.Handle(authPath, authHandler)
 	mux.Handle(shopPath, shopHandler)

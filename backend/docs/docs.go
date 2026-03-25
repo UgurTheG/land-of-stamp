@@ -17,11 +17,11 @@ import (
 //go:embed openapi.yaml
 var specYAML string
 
-// DocsService implements pbconnect.DocsServiceHandler.
-type DocsService struct{}
+// Service implements pbconnect.DocsServiceHandler.
+type Service struct{}
 
 // GetOpenAPISpec returns the raw OpenAPI YAML spec.
-func (s *DocsService) GetOpenAPISpec(_ context.Context, _ *connect.Request[pb.GetOpenAPISpecRequest]) (*connect.Response[pb.GetOpenAPISpecResponse], error) {
+func (s *Service) GetOpenAPISpec(_ context.Context, _ *connect.Request[pb.GetOpenAPISpecRequest]) (*connect.Response[pb.GetOpenAPISpecResponse], error) {
 	return connect.NewResponse(&pb.GetOpenAPISpecResponse{
 		Content:     specYAML,
 		ContentType: "application/yaml",
@@ -29,7 +29,7 @@ func (s *DocsService) GetOpenAPISpec(_ context.Context, _ *connect.Request[pb.Ge
 }
 
 // GetDocsPage returns a self-contained Scalar UI HTML page with the spec inlined.
-func (s *DocsService) GetDocsPage(_ context.Context, _ *connect.Request[pb.GetDocsPageRequest]) (*connect.Response[pb.GetDocsPageResponse], error) {
+func (s *Service) GetDocsPage(_ context.Context, _ *connect.Request[pb.GetDocsPageRequest]) (*connect.Response[pb.GetDocsPageResponse], error) {
 	return connect.NewResponse(&pb.GetDocsPageResponse{
 		Html: buildScalarHTML(specYAML),
 	}), nil
@@ -39,11 +39,16 @@ func (s *DocsService) GetDocsPage(_ context.Context, _ *connect.Request[pb.GetDo
 // so no additional network request is needed.
 func buildScalarHTML(spec string) string {
 	// Build a JSON configuration object with the spec content embedded.
-	cfg, _ := json.Marshal(map[string]any{
-		"spec": map[string]any{
-			"content": spec,
-		},
-	})
+	type specObj struct {
+		Content string `json:"content"`
+	}
+	type cfgObj struct {
+		Spec specObj `json:"spec"`
+	}
+	cfg, err := json.Marshal(cfgObj{Spec: specObj{Content: spec}})
+	if err != nil {
+		cfg = []byte("{}")
+	}
 	// HTML-safe: single-quote the attribute value so the JSON double-quotes are fine.
 	var b strings.Builder
 	b.WriteString(`<!doctype html>

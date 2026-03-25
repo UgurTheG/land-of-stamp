@@ -20,8 +20,8 @@ const userKey ctxKey = "user"
 
 // Public procedures that require no authentication.
 var publicProcedures = map[string]bool{
-	pbconnect.AuthServiceLogoutProcedure:        true,
-	pbconnect.ShopServiceListShopsProcedure:     true,
+	pbconnect.AuthServiceLogoutProcedure:         true,
+	pbconnect.ShopServiceListShopsProcedure:      true,
 	pbconnect.DocsServiceGetOpenAPISpecProcedure: true,
 	pbconnect.DocsServiceGetDocsPageProcedure:    true,
 }

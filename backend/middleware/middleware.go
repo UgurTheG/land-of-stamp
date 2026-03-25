@@ -25,7 +25,7 @@ func RequestLog(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), requestIDKey, reqID)
 		r = r.WithContext(ctx)
 
-		w.Header().Set("X-Request-ID", reqID)
+		w.Header().Set(constants.HeaderRequestID, reqID)
 
 		start := time.Now()
 		sw := &statusWriter{ResponseWriter: w, status: http.StatusOK}
@@ -61,9 +61,9 @@ func CORS(next http.Handler) http.Handler {
 			origin = constants.DefaultFrontendURL
 		}
 		w.Header().Set("Access-Control-Allow-Origin", origin)
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Connect-Protocol-Version, Connect-Timeout-Ms, Grpc-Timeout, X-Grpc-Web, X-User-Agent")
-		w.Header().Set("Access-Control-Expose-Headers", "Grpc-Status, Grpc-Message, Grpc-Status-Details-Bin")
+		w.Header().Set("Access-Control-Allow-Methods", constants.CORSAllowMethods)
+		w.Header().Set("Access-Control-Allow-Headers", constants.CORSAllowHeaders)
+		w.Header().Set("Access-Control-Expose-Headers", constants.CORSExposeHeaders)
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Max-Age", constants.CORSMaxAge)
 		if r.Method == http.MethodOptions {
