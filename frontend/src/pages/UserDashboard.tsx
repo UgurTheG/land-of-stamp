@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useNavigate } from 'react-router';
 import { useAuth } from '../hooks/useAuth';
 import { toast } from 'sonner';
 import {
@@ -11,11 +10,10 @@ import {
   type StampCard as StampCardType,
 } from '../lib/api';
 import StampCard from '../components/stamps/StampCard';
-import { Stamp, Star, Gift, TrendingUp, ScanLine, History, ChevronDown } from 'lucide-react';
+import { Stamp, Star, Gift, TrendingUp, History, ChevronDown } from 'lucide-react';
 
 export default function UserDashboard() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [shops, setShops] = useState<Shop[]>([]);
   const [cards, setCards] = useState<StampCardType[]>([]);
 
@@ -74,7 +72,7 @@ export default function UserDashboard() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 flex items-start justify-between"
+          className="mb-8"
         >
           <div>
             <h1 className="text-3xl sm:text-4xl font-black text-white">
@@ -82,13 +80,6 @@ export default function UserDashboard() {
             </h1>
             <p className="text-indigo-300 mt-2">Here are your loyalty stamp cards</p>
           </div>
-          <button
-            onClick={() => navigate('/scan')}
-            className="shrink-0 flex items-center gap-2 bg-linear-to-r from-accent to-amber-400 text-surface font-bold px-5 py-3 rounded-2xl hover:scale-[1.03] active:scale-[0.98] transition-transform cursor-pointer shadow-lg shadow-accent/30"
-          >
-            <ScanLine className="w-5 h-5" />
-            <span className="hidden sm:inline">Scan QR</span>
-          </button>
         </motion.div>
 
         {/* Stats */}

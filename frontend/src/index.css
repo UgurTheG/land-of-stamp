@@ -208,16 +208,16 @@ body {
 [data-theme="light"] .text-white            { color: #0f172a; }
 [data-theme="light"] .hover\:text-white:hover { color: #0f172a; }
 [data-theme="light"] .text-white\/20        { color: rgba(15, 23, 42, 0.2); }
+[data-theme="light"] .text-white\/30        { color: rgba(15, 23, 42, 0.3); }
 [data-theme="light"] .text-indigo-200       { color: #475569; }
 [data-theme="light"] .text-indigo-300       { color: #64748b; }
 [data-theme="light"] .text-indigo-400       { color: #94a3b8; }
-[data-theme="light"] .text-indigo-500       { color: #cbd5e1; }
-[data-theme="light"] .text-indigo-600       { color: #e2e8f0; }
+[data-theme="light"] .text-indigo-500       { color: #94a3b8; }
+[data-theme="light"] .text-indigo-600       { color: #cbd5e1; }
 [data-theme="light"] .text-zinc-400         { color: #94a3b8; }
 
-/* Preserve white text inside gradient / colored containers */
+/* Preserve white text only inside truly colored containers */
 [data-theme="light"] :is(
-  [class*="bg-linear-to"],
   [class*="from-primary"],
   [class*="from-accent"],
   [class*="from-amber"],
@@ -228,13 +228,18 @@ body {
   [class*="bg-accent"],
   [class*="bg-green-500"],
   [style*="linear-gradient"],
-  [style*="background"]
+  [style*="background-color"]
 ) > .text-white,
 [data-theme="light"] :is(
-  [class*="bg-linear-to"],
   [class*="from-primary"],
   [class*="from-accent"],
   [class*="from-amber"],
+  [class*="from-emerald"],
+  [class*="from-rose"],
+  [class*="from-indigo-5"],
+  [class*="bg-primary"],
+  [class*="bg-accent"],
+  [class*="bg-green-500"],
   [style*="linear-gradient"]
 ).text-white {
   color: #ffffff;
@@ -242,12 +247,32 @@ body {
 
 /* ── Background overrides ── */
 [data-theme="light"] .bg-white\/5  { background-color: rgba(0, 0, 0, 0.03); }
+[data-theme="light"] .bg-white\/\[0\.07\] { background-color: rgba(15, 23, 42, 0.04); }
+[data-theme="light"] .bg-white\/7  { background-color: rgba(15, 23, 42, 0.04); }
+[data-theme="light"] .bg-white\/8  { background-color: rgba(15, 23, 42, 0.045); }
 [data-theme="light"] .bg-white\/10 { background-color: rgba(0, 0, 0, 0.04); }
 [data-theme="light"] .bg-white\/15 { background-color: rgba(0, 0, 0, 0.05); }
 
 [data-theme="light"] .hover\:bg-white\/5:hover  { background-color: rgba(0, 0, 0, 0.03); }
+[data-theme="light"] .hover\:bg-white\/8:hover  { background-color: rgba(15, 23, 42, 0.05); }
 [data-theme="light"] .hover\:bg-white\/10:hover { background-color: rgba(0, 0, 0, 0.04); }
 [data-theme="light"] .hover\:bg-white\/15:hover { background-color: rgba(0, 0, 0, 0.05); }
+
+[data-theme="light"] .bg-surface {
+  background-color: rgba(255, 255, 255, 0.88) !important;
+}
+
+[data-theme="light"] .bg-surface\/80 {
+  background-color: rgba(255, 255, 255, 0.82) !important;
+}
+
+[data-theme="light"] .bg-surface\/90 {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-theme="light"] .bg-black\/60 {
+  background-color: rgba(15, 23, 42, 0.22) !important;
+}
 
 /* White gradient cards → solid white surface */
 [data-theme="light"] [class*="from-white"][class*="to-white"] {
@@ -295,7 +320,15 @@ body {
   border-color: rgba(0, 0, 0, 0.1) !important;
   color: #0f172a !important;
 }
+[data-theme="light"] textarea {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #0f172a !important;
+}
 [data-theme="light"] input::placeholder {
+  color: #94a3b8 !important;
+}
+[data-theme="light"] textarea::placeholder {
   color: #94a3b8 !important;
 }
 

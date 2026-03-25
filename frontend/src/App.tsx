@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { useTheme } from './hooks/useTheme';
@@ -11,7 +11,6 @@ const LandingPage = lazy(() => import('./pages/LandingPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const UserDashboard = lazy(() => import('./pages/UserDashboard'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
-const ScanPage = lazy(() => import('./pages/ScanPage'));
 const ClaimPage = lazy(() => import('./pages/ClaimPage'));
 
 function AppShell() {
@@ -46,7 +45,7 @@ function AppShell() {
               path="/scan"
               element={
                 <ProtectedRoute requiredRole="user">
-                  <ScanPage />
+                  <Navigate to="/dashboard" replace />
                 </ProtectedRoute>
               }
             />

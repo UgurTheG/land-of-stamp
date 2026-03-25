@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { Link } from 'react-router';
 import { motion, useScroll, useTransform } from 'motion/react';
+import { useAuth } from '../hooks/useAuth';
 import {
   Stamp,
   Gift,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 
 export default function LandingPage() {
+  const { isAuthenticated, user } = useAuth();
   const containerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: containerRef });
 
@@ -56,6 +58,25 @@ export default function LandingPage() {
     { icon: Stamp, value: '1M+', label: 'Stamps Collected' },
     { icon: Gift, value: '50K+', label: 'Rewards Redeemed' },
   ];
+
+  const isAdmin = user?.role === 'admin';
+  const primaryHref = isAuthenticated ? (isAdmin ? '/admin' : '/dashboard') : '/login';
+  const primaryLabel = isAuthenticated ? (isAdmin ? 'Open Dashboard' : 'Go to My Cards') : 'Get Started';
+  const bottomHeading = isAuthenticated
+    ? isAdmin
+      ? 'Ready to manage your stamp cards?'
+      : 'Ready to keep collecting?'
+    : 'Ready to start collecting?';
+  const bottomBody = isAuthenticated
+    ? isAdmin
+      ? 'Jump back into your shop dashboard, manage rewards, and generate fresh QR codes for customers.'
+      : 'Head back to your stamp cards, check your progress, and see how close you are to your next reward.'
+    : 'Join thousands of happy customers and shop owners. Your next reward is just a few stamps away.';
+  const bottomLabel = isAuthenticated
+    ? isAdmin
+      ? 'Go to Admin Dashboard'
+      : 'View My Cards'
+    : 'Sign Up Now';
 
   return (
     <div ref={containerRef} className="min-h-screen">
@@ -143,10 +164,10 @@ export default function LandingPage() {
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             <Link
-              to="/login"
+              to={primaryHref}
               className="group flex items-center gap-2 bg-linear-to-r from-accent to-amber-400 text-surface font-bold px-8 py-4 rounded-2xl hover:shadow-lg hover:shadow-accent/25 transition-all hover:scale-105 text-lg"
             >
-              Get Started
+              {primaryLabel}
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <button
@@ -327,17 +348,16 @@ export default function LandingPage() {
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-accent/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
             <h2 className="relative text-3xl sm:text-4xl font-black text-white mb-4">
-              Ready to start collecting?
+              {bottomHeading}
             </h2>
             <p className="relative text-indigo-200 text-lg mb-8 max-w-xl mx-auto">
-              Join thousands of happy customers and shop owners. Your next reward is just a few stamps
-              away.
+              {bottomBody}
             </p>
             <Link
-              to="/login"
+              to={primaryHref}
               className="relative inline-flex items-center gap-2 bg-linear-to-r from-accent to-amber-400 text-surface font-bold px-8 py-4 rounded-2xl hover:shadow-lg hover:shadow-accent/25 transition-all hover:scale-105 text-lg"
             >
-              Sign Up Now
+              {bottomLabel}
               <ArrowRight className="w-5 h-5" />
             </Link>
           </motion.div>

@@ -103,6 +103,24 @@ test.describe('Landing Page', () => {
     await page.goto('/');
     await expect(page.getByRole('link', { name: 'Sign In' })).toBeVisible();
   });
+
+  test('logged-in user landing page shows dashboard CTAs instead of guest signup copy', async ({ page }) => {
+    await registerViaAPI(page, 'user');
+    await page.goto('/');
+
+    await expect(page.getByText('Ready to start collecting?')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Go to My Cards' }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'View My Cards' })).toBeVisible();
+  });
+
+  test('logged-in admin landing page shows admin dashboard CTAs instead of guest signup copy', async ({ page }) => {
+    await registerViaAPI(page, 'admin');
+    await page.goto('/');
+
+    await expect(page.getByText('Ready to start collecting?')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Open Dashboard' }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Go to Admin Dashboard' })).toBeVisible();
+  });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -734,87 +752,34 @@ test.describe('Claim Page', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  QR CODE — SCAN PAGE
+//  USER SCAN ENTRY POINTS REMOVED
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.describe('Scan Page', () => {
-  test('user can navigate to /scan from dashboard', async ({ page }) => {
-    await registerViaAPI(page, 'user');
-    await page.getByRole('link', { name: /Scan QR/i }).first().click();
-    await expect(page).toHaveURL(/\/scan/);
-  });
-
-  test('scan page shows recommended native camera section', async ({ page }) => {
+test.describe('Removed user scan entry points', () => {
+  test('old /scan URL redirects logged-in users to dashboard', async ({ page }) => {
     await registerViaAPI(page, 'user');
     await page.goto('/scan');
-    await page.waitForLoadState('networkidle');
-
-    await expect(page.getByText(/Use Your Phone Camera/i)).toBeVisible();
-    await expect(page.getByText(/Recommended/i)).toBeVisible();
-  });
-
-  test('scan page shows in-app scanner fallback', async ({ page }) => {
-    await registerViaAPI(page, 'user');
-    await page.goto('/scan');
-    await page.waitForLoadState('networkidle');
-
-    await expect(page.getByText(/In-App Scanner/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /Open Scanner/i })).toBeVisible();
-  });
-
-  test('scan page shows tips section', async ({ page }) => {
-    await registerViaAPI(page, 'user');
-    await page.goto('/scan');
-    await page.waitForLoadState('networkidle');
-
-    await expect(page.getByText(/Tips/i)).toBeVisible();
-    await expect(page.getByText(/expire after 60 seconds/i)).toBeVisible();
-  });
-
-  test('scan page has back to dashboard button', async ({ page }) => {
-    await registerViaAPI(page, 'user');
-    await page.goto('/scan');
-    await page.waitForLoadState('networkidle');
-
-    await page.getByText('Back to Dashboard').click();
     await expect(page).toHaveURL(/\/dashboard/);
   });
 
-  test('scan page is protected — redirects when not logged in', async ({ page }) => {
+  test('old /scan URL is still protected when not logged in', async ({ page }) => {
     await page.goto('/scan');
     await expect(page).toHaveURL(/\/login/);
   });
-});
 
-// ═══════════════════════════════════════════════════════════════════════════════
-//  QR CODE — NAVBAR
-// ═══════════════════════════════════════════════════════════════════════════════
-
-test.describe('Navbar QR Links', () => {
-  test('user sees Scan QR link in desktop navbar', async ({ page }) => {
+  test('user does not see Scan QR link in navbar', async ({ page }) => {
     await registerViaAPI(page, 'user');
-    await expect(page.getByRole('link', { name: /Scan QR/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /Scan QR/i })).toHaveCount(0);
   });
 
-  test('admin does NOT see Scan QR link', async ({ page }) => {
+  test('admin does not see Scan QR link either', async ({ page }) => {
     await registerViaAPI(page, 'admin');
-    await expect(page.getByRole('link', { name: /Scan QR/i })).not.toBeVisible();
+    await expect(page.getByRole('link', { name: /Scan QR/i })).toHaveCount(0);
   });
-});
 
-// ═══════════════════════════════════════════════════════════════════════════════
-//  QR CODE — USER DASHBOARD SCAN BUTTON
-// ═══════════════════════════════════════════════════════════════════════════════
-
-test.describe('User Dashboard Scan Button', () => {
-  test('shows Scan QR button on dashboard', async ({ page }) => {
+  test('user dashboard no longer shows a Scan QR button', async ({ page }) => {
     await registerViaAPI(page, 'user');
-    const scanBtn = page.getByRole('button', { name: /Scan QR/i });
-    // On mobile it may only show the icon, on desktop the text
-    const scanLink = page.getByRole('link', { name: /Scan QR/i });
-    const hasScanBtn = await scanBtn.isVisible().catch(() => false);
-    const hasScanLink = await scanLink.first().isVisible().catch(() => false);
-    expect(hasScanBtn || hasScanLink).toBeTruthy();
+    await expect(page.getByRole('button', { name: /Scan QR/i })).toHaveCount(0);
   });
 });
 

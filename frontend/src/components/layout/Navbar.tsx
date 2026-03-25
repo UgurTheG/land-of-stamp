@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useTheme } from '../../hooks/useTheme';
-import { Stamp, LogOut, LayoutDashboard, Home, Menu, X, ScanLine, Sun, Moon } from 'lucide-react';
+import { Stamp, LogOut, LayoutDashboard, Home, Menu, X, Sun, Moon } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -49,14 +49,6 @@ export default function Navbar() {
             {isAuthenticated && user?.role === 'user' && (
               <Link to="/dashboard" className={navLinkClass('/dashboard')}>
                 My Cards
-              </Link>
-            )}
-            {isAuthenticated && user?.role === 'user' && (
-              <Link to="/scan" className={navLinkClass('/scan')}>
-                <span className="flex items-center gap-1.5">
-                  <ScanLine className="w-4 h-4" />
-                  Scan QR
-                </span>
               </Link>
             )}
             {isAuthenticated && user?.role === 'admin' && (
@@ -141,16 +133,6 @@ export default function Navbar() {
                 >
                   <LayoutDashboard className="w-4 h-4" />
                   My Cards
-                </Link>
-              )}
-              {isAuthenticated && user?.role === 'user' && (
-                <Link
-                  to="/scan"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 text-accent hover:text-amber-300 py-2"
-                >
-                  <ScanLine className="w-4 h-4" />
-                  Scan QR Code
                 </Link>
               )}
               {isAuthenticated && user?.role === 'admin' && (
