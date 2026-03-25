@@ -11,7 +11,7 @@ COPY . .
 RUN CGO_ENABLED=1 go build -trimpath -ldflags="-s -w" -o /app/server .
 
 # ── Runtime stage ────────────────────────────────────────
-FROM alpine:3.22
+FROM alpine:3.23
 
 RUN apk add --no-cache ca-certificates tzdata \
     && adduser -D -u 1000 appuser
