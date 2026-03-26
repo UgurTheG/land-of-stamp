@@ -38,7 +38,6 @@ var ErrGitHubRequest = errors.New("github user request failed")
 // ErrGitHubDecode indicates the GitHub user response could not be decoded.
 var ErrGitHubDecode = errors.New("github user decode failed")
 
-
 // ── ConnectRPC errors ──────────────────────────────────
 // Pre-built connect errors avoid allocating identical errors on every request.
 

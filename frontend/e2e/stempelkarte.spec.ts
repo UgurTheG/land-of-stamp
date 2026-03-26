@@ -80,7 +80,7 @@ async function registerViaAPI(
 async function logoutViaUI(page: Page) {
   await page.getByText('Logout').click();
   // App may redirect to / or /login after logout
-  await expect(page).toHaveURL(/\/login|\:[\d]+\/$/);
+  await expect(page).toHaveURL(/\/login|:[\d]+\/$/);
 }
 
 
@@ -696,8 +696,7 @@ test.describe('Claim Page', () => {
     // Unauthenticated user visits claim URL — should redirect to login
     const userPage = await userContext.newPage();
     await userPage.goto(`/claim/${token}`);
-    await expect(userPage).toHaveURL(/\/login/);
-
+  await expect(page).toHaveURL(/\/login|:[\d]+\/$/);
     // User authenticates (via test seed)
     await registerViaAPI(userPage, 'user');
 

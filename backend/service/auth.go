@@ -2,10 +2,11 @@ package service
 
 import (
 	"context"
-	"land-of-stamp-backend/auth"
 	"log/slog"
 	"net/http"
 	"os"
+
+	"land-of-stamp-backend/auth"
 
 	"land-of-stamp-backend/apperrors"
 	"land-of-stamp-backend/constants"
