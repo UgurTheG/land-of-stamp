@@ -2,7 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useLocale } from '../../hooks/useLocale';
 import { useTheme } from '../../hooks/useTheme';
-import { Stamp, LogOut, LayoutDashboard, Home, Menu, X, Sun, Moon, UserCircle2 } from 'lucide-react';
+import { Stamp, LogOut, LayoutDashboard, Home, Menu, X, Sun, Moon, UserCircle2, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -14,6 +14,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -29,6 +30,8 @@ export default function Navbar() {
         ? 'text-accent'
         : 'text-indigo-200 hover:text-white'
     }`;
+
+  const initials = (user?.displayName || user?.username || 'U').slice(0, 2).toUpperCase();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-surface/60 backdrop-blur-2xl border-b border-white/6 shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
@@ -59,12 +62,6 @@ export default function Navbar() {
                 {m.common.dashboard}
               </Link>
             )}
-            {isAuthenticated && (
-              <Link to="/profile" className={navLinkClass('/profile')}>
-                {m.common.profile}
-              </Link>
-            )}
-
             <LanguageSwitcher />
 
             {/* Theme toggle */}
@@ -78,17 +75,47 @@ export default function Navbar() {
             </button>
 
             {isAuthenticated ? (
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-indigo-300 bg-white/5 px-3 py-1 rounded-full">
-                  {user?.username}
-                </span>
+              <div className="relative">
                 <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-1.5 text-indigo-300 hover:text-white transition-colors text-sm cursor-pointer"
+                  onClick={() => setAccountOpen((v) => !v)}
+                  className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full py-1 pl-1 pr-2 cursor-pointer"
                 >
-                  <LogOut className="w-4 h-4" />
-                  {m.common.logout}
+                  {user?.avatarUrl ? (
+                    <img src={user.avatarUrl} alt={m.common.profile} className="w-8 h-8 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-indigo-500/30 text-white text-xs font-bold flex items-center justify-center">
+                      {initials}
+                    </div>
+                  )}
+                  <ChevronDown className="w-4 h-4 text-indigo-300" />
                 </button>
+
+                <AnimatePresence>
+                  {accountOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -6 }}
+                      className="absolute right-0 mt-2 w-48 bg-surface/95 border border-white/10 rounded-xl p-2 shadow-xl"
+                    >
+                      <Link
+                        to="/profile"
+                        onClick={() => setAccountOpen(false)}
+                        className="flex items-center gap-2 text-indigo-200 hover:text-white hover:bg-white/5 rounded-lg px-3 py-2 text-sm"
+                      >
+                        <UserCircle2 className="w-4 h-4" />
+                        {m.common.profile}
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2 text-red-400 hover:text-red-300 hover:bg-white/5 rounded-lg px-3 py-2 text-sm cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        {m.common.logout}
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             ) : (
               <Link
@@ -157,24 +184,26 @@ export default function Navbar() {
                   {m.common.dashboard}
                 </Link>
               )}
-              {isAuthenticated && (
-                <Link
-                  to="/profile"
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 text-indigo-200 hover:text-white py-2"
-                >
-                  <UserCircle2 className="w-4 h-4" />
-                  {m.common.profile}
-                </Link>
-              )}
               {isAuthenticated ? (
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 text-red-400 hover:text-red-300 py-2 w-full cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" />
-                  {m.common.logout} ({user?.username})
-                </button>
+                <div className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2">
+                  <button
+                    onClick={() => {
+                      setMobileOpen(false);
+                      navigate('/profile');
+                    }}
+                    className="w-full flex items-center gap-2 text-indigo-200 hover:text-white py-2 cursor-pointer"
+                  >
+                    <UserCircle2 className="w-4 h-4" />
+                    {m.common.profile}
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 text-red-400 hover:text-red-300 py-2 cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    {m.common.logout}
+                  </button>
+                </div>
               ) : (
                 <Link
                   to="/login"
