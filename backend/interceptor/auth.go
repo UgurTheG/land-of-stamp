@@ -44,7 +44,7 @@ var adminProcedures = map[string]bool{
 // from the Authorization header or __token cookie and enforces role-based access.
 func NewAuthInterceptor() connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
-		return connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 			procedure := req.Spec().Procedure
 
 			// Public endpoints need no auth.
@@ -73,7 +73,7 @@ func NewAuthInterceptor() connect.UnaryInterceptorFunc {
 
 			ctx = context.WithValue(ctx, userKey, claims)
 			return next(ctx, req)
-		})
+		}
 	}
 }
 

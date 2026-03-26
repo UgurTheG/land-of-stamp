@@ -1,8 +1,9 @@
 package service
 
 import (
-	"encoding/base64"
 	"context"
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -183,10 +184,10 @@ func (s *AuthService) GetProfileStats(ctx context.Context, _ *connect.Request[pb
 	}
 
 	return connect.NewResponse(&pb.ProfileStatsResponse{
-		JoinedShops:  int32(joinedShops),
-		ActiveCards:  int32(activeCards),
+		JoinedShops:   int32(joinedShops),
+		ActiveCards:   int32(activeCards),
 		RedeemedCards: int32(redeemedCards),
-		TotalStamps:  int32(totalStamps),
+		TotalStamps:   int32(totalStamps),
 	}), nil
 }
 
@@ -199,43 +200,55 @@ func (s *AuthService) DeleteAccount(ctx context.Context, _ *connect.Request[pb.D
 	userID := claims.UserID
 
 	err := db.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		hard := tx.Unscoped()
+		// hard returns a fresh unscoped session each call so WHERE clauses
+		// from a previous query never leak into the next one.
+		hard := func() *gorm.DB { return tx.Session(&gorm.Session{NewDB: true}).Unscoped() }
 
 		var shops []db.Shop
-		if err := hard.Where("owner_id = ?", userID).Find(&shops).Error; err != nil {
+		if err := hard().Where("owner_id = ?", userID).Find(&shops).Error; err != nil {
 			return err
 		}
 		for _, shop := range shops {
 			shopID := shop.UUID.String()
 			var tokens []db.StampToken
-			if err := hard.Where("shop_id = ?", shopID).Find(&tokens).Error; err != nil {
+			if err := hard().Where("shop_id = ?", shopID).Find(&tokens).Error; err != nil {
 				return err
 			}
 			for _, t := range tokens {
-				if err := hard.Where("token_id = ?", t.UUID.String()).Delete(&db.StampTokenClaim{}).Error; err != nil {
+				if err := hard().Where("token_id = ?", t.UUID.String()).Delete(&db.StampTokenClaim{}).Error; err != nil {
 					return err
 				}
 			}
-			if err := hard.Where("shop_id = ?", shopID).Delete(&db.StampToken{}).Error; err != nil {
+			if err := hard().Where("shop_id = ?", shopID).Delete(&db.StampToken{}).Error; err != nil {
 				return err
 			}
-			if err := hard.Where("shop_id = ?", shopID).Delete(&db.StampCard{}).Error; err != nil {
+			if err := hard().Where("shop_id = ?", shopID).Delete(&db.StampCard{}).Error; err != nil {
 				return err
 			}
-			if err := hard.Delete(&shop).Error; err != nil {
+			if err := hard().Delete(&shop).Error; err != nil {
 				return err
 			}
 		}
 
-		if err := hard.Where("user_id = ?", userID).Delete(&db.StampCard{}).Error; err != nil {
+		if err := hard().Where("user_id = ?", userID).Delete(&db.StampCard{}).Error; err != nil {
 			return err
 		}
-		if err := hard.Where("user_id = ?", userID).Delete(&db.StampTokenClaim{}).Error; err != nil {
+		if err := hard().Where("user_id = ?", userID).Delete(&db.StampTokenClaim{}).Error; err != nil {
 			return err
 		}
-		return hard.Where("uuid = ?", userID).Delete(&db.User{}).Error
+		res := hard().Where("uuid = ?", userID).Delete(&db.User{})
+		if res.Error != nil {
+			return res.Error
+		}
+		if res.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
+		}
+		return nil
 	})
 	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperrors.ErrNotFound
+		}
 		slog.ErrorContext(ctx, "deleteAccount: transaction failed", "user_id", userID, "error", err)
 		return nil, apperrors.ErrInternal
 	}

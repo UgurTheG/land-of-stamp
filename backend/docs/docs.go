@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"strings"
 
-	pb "land-of-stamp-backend/gen/pb"
+	"land-of-stamp-backend/gen/pb"
 
 	"connectrpc.com/connect"
 )
