@@ -5,14 +5,12 @@
 package pbconnect
 
 import (
+	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
+	pb "land-of-stamp-backend/gen/pb"
 	http "net/http"
 	strings "strings"
-
-	connect "connectrpc.com/connect"
-
-	pb "land-of-stamp-backend/gen/pb"
 )
 
 // This is a compile-time assertion to ensure that this generated file and the connect package are

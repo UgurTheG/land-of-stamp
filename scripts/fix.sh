@@ -15,10 +15,15 @@
 #     8. eslint --fix         — auto-fixable ESLint rules
 #     9. tsc --noEmit         — type-check (no fixes, but surfaces type errors)
 #
+#   Proto generation
+#     10. Install pinned Go protoc plugins
+#     11. Regenerate protobuf code (`bash proto/generate.sh`)
+#
 # Usage:
 #   ./scripts/fix.sh            # run everything
 #   ./scripts/fix.sh --go       # Go only
 #   ./scripts/fix.sh --frontend # frontend only
+#   ./scripts/fix.sh --no-proto # skip proto regeneration
 #
 # Exit code: 0 if everything passes, 1 if any step fails.
 
@@ -27,15 +32,19 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BACKEND="$ROOT/backend"
 FRONTEND="$ROOT/frontend"
+PROTO_GEN_GO_VERSION="v1.36.6"
+PROTO_GEN_CONNECT_VERSION="v1.19.1"
 
 # ── Argument parsing ───────────────────────────────────
 RUN_GO=true
 RUN_FRONTEND=true
+RUN_PROTO=true
 
 for arg in "$@"; do
   case "$arg" in
     --go)       RUN_FRONTEND=false ;;
     --frontend) RUN_GO=false ;;
+    --no-proto) RUN_PROTO=false ;;
   esac
 done
 
@@ -81,9 +90,15 @@ if $RUN_GO; then
 
   step "staticcheck"
   if command -v staticcheck &>/dev/null; then
-    SC_OUT=$(staticcheck ./... 2>&1 || true)
-    # Suppress version-mismatch warnings — they come from the Go toolchain
-    # being newer than the staticcheck binary, not from our code.
+    # Skip generated protobuf packages; they often trigger deprecated-api noise.
+    mapfile -t SC_PKGS < <(go list ./... | grep -v '/gen/pb' || true)
+    if [ "${#SC_PKGS[@]}" -gt 0 ]; then
+      SC_OUT=$(staticcheck "${SC_PKGS[@]}" 2>&1 || true)
+    else
+      SC_OUT=""
+    fi
+
+    # Suppress Go toolchain/binary version mismatch warnings.
     REAL_ISSUES=$(echo "$SC_OUT" | grep -v "module requires at least go" | grep -v "application built with go" || true)
     if [ -n "$REAL_ISSUES" ]; then
       echo "$REAL_ISSUES"
@@ -122,6 +137,41 @@ if $RUN_FRONTEND; then
 
   step "tsc --noEmit"
   if npx tsc --noEmit 2>&1; then ok "tsc"; else fail "tsc (type errors — see above)"; fi
+fi
+
+# ══════════════════════════════════════════════════════
+# PROTO
+# ══════════════════════════════════════════════════════
+if $RUN_PROTO; then
+  echo
+  echo "╔══════════════════════════════╗"
+  echo "║       Proto Generation       ║"
+  echo "╚══════════════════════════════╝"
+  cd "$ROOT"
+
+  step "install pinned protoc Go plugins"
+  export PATH="$(go env GOPATH)/bin:$PATH"
+  if go install "google.golang.org/protobuf/cmd/protoc-gen-go@${PROTO_GEN_GO_VERSION}" 2>&1 \
+    && go install "connectrpc.com/connect/cmd/protoc-gen-connect-go@${PROTO_GEN_CONNECT_VERSION}" 2>&1; then
+    ok "protoc-gen-go=${PROTO_GEN_GO_VERSION}, protoc-gen-connect-go=${PROTO_GEN_CONNECT_VERSION}"
+  else
+    fail "install protoc plugins"
+  fi
+
+  step "proto/generate.sh"
+  if [ ! -x "$FRONTEND/node_modules/.bin/protoc-gen-es" ]; then
+    (cd "$FRONTEND" && npm install --prefer-offline >/dev/null 2>&1) || true
+  fi
+  if bash proto/generate.sh 2>&1; then
+    CHANGED=$(git --no-pager diff --name-only -- backend/gen/ frontend/src/gen/ || true)
+    if [ -n "$CHANGED" ]; then
+      ok "proto regenerated; changed files:$(echo "$CHANGED" | sed 's/^/\n    /')"
+    else
+      ok "proto already up to date"
+    fi
+  else
+    fail "proto generation"
+  fi
 fi
 
 # ══════════════════════════════════════════════════════
