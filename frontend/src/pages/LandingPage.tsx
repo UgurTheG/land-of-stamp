@@ -61,23 +61,23 @@ export default function LandingPage() {
     { icon: Gift, value: '50K+', label: m.landing.stats[3] },
   ];
 
-  const isAdmin = user?.role === 'admin';
-  const primaryHref = isAuthenticated ? (isAdmin ? '/admin' : '/dashboard') : '/login';
+  const hasShop = user?.hasShop;
+  const primaryHref = isAuthenticated ? (hasShop ? '/admin' : '/dashboard') : '/login';
   const primaryLabel = isAuthenticated
-    ? (isAdmin ? m.landing.heroPrimaryAdmin : m.landing.heroPrimaryUser)
+    ? (hasShop ? m.landing.heroPrimaryAdmin : m.landing.heroPrimaryUser)
     : m.landing.heroPrimaryGuest;
   const bottomHeading = isAuthenticated
-    ? isAdmin
+    ? hasShop
       ? m.landing.bottomAdmin.heading
       : m.landing.bottomUser.heading
     : m.landing.bottomGuest.heading;
   const bottomBody = isAuthenticated
-    ? isAdmin
+    ? hasShop
       ? m.landing.bottomAdmin.body
       : m.landing.bottomUser.body
     : m.landing.bottomGuest.body;
   const bottomLabel = isAuthenticated
-    ? isAdmin
+    ? hasShop
       ? m.landing.bottomAdmin.button
       : m.landing.bottomUser.button
     : m.landing.bottomGuest.button;

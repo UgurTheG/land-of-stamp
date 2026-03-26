@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"land-of-stamp-backend/auth"
 	"log/slog"
 	"net/http"
 	"os"
@@ -45,47 +44,6 @@ func (s *AuthService) GetMe(ctx context.Context, _ *connect.Request[pb.GetMeRequ
 	return connect.NewResponse(user.ToProto()), nil
 }
 
-// ChooseRole allows a newly registered user to pick their role (user or admin).
-// This can only be called once — subsequent calls are rejected.
-func (s *AuthService) ChooseRole(ctx context.Context, req *connect.Request[pb.ChooseRoleRequest]) (*connect.Response[pb.User], error) {
-	claims := interceptor.GetUser(ctx)
-	if claims == nil {
-		return nil, apperrors.ErrUnauthenticated
-	}
-
-	role := req.Msg.Role
-	if role != constants.RoleUser && role != constants.RoleAdmin {
-		return nil, apperrors.ErrInvalidArgument
-	}
-
-	var user db.User
-	if err := db.DB.WithContext(ctx).Where("uuid = ?", claims.UserID).First(&user).Error; err != nil {
-		return nil, apperrors.ErrNotFound
-	}
-
-	if user.RoleChosen {
-		return nil, apperrors.ErrFailedPrecondition
-	}
-
-	user.Role = role
-	user.RoleChosen = true
-	if err := db.DB.WithContext(ctx).Save(&user).Error; err != nil {
-		slog.ErrorContext(ctx, "chooseRole: save failed", "error", err)
-		return nil, apperrors.ErrInternal
-	}
-
-	// Issue a new JWT with the updated role
-	jwtToken, err := auth.GenerateToken(user.UUID.String(), user.Username, user.Role)
-	if err != nil {
-		slog.ErrorContext(ctx, "chooseRole: token generation failed", "error", err)
-		return nil, apperrors.ErrInternal
-	}
-
-	slog.InfoContext(ctx, "user chose role", "uuid", user.UUID, "role", role)
-	resp := connect.NewResponse(user.ToProto())
-	SetTokenCookie(resp.Header(), jwtToken)
-	return resp, nil
-}
 
 // ── Cookie helpers (exported for use by OAuth handlers) ──
 

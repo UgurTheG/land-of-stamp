@@ -9,8 +9,9 @@ option go_package = "land-of-stamp-backend/gen/pb";
 message User {
   string id = 1;
   string username = 2;
-  string role = 3;          // "user" | "admin"
+  string role = 3;          // "user" | "admin" (legacy — not used for authorization)
   optional string shop_id = 4;
+  bool has_shop = 5;        // true if the user owns at least one shop
 }
 
 message Shop {
@@ -39,9 +40,6 @@ message LogoutRequest {}
 
 message GetMeRequest {}
 
-message ChooseRoleRequest {
-  string role = 1; // "user" | "admin"
-}
 
 // ── Shops ──────────────────────────────────────────────
 
@@ -174,7 +172,6 @@ service DocsService {
 service AuthService {
   rpc Logout(LogoutRequest) returns (StatusResponse);
   rpc GetMe(GetMeRequest) returns (User);
-  rpc ChooseRole(ChooseRoleRequest) returns (User);
 }
 
 service ShopService {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router';
+import { useNavigate } from 'react-router';
 import { apiGetMe, persistSession } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { useLocale } from '../hooks/useLocale';
@@ -7,27 +7,20 @@ import { useLocale } from '../hooks/useLocale';
 /**
  * After the backend OAuth callback sets the JWT cookie and redirects here,
  * this page calls GetMe to hydrate the auth context, then navigates to
- * the appropriate dashboard (or role selection for new users).
+ * the appropriate dashboard.
  */
 export default function OAuthCallbackPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { refreshUser } = useAuth();
   const { m } = useLocale();
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const isNew = searchParams.get('new') === 'true';
-
     apiGetMe()
       .then((user) => {
         persistSession(user);
         refreshUser(user);
-        if (isNew) {
-          navigate('/choose-role', { replace: true });
-        } else {
-          navigate(user.role === 'admin' ? '/admin' : '/dashboard', { replace: true });
-        }
+        navigate(user.hasShop ? '/admin' : '/dashboard', { replace: true });
       })
       .catch(() => {
         setError(m.login.validation.genericError);
@@ -50,4 +43,3 @@ export default function OAuthCallbackPage() {
     </div>
   );
 }
-

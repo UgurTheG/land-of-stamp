@@ -48,8 +48,6 @@ const (
 	AuthServiceLogoutProcedure = "/landofstamp.v1.AuthService/Logout"
 	// AuthServiceGetMeProcedure is the fully-qualified name of the AuthService's GetMe RPC.
 	AuthServiceGetMeProcedure = "/landofstamp.v1.AuthService/GetMe"
-	// AuthServiceChooseRoleProcedure is the fully-qualified name of the AuthService's ChooseRole RPC.
-	AuthServiceChooseRoleProcedure = "/landofstamp.v1.AuthService/ChooseRole"
 	// ShopServiceListShopsProcedure is the fully-qualified name of the ShopService's ListShops RPC.
 	ShopServiceListShopsProcedure = "/landofstamp.v1.ShopService/ListShops"
 	// ShopServiceCreateShopProcedure is the fully-qualified name of the ShopService's CreateShop RPC.
@@ -185,7 +183,6 @@ func (UnimplementedDocsServiceHandler) GetDocsPage(context.Context, *connect.Req
 type AuthServiceClient interface {
 	Logout(context.Context, *connect.Request[pb.LogoutRequest]) (*connect.Response[pb.StatusResponse], error)
 	GetMe(context.Context, *connect.Request[pb.GetMeRequest]) (*connect.Response[pb.User], error)
-	ChooseRole(context.Context, *connect.Request[pb.ChooseRoleRequest]) (*connect.Response[pb.User], error)
 }
 
 // NewAuthServiceClient constructs a client for the landofstamp.v1.AuthService service. By default,
@@ -211,20 +208,13 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("GetMe")),
 			connect.WithClientOptions(opts...),
 		),
-		chooseRole: connect.NewClient[pb.ChooseRoleRequest, pb.User](
-			httpClient,
-			baseURL+AuthServiceChooseRoleProcedure,
-			connect.WithSchema(authServiceMethods.ByName("ChooseRole")),
-			connect.WithClientOptions(opts...),
-		),
 	}
 }
 
 // authServiceClient implements AuthServiceClient.
 type authServiceClient struct {
-	logout     *connect.Client[pb.LogoutRequest, pb.StatusResponse]
-	getMe      *connect.Client[pb.GetMeRequest, pb.User]
-	chooseRole *connect.Client[pb.ChooseRoleRequest, pb.User]
+	logout *connect.Client[pb.LogoutRequest, pb.StatusResponse]
+	getMe  *connect.Client[pb.GetMeRequest, pb.User]
 }
 
 // Logout calls landofstamp.v1.AuthService.Logout.
@@ -237,16 +227,10 @@ func (c *authServiceClient) GetMe(ctx context.Context, req *connect.Request[pb.G
 	return c.getMe.CallUnary(ctx, req)
 }
 
-// ChooseRole calls landofstamp.v1.AuthService.ChooseRole.
-func (c *authServiceClient) ChooseRole(ctx context.Context, req *connect.Request[pb.ChooseRoleRequest]) (*connect.Response[pb.User], error) {
-	return c.chooseRole.CallUnary(ctx, req)
-}
-
 // AuthServiceHandler is an implementation of the landofstamp.v1.AuthService service.
 type AuthServiceHandler interface {
 	Logout(context.Context, *connect.Request[pb.LogoutRequest]) (*connect.Response[pb.StatusResponse], error)
 	GetMe(context.Context, *connect.Request[pb.GetMeRequest]) (*connect.Response[pb.User], error)
-	ChooseRole(context.Context, *connect.Request[pb.ChooseRoleRequest]) (*connect.Response[pb.User], error)
 }
 
 // NewAuthServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -268,20 +252,12 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("GetMe")),
 		connect.WithHandlerOptions(opts...),
 	)
-	authServiceChooseRoleHandler := connect.NewUnaryHandler(
-		AuthServiceChooseRoleProcedure,
-		svc.ChooseRole,
-		connect.WithSchema(authServiceMethods.ByName("ChooseRole")),
-		connect.WithHandlerOptions(opts...),
-	)
 	return "/landofstamp.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AuthServiceLogoutProcedure:
 			authServiceLogoutHandler.ServeHTTP(w, r)
 		case AuthServiceGetMeProcedure:
 			authServiceGetMeHandler.ServeHTTP(w, r)
-		case AuthServiceChooseRoleProcedure:
-			authServiceChooseRoleHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -297,10 +273,6 @@ func (UnimplementedAuthServiceHandler) Logout(context.Context, *connect.Request[
 
 func (UnimplementedAuthServiceHandler) GetMe(context.Context, *connect.Request[pb.GetMeRequest]) (*connect.Response[pb.User], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("landofstamp.v1.AuthService.GetMe is not implemented"))
-}
-
-func (UnimplementedAuthServiceHandler) ChooseRole(context.Context, *connect.Request[pb.ChooseRoleRequest]) (*connect.Response[pb.User], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("landofstamp.v1.AuthService.ChooseRole is not implemented"))
 }
 
 // ShopServiceClient is a client for the landofstamp.v1.ShopService service.

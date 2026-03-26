@@ -291,17 +291,20 @@ func TestCreateShop_Unauthenticated(t *testing.T) {
 	wantCode(t, err, connect.CodeUnauthenticated)
 }
 
-func TestCreateShop_UserRole_Forbidden(t *testing.T) {
+func TestCreateShop_AnyUserCanCreate(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 	c := newClients(ts.URL)
 
 	tk, _ := regUser(t, c, "regularuser", "pass1234", "user")
 
-	_, err := c.shop.CreateShop(ctx, ck(&pb.CreateShopRequest{
+	resp, err := c.shop.CreateShop(ctx, ck(&pb.CreateShopRequest{
 		Name: "Sneaky Shop", RewardDescription: "test",
 	}, tk))
-	wantCode(t, err, connect.CodePermissionDenied)
+	noErr(t, err)
+	if resp.Msg.Name != "Sneaky Shop" {
+		t.Errorf("expected shop name 'Sneaky Shop', got %q", resp.Msg.Name)
+	}
 }
 
 func TestCreateShop_MissingRequiredFields(t *testing.T) {
@@ -922,15 +925,18 @@ func TestGetMyShops_Unauthenticated(t *testing.T) {
 	wantCode(t, err, connect.CodeUnauthenticated)
 }
 
-func TestGetMyShops_UserRole_Forbidden(t *testing.T) {
+func TestGetMyShops_AnyUserCanCall(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 	c := newClients(ts.URL)
 
 	uTk, _ := regUser(t, c, "user", "user1234", "user")
 
-	_, err := c.shop.GetMyShops(ctx, ck(&pb.GetMyShopsRequest{}, uTk))
-	wantCode(t, err, connect.CodePermissionDenied)
+	resp, err := c.shop.GetMyShops(ctx, ck(&pb.GetMyShopsRequest{}, uTk))
+	noErr(t, err)
+	if len(resp.Msg.Shops) != 0 {
+		t.Errorf("expected 0 shops for user with no shops, got %d", len(resp.Msg.Shops))
+	}
 }
 
 func TestGetShopCards_Empty(t *testing.T) {
@@ -1069,7 +1075,7 @@ func TestGrantStamp_Unauthenticated(t *testing.T) {
 	wantCode(t, err, connect.CodeUnauthenticated)
 }
 
-func TestGrantStamp_UserRole_Forbidden(t *testing.T) {
+func TestGrantStamp_UserRole_NonOwner(t *testing.T) {
 	ts := setupTestServer(t)
 	defer ts.Close()
 	c := newClients(ts.URL)
@@ -1077,7 +1083,7 @@ func TestGrantStamp_UserRole_Forbidden(t *testing.T) {
 	uTk, _ := regUser(t, c, "user", "user1234", "user")
 
 	_, err := c.stamp.GrantStamp(ctx, ck(&pb.GrantStampRequest{ShopId: "some-id", UserId: "someone"}, uTk))
-	wantCode(t, err, connect.CodePermissionDenied)
+	wantCode(t, err, connect.CodeNotFound)
 }
 
 func TestCreateShop_DuplicateName(t *testing.T) {

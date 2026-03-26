@@ -49,12 +49,12 @@ export default function Navbar() {
             <Link to="/" className={navLinkClass('/')}>
               {m.common.home}
             </Link>
-            {isAuthenticated && user?.role === 'user' && (
+            {isAuthenticated && (
               <Link to="/dashboard" className={navLinkClass('/dashboard')}>
                 {m.common.myCards}
               </Link>
             )}
-            {isAuthenticated && user?.role === 'admin' && (
+            {isAuthenticated && user?.hasShop && (
               <Link to="/admin" className={navLinkClass('/admin')}>
                 {m.common.dashboard}
               </Link>
@@ -132,7 +132,7 @@ export default function Navbar() {
                 <Home className="w-4 h-4" />
                 {m.common.home}
               </Link>
-              {isAuthenticated && user?.role === 'user' && (
+              {isAuthenticated && (
                 <Link
                   to="/dashboard"
                   onClick={() => setMobileOpen(false)}
@@ -142,7 +142,7 @@ export default function Navbar() {
                   {m.common.myCards}
                 </Link>
               )}
-              {isAuthenticated && user?.role === 'admin' && (
+              {isAuthenticated && user?.hasShop && (
                 <Link
                   to="/admin"
                   onClick={() => setMobileOpen(false)}

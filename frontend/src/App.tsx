@@ -15,7 +15,6 @@ const UserDashboard = lazy(() => import('./pages/UserDashboard'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const ClaimPage = lazy(() => import('./pages/ClaimPage'));
 const OAuthCallbackPage = lazy(() => import('./pages/OAuthCallbackPage'));
-const ChooseRolePage = lazy(() => import('./pages/ChooseRolePage'));
 
 function AppShell() {
   const { theme } = useTheme();
@@ -40,17 +39,9 @@ function AppShell() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/login/oauth-callback" element={<OAuthCallbackPage />} />
             <Route
-              path="/choose-role"
-              element={
-                <ProtectedRoute>
-                  <ChooseRolePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/dashboard"
               element={
-                <ProtectedRoute requiredRole="user">
+                <ProtectedRoute>
                   <UserDashboard />
                 </ProtectedRoute>
               }
@@ -58,7 +49,7 @@ function AppShell() {
             <Route
               path="/scan"
               element={
-                <ProtectedRoute requiredRole="user">
+                <ProtectedRoute>
                   <Navigate to="/dashboard" replace />
                 </ProtectedRoute>
               }
@@ -66,7 +57,7 @@ function AppShell() {
             <Route
               path="/claim/:token"
               element={
-                <ProtectedRoute requiredRole="user">
+                <ProtectedRoute>
                   <ClaimPage />
                 </ProtectedRoute>
               }
@@ -74,7 +65,7 @@ function AppShell() {
             <Route
               path="/admin"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <AdminDashboard />
                 </ProtectedRoute>
               }
