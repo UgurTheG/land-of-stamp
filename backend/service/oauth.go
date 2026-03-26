@@ -183,7 +183,7 @@ func (s *OAuthService) handleCallback(provider string, cfg *oauth2.Config, fetch
 		}
 
 		// Upsert user in DB
-		user, err := upsertOAuthUser(r.Context(), provider, info.ID, info.Username)
+		user, isNew, err := upsertOAuthUser(r.Context(), provider, info.ID, info.Username)
 		if err != nil {
 			slog.Error("oauth: upsert failed", "provider", provider, "error", err)
 			http.Redirect(w, r, s.frontendURL+constants.OAuthErrorPath+"?error=oauth_db", http.StatusTemporaryRedirect)
@@ -201,8 +201,12 @@ func (s *OAuthService) handleCallback(provider string, cfg *oauth2.Config, fetch
 
 		// Set cookie and redirect
 		SetTokenCookie(w.Header(), jwtToken)
-		slog.Info("oauth: user logged in", "provider", provider, "uuid", uid, "username", user.Username)
-		http.Redirect(w, r, s.frontendURL+constants.OAuthCallbackPath, http.StatusTemporaryRedirect)
+		slog.Info("oauth: user logged in", "provider", provider, "uuid", uid, "username", user.Username, "new", isNew)
+		callbackURL := s.frontendURL + constants.OAuthCallbackPath
+		if isNew || !user.RoleChosen {
+			callbackURL += "?new=true"
+		}
+		http.Redirect(w, r, callbackURL, http.StatusTemporaryRedirect)
 	}
 }
 
@@ -244,7 +248,7 @@ func (s *OAuthService) handleAppleCallback() http.HandlerFunc {
 		}
 
 		// Upsert user in DB
-		user, err := upsertOAuthUser(r.Context(), constants.ProviderApple, info.ID, info.Username)
+		user, isNew, err := upsertOAuthUser(r.Context(), constants.ProviderApple, info.ID, info.Username)
 		if err != nil {
 			slog.Error("oauth: upsert failed", "provider", constants.ProviderApple, "error", err)
 			http.Redirect(w, r, s.frontendURL+constants.OAuthErrorPath+"?error=oauth_db", http.StatusTemporaryRedirect)
@@ -260,8 +264,12 @@ func (s *OAuthService) handleAppleCallback() http.HandlerFunc {
 			return
 		}
 		SetTokenCookie(w.Header(), jwtToken)
-		slog.Info("oauth: user logged in", "provider", constants.ProviderApple, "uuid", uid, "username", user.Username)
-		http.Redirect(w, r, s.frontendURL+constants.OAuthCallbackPath, http.StatusTemporaryRedirect)
+		slog.Info("oauth: user logged in", "provider", constants.ProviderApple, "uuid", uid, "username", user.Username, "new", isNew)
+		callbackURL := s.frontendURL + constants.OAuthCallbackPath
+		if isNew || !user.RoleChosen {
+			callbackURL += "?new=true"
+		}
+		http.Redirect(w, r, callbackURL, http.StatusTemporaryRedirect)
 	}
 }
 
@@ -378,17 +386,18 @@ func extractAppleUser(token *oauth2.Token, userJSON string) (*oauthUserInfo, err
 
 // upsertOAuthUser finds or creates a user by (oauth_provider, oauth_id).
 // If the username is already taken (by a password-based user), we append the provider suffix.
-func upsertOAuthUser(ctx context.Context, provider, oauthID, username string) (*db.User, error) {
+// Returns the user and whether it was newly created.
+func upsertOAuthUser(ctx context.Context, provider, oauthID, username string) (*db.User, bool, error) {
 	var user db.User
 	err := db.DB.WithContext(ctx).
 		Where("oauth_provider = ? AND oauth_id = ?", provider, oauthID).
 		First(&user).Error
 
 	if err == nil {
-		return &user, nil // existing OAuth user
+		return &user, false, nil // existing OAuth user
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
+		return nil, false, err
 	}
 
 	// New OAuth user — ensure unique username
@@ -399,16 +408,17 @@ func upsertOAuthUser(ctx context.Context, provider, oauthID, username string) (*
 			Username:      candidateName,
 			PasswordHash:  "", // no password for OAuth users
 			Role:          constants.RoleUser,
+			RoleChosen:    false,
 			OAuthProvider: provider,
 			OAuthID:       oauthID,
 		}
 		if err := db.DB.WithContext(ctx).Create(&user).Error; err == nil {
-			return &user, nil
+			return &user, true, nil
 		}
 		// Username conflict — try with suffix
 		candidateName = fmt.Sprintf("%s_%s_%s", username, provider, randomShort())
 	}
-	return nil, fmt.Errorf("%w for %s/%s", apperrors.ErrUniqueUsernameFailed, provider, oauthID)
+	return nil, false, fmt.Errorf("%w for %s/%s", apperrors.ErrUniqueUsernameFailed, provider, oauthID)
 }
 
 // ── Utilities ──────────────────────────────────────────

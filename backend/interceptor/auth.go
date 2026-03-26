@@ -27,9 +27,21 @@ var publicProcedures = map[string]bool{
 	pbconnect.DocsServiceGetDocsPageProcedure:    true,
 }
 
+// Admin-only procedures that require role "admin".
+var adminProcedures = map[string]bool{
+	pbconnect.ShopServiceCreateShopProcedure:           true,
+	pbconnect.ShopServiceUpdateShopProcedure:           true,
+	pbconnect.ShopServiceGetMyShopsProcedure:           true,
+	pbconnect.StampServiceGetShopCardsProcedure:        true,
+	pbconnect.StampServiceGrantStampProcedure:          true,
+	pbconnect.StampServiceUpdateStampCountProcedure:    true,
+	pbconnect.StampServiceGetShopCustomersProcedure:    true,
+	pbconnect.StampServiceCreateStampTokenProcedure:    true,
+	pbconnect.StampServiceGetStampTokenStatusProcedure: true,
+}
+
 // NewAuthInterceptor returns a unary interceptor that validates JWT tokens
-// from the Authorization header or __token cookie and enforces authentication.
-// Per-resource authorization (e.g. shop ownership) is handled in the service layer.
+// from the Authorization header or __token cookie and enforces role-based access.
 func NewAuthInterceptor() connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return connect.UnaryFunc(func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
@@ -53,6 +65,11 @@ func NewAuthInterceptor() connect.UnaryInterceptorFunc {
 				return nil, apperrors.ErrUnauthenticated
 			}
 
+			// Admin-only check.
+			if adminProcedures[procedure] && claims.Role != constants.RoleAdmin {
+				slog.WarnContext(ctx, "auth: admin access denied", "procedure", procedure, "role", claims.Role)
+				return nil, apperrors.ErrPermissionDenied
+			}
 
 			ctx = context.WithValue(ctx, userKey, claims)
 			return next(ctx, req)

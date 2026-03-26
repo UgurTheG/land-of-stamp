@@ -103,6 +103,15 @@ export const messages = {
         genericError: 'Something went wrong',
       },
     },
+    chooseRole: {
+      title: 'How will you use Länd of Stamp?',
+      subtitle: 'Choose your role to get started. This cannot be changed later.',
+      customer: 'Customer',
+      customerDesc: 'Collect stamps, earn rewards, and discover shops near you.',
+      shopOwner: 'Shop Owner',
+      shopOwnerDesc: 'Create your shop, set up rewards, and manage your customers.',
+      error: 'Could not set your role. Please try again.',
+    },
     userDashboard: {
       welcomeBack: (username: string) => `Welcome back, ${username}! 👋`,
       subtitle: 'Here are your loyalty stamp cards',
@@ -331,6 +340,15 @@ export const messages = {
       validation: {
         genericError: 'Etwas ist schiefgelaufen',
       },
+    },
+    chooseRole: {
+      title: 'Wie wirst du Länd of Stamp nutzen?',
+      subtitle: 'Wähle deine Rolle. Dies kann später nicht geändert werden.',
+      customer: 'Kunde',
+      customerDesc: 'Stempel sammeln, Belohnungen verdienen und Läden in deiner Nähe entdecken.',
+      shopOwner: 'Ladenbesitzer',
+      shopOwnerDesc: 'Erstelle deinen Laden, richte Belohnungen ein und verwalte deine Kunden.',
+      error: 'Rolle konnte nicht gesetzt werden. Bitte versuche es erneut.',
     },
     userDashboard: {
       welcomeBack: (username: string) => `Willkommen zurück, ${username}! 👋`,

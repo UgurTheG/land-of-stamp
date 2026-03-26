@@ -43,7 +43,7 @@ function rpc(ctx: { request: { post: (url: string, options: object) => Promise<i
 async function registerViaAPI(
   page: Page,
   role: 'user' | 'admin',
-  opts?: { username?: string; createShop?: boolean },
+  opts?: { username?: string },
 ) {
   const username = opts?.username ?? `e2e_${role}_${uid()}`;
 
@@ -58,30 +58,16 @@ async function registerViaAPI(
     throw new Error(`Seed user failed (${resp.status()}): ${body}`);
   }
 
-  // Optionally create a shop BEFORE fetching user state so hasShop is accurate
-  if (opts?.createShop) {
-    const shopResp = await rpc(context, RPC.createShop, {
-      name: `${username} Shop ${uid()}`, rewardDescription: 'E2E reward', stampsRequired: 3, color: '#6366f1',
-    });
-    if (!shopResp.ok()) throw new Error(`Shop creation failed: ${await shopResp.text()}`);
-  }
-
-  // Fetch the latest user state from GetMe (includes hasShop)
-  const meResp = await context.request.post(RPC.getMe, {
-    headers: { 'Content-Type': 'application/json' },
-    data: {},
-  });
-  const user = await meResp.json();
-
-  // Navigate to the appropriate page
+  // Navigate to the role-appropriate page (cookie is set from API response)
   const target = role === 'admin' ? '/admin' : '/dashboard';
   await page.goto(target);
   await page.waitForLoadState('domcontentloaded');
 
-  // Set localStorage so AuthContext picks up the user
-  await page.evaluate((u) => {
-    localStorage.setItem('land_of_stamp_current_user', JSON.stringify(u));
-  }, user);
+  // Also set localStorage so AuthContext picks up the user
+  const json = await resp.json();
+  await page.evaluate((user) => {
+    localStorage.setItem('land_of_stamp_current_user', JSON.stringify(user));
+  }, json.user);
 
   // Reload so React hydrates with the user from localStorage + cookie
   await page.goto(target);
@@ -90,16 +76,11 @@ async function registerViaAPI(
   return { username };
 }
 
-/** Seed an admin user and create a shop so hasShop is true. */
-async function registerAdminWithShop(page: Page, opts?: { username?: string }) {
-  return registerViaAPI(page, 'admin', { ...opts, createShop: true });
-}
-
 /** Clear auth state and go home. */
 async function logoutViaUI(page: Page) {
   await page.getByText('Logout').click();
   // App may redirect to / or /login after logout
-  await expect(page).toHaveURL(/\/login|:[\d]+\/$/);
+  await expect(page).toHaveURL(/\/login|\:[\d]+\/$/);
 }
 
 
@@ -136,12 +117,8 @@ test.describe('Landing Page', () => {
   });
 
   test('logged-in admin landing page shows admin dashboard CTAs instead of guest signup copy', async ({ page }) => {
-    await registerAdminWithShop(page);
+    await registerViaAPI(page, 'admin');
     await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-
-    // Wait for React to hydrate with the user context
-    await expect(page.getByRole('navigation').getByText('Logout')).toBeVisible();
 
     await expect(page.getByText('Ready to start collecting?')).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Open Dashboard' }).first()).toBeVisible();
@@ -190,6 +167,23 @@ test.describe('Auth', () => {
   });
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//  ROLE-BASED NAVIGATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.describe('Role-Based Navigation', () => {
+  test('user role cannot access /admin', async ({ page }) => {
+    await registerViaAPI(page, 'user');
+    await page.goto('/admin');
+    await expect(page).not.toHaveURL(/\/admin/);
+  });
+
+  test('admin role cannot access /dashboard', async ({ page }) => {
+    await registerViaAPI(page, 'admin');
+    await page.goto('/dashboard');
+    await expect(page).not.toHaveURL(/\/dashboard/);
+  });
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  USER DASHBOARD
@@ -330,35 +324,18 @@ test.describe('Full E2E Journey', () => {
 
     // 1. Admin registers and creates a shop via API
     const adminPage = await adminContext.newPage();
+    await registerViaAPI(adminPage, 'admin');
+
     const journeyShopName = `Journey Café ${uid()}`;
-
-    // Seed admin user
-    const seedResp = await adminContext.request.post(RPC.seedUser, {
-      headers: { 'Content-Type': 'application/json' },
-      data: { username: `e2e_admin_${uid()}`, role: 'admin' },
-    });
-    expect(seedResp.ok()).toBeTruthy();
-
-    // Create the shop (cookie is set from seed response)
     const resp = await rpc(adminPage.context(), RPC.createShop, {
       name: journeyShopName, description: 'Your favorite café', rewardDescription: '1 free espresso', stampsRequired: 2, color: '#6366f1',
     });
     expect(resp.ok()).toBeTruthy();
     const shopData = await resp.json();
 
-    // Fetch user state (hasShop: true) and set localStorage
-    const meResp = await adminPage.context().request.post(RPC.getMe, {
-      headers: { 'Content-Type': 'application/json' }, data: {},
-    });
-    const adminUser = await meResp.json();
-    await adminPage.goto('/admin');
+    // Reload admin page so it picks up the shop
+    await adminPage.reload();
     await adminPage.waitForLoadState('domcontentloaded');
-    await adminPage.evaluate((u) => {
-      localStorage.setItem('land_of_stamp_current_user', JSON.stringify(u));
-    }, adminUser);
-    await adminPage.goto('/admin');
-    await adminPage.waitForLoadState('domcontentloaded');
-
     await expect(adminPage.getByRole('heading', { name: journeyShopName })).toBeVisible();
 
     // 2. User registers and joins the shop
@@ -455,19 +432,13 @@ test.describe('Admin Statistics', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test.describe('Navbar', () => {
-  test('shows "My Cards" link for any authenticated user', async ({ page }) => {
+  test('shows "My Cards" link for user role', async ({ page }) => {
     await registerViaAPI(page, 'user');
     await expect(page.getByRole('link', { name: 'My Cards' })).toBeVisible();
   });
 
-  test('shows "Dashboard" link for shop owner', async ({ page }) => {
-    await registerAdminWithShop(page);
-    await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
-  });
-
-  test('shows both "My Cards" and "Dashboard" for shop owner', async ({ page }) => {
-    await registerAdminWithShop(page);
-    await expect(page.getByRole('link', { name: 'My Cards' })).toBeVisible();
+  test('shows "Dashboard" link for admin role', async ({ page }) => {
+    await registerViaAPI(page, 'admin');
     await expect(page.getByRole('link', { name: 'Dashboard' })).toBeVisible();
   });
 
@@ -487,10 +458,10 @@ test.describe('API Edge Cases', () => {
     expect(resp.status()).toBe(401);
   });
 
-  test('any user can create a shop via API', async ({ page }) => {
+  test('user cannot create a shop (403)', async ({ page }) => {
     await registerViaAPI(page, 'user');
-    const resp = await rpc(page.context(), RPC.createShop, { name: `User Shop ${uid()}`, rewardDescription: 'test' });
-    expect(resp.status()).toBe(200);
+    const resp = await rpc(page.context(), RPC.createShop, { name: 'Sneaky', rewardDescription: 'test' });
+    expect(resp.status()).toBe(403);
   });
 
   test('admin can create a shop via API', async ({ page }) => {
