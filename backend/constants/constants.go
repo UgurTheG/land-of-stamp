@@ -31,7 +31,6 @@ const StampTokenTTL = 60 * time.Second
 const (
 	ProviderGoogle = "google"
 	ProviderGitHub = "github"
-	ProviderApple  = "apple"
 )
 
 // Frontend paths used after OAuth redirects.
@@ -55,8 +54,6 @@ const (
 	EnvGoogleSecret      = "GOOGLE_CLIENT_SECRET"
 	EnvGitHubClientID    = "GITHUB_CLIENT_ID"
 	EnvGitHubSecret      = "GITHUB_CLIENT_SECRET" //nolint:gosec // G101: env var name, not a credential.
-	EnvAppleClientID     = "APPLE_CLIENT_ID"
-	EnvAppleSecret       = "APPLE_CLIENT_SECRET"
 )
 
 // Default fallback values when environment variables are not set.
@@ -108,8 +105,6 @@ const (
 	GoogleAuthURL  = "https://accounts.google.com/o/oauth2/auth"
 	GoogleTokenURL = "https://oauth2.googleapis.com/token"
 	GoogleUserURL  = "https://www.googleapis.com/oauth2/v2/userinfo"
-	AppleAuthURL   = "https://appleid.apple.com/auth/authorize"
-	AppleTokenURL  = "https://appleid.apple.com/auth/token"
 	GitHubUserURL  = "https://api.github.com/user"
 )
 
@@ -117,13 +112,10 @@ const (
 const (
 	GoogleCallbackRoute = "/auth/google/callback"
 	GitHubCallbackRoute = "/auth/github/callback"
-	AppleCallbackRoute  = "/auth/apple/callback"
 	GoogleLoginRoute    = "GET /auth/google"
 	GitHubLoginRoute    = "GET /auth/github"
-	AppleLoginRoute     = "GET /auth/apple"
 	GoogleCallbackMux   = "GET /auth/google/callback"
 	GitHubCallbackMux   = "GET /auth/github/callback"
-	AppleCallbackMux    = "POST /auth/apple/callback"
 )
 
 // Random byte sizes for token and secret generation.

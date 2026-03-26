@@ -147,7 +147,6 @@ test.describe('Auth', () => {
     await page.goto('/login');
     await expect(page.getByText(/Continue with Google/i)).toBeVisible();
     await expect(page.getByText(/Continue with GitHub/i)).toBeVisible();
-    await expect(page.getByText(/Continue with Apple/i)).toBeVisible();
   });
 
   test('logout clears session and redirects home', async ({ page }) => {

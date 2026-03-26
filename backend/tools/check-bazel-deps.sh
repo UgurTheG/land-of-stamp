@@ -29,17 +29,9 @@ while read -r name current; do
     continue
   fi
 
-  # Check existence + get latest in one python call
-  eval "$(echo "$json" | python3 -c "
-import sys, json
-d = json.load(sys.stdin)
-vs = d.get('versions', [])
-current = '$current'
-latest = vs[-1] if vs else ''
-exists = current in vs
-print(f'latest={latest}')
-print(f'exists={str(exists).lower()}')
-")"
+  # Check existence + get latest with jq
+  latest=$(echo "$json" | jq -r '.versions[-1] // ""')
+  exists=$(echo "$json" | jq -r --arg v "$current" '.versions | index($v) != null | tostring')
 
   if [ "$exists" = "false" ]; then
     echo "❌  $name $current does NOT exist in BCR (latest: $latest)"

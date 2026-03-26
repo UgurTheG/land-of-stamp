@@ -98,7 +98,6 @@ export const messages = {
       continueWith: 'Choose a provider to sign in',
       continueWithGoogle: 'Continue with Google',
       continueWithGitHub: 'Continue with GitHub',
-      continueWithApple: 'Continue with Apple',
       validation: {
         genericError: 'Something went wrong',
       },
@@ -336,7 +335,6 @@ export const messages = {
       continueWith: 'Wähle einen Anbieter zum Anmelden',
       continueWithGoogle: 'Weiter mit Google',
       continueWithGitHub: 'Weiter mit GitHub',
-      continueWithApple: 'Weiter mit Apple',
       validation: {
         genericError: 'Etwas ist schiefgelaufen',
       },

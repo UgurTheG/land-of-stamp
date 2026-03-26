@@ -20,12 +20,6 @@ var ErrInvalidToken = errors.New("invalid token")
 
 // ── OAuth ──────────────────────────────────────────────
 
-// ErrNoIDToken indicates Apple's token response did not contain an id_token.
-var ErrNoIDToken = errors.New("no id_token in Apple token response")
-
-// ErrMalformedIDToken indicates the Apple id_token JWT could not be parsed.
-var ErrMalformedIDToken = errors.New("malformed Apple id_token")
-
 // ErrUniqueUsernameFailed indicates all attempts to generate a unique username
 // during OAuth user creation were exhausted.
 var ErrUniqueUsernameFailed = errors.New("could not create unique username")
@@ -44,11 +38,6 @@ var ErrGitHubRequest = errors.New("github user request failed")
 // ErrGitHubDecode indicates the GitHub user response could not be decoded.
 var ErrGitHubDecode = errors.New("github user decode failed")
 
-// ErrAppleIDTokenDecode indicates the Apple id_token payload could not be base64-decoded.
-var ErrAppleIDTokenDecode = errors.New("decode Apple id_token payload failed")
-
-// ErrAppleIDTokenParse indicates the Apple id_token claims could not be parsed.
-var ErrAppleIDTokenParse = errors.New("parse Apple id_token claims failed")
 
 // ── ConnectRPC errors ──────────────────────────────────
 // Pre-built connect errors avoid allocating identical errors on every request.
