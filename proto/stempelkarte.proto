@@ -11,6 +11,8 @@ message User {
   string username = 2;
   string role = 3;          // "user" | "admin"
   optional string shop_id = 4;
+  string display_name = 5;
+  string avatar_url = 6;
 }
 
 message Shop {
@@ -41,6 +43,28 @@ message GetMeRequest {}
 
 message ChooseRoleRequest {
   string role = 1; // "user" | "admin"
+}
+
+message UpdateProfileRequest {
+  string display_name = 1;
+}
+
+message UploadProfilePictureRequest {
+  string mime_type = 1;   // e.g. image/png
+  string data_base64 = 2; // base64 image bytes (no data-url prefix)
+}
+
+message DeleteProfilePictureRequest {}
+
+message DeleteAccountRequest {}
+
+message GetProfileStatsRequest {}
+
+message ProfileStatsResponse {
+  int32 joined_shops = 1;
+  int32 active_cards = 2;
+  int32 redeemed_cards = 3;
+  int32 total_stamps = 4;
 }
 
 // ── Shops ──────────────────────────────────────────────
@@ -175,6 +199,11 @@ service AuthService {
   rpc Logout(LogoutRequest) returns (StatusResponse);
   rpc GetMe(GetMeRequest) returns (User);
   rpc ChooseRole(ChooseRoleRequest) returns (User);
+  rpc UpdateProfile(UpdateProfileRequest) returns (User);
+  rpc UploadProfilePicture(UploadProfilePictureRequest) returns (User);
+  rpc DeleteProfilePicture(DeleteProfilePictureRequest) returns (User);
+  rpc GetProfileStats(GetProfileStatsRequest) returns (ProfileStatsResponse);
+  rpc DeleteAccount(DeleteAccountRequest) returns (StatusResponse);
 }
 
 service ShopService {

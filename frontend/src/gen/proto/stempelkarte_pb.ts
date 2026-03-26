@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file proto/stempelkarte.proto.
  */
 export const file_proto_stempelkarte: GenFile = /*@__PURE__*/
-  fileDesc("Chhwcm90by9zdGVtcGVsa2FydGUucHJvdG8SDmxhbmRvZnN0YW1wLnYxIlQKBFVzZXISCgoCaWQYASABKAkSEAoIdXNlcm5hbWUYAiABKAkSDAoEcm9sZRgDIAEoCRIUCgdzaG9wX2lkGAQgASgJSACIAQFCCgoIX3Nob3BfaWQiiwEKBFNob3ASCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIaChJyZXdhcmRfZGVzY3JpcHRpb24YBCABKAkSFwoPc3RhbXBzX3JlcXVpcmVkGAUgASgFEg0KBWNvbG9yGAYgASgJEhAKCG93bmVyX2lkGAcgASgJIm8KCVN0YW1wQ2FyZBIKCgJpZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEg8KB3Nob3BfaWQYAyABKAkSDgoGc3RhbXBzGAQgASgFEhAKCHJlZGVlbWVkGAUgASgIEhIKCmNyZWF0ZWRfYXQYBiABKAkiDwoNTG9nb3V0UmVxdWVzdCIOCgxHZXRNZVJlcXVlc3QiIQoRQ2hvb3NlUm9sZVJlcXVlc3QSDAoEcm9sZRgBIAEoCSISChBMaXN0U2hvcHNSZXF1ZXN0InoKEUNyZWF0ZVNob3BSZXF1ZXN0EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSGgoScmV3YXJkX2Rlc2NyaXB0aW9uGAMgASgJEhcKD3N0YW1wc19yZXF1aXJlZBgEIAEoBRINCgVjb2xvchgFIAEoCSKGAQoRVXBkYXRlU2hvcFJlcXVlc3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIaChJyZXdhcmRfZGVzY3JpcHRpb24YBCABKAkSFwoPc3RhbXBzX3JlcXVpcmVkGAUgASgFEg0KBWNvbG9yGAYgASgJIhMKEUdldE15U2hvcHNSZXF1ZXN0Ii8KCFNob3BMaXN0EiMKBXNob3BzGAEgAygLMhQubGFuZG9mc3RhbXAudjEuU2hvcCITChFHZXRNeUNhcmRzUmVxdWVzdCIiCg9Kb2luU2hvcFJlcXVlc3QSDwoHc2hvcF9pZBgBIAEoCSImChNHZXRTaG9wQ2FyZHNSZXF1ZXN0Eg8KB3Nob3BfaWQYASABKAkiNQoRR3JhbnRTdGFtcFJlcXVlc3QSDwoHc2hvcF9pZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJIksKF1VwZGF0ZVN0YW1wQ291bnRSZXF1ZXN0Eg8KB3Nob3BfaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCRIOCgZzdGFtcHMYAyABKAUiJAoRUmVkZWVtQ2FyZFJlcXVlc3QSDwoHY2FyZF9pZBgBIAEoCSIqChdHZXRTaG9wQ3VzdG9tZXJzUmVxdWVzdBIPCgdzaG9wX2lkGAEgASgJIjkKDVN0YW1wQ2FyZExpc3QSKAoFY2FyZHMYASADKAsyGS5sYW5kb2ZzdGFtcC52MS5TdGFtcENhcmQiKgoXQ3JlYXRlU3RhbXBUb2tlblJlcXVlc3QSDwoHc2hvcF9pZBgBIAEoCSItChpHZXRTdGFtcFRva2VuU3RhdHVzUmVxdWVzdBIPCgdzaG9wX2lkGAEgASgJIj4KGFN0YW1wVG9rZW5TdGF0dXNSZXNwb25zZRIOCgZhY3RpdmUYASABKAgSEgoKZXhwaXJlc19hdBgCIAEoCSJACgpTdGFtcFRva2VuEg0KBXRva2VuGAEgASgJEhIKCmV4cGlyZXNfYXQYAiABKAkSDwoHc2hvcF9pZBgDIAEoCSIiChFDbGFpbVN0YW1wUmVxdWVzdBINCgV0b2tlbhgBIAEoCSJhChJDbGFpbVN0YW1wUmVzcG9uc2USEQoJc2hvcF9uYW1lGAEgASgJEg4KBnN0YW1wcxgCIAEoBRIXCg9zdGFtcHNfcmVxdWlyZWQYAyABKAUSDwoHbWVzc2FnZRgEIAEoCSIvCghVc2VyTGlzdBIjCgV1c2VycxgBIAMoCzIULmxhbmRvZnN0YW1wLnYxLlVzZXIiIAoOU3RhdHVzUmVzcG9uc2USDgoGc3RhdHVzGAEgASgJIh4KDUVycm9yUmVzcG9uc2USDQoFZXJyb3IYASABKAkiFwoVR2V0T3BlbkFQSVNwZWNSZXF1ZXN0Ij8KFkdldE9wZW5BUElTcGVjUmVzcG9uc2USDwoHY29udGVudBgBIAEoCRIUCgxjb250ZW50X3R5cGUYAiABKAkiFAoSR2V0RG9jc1BhZ2VSZXF1ZXN0IiMKE0dldERvY3NQYWdlUmVzcG9uc2USDAoEaHRtbBgBIAEoCTLGAQoLRG9jc1NlcnZpY2USXwoOR2V0T3BlbkFQSVNwZWMSJS5sYW5kb2ZzdGFtcC52MS5HZXRPcGVuQVBJU3BlY1JlcXVlc3QaJi5sYW5kb2ZzdGFtcC52MS5HZXRPcGVuQVBJU3BlY1Jlc3BvbnNlElYKC0dldERvY3NQYWdlEiIubGFuZG9mc3RhbXAudjEuR2V0RG9jc1BhZ2VSZXF1ZXN0GiMubGFuZG9mc3RhbXAudjEuR2V0RG9jc1BhZ2VSZXNwb25zZTLaAQoLQXV0aFNlcnZpY2USRwoGTG9nb3V0Eh0ubGFuZG9mc3RhbXAudjEuTG9nb3V0UmVxdWVzdBoeLmxhbmRvZnN0YW1wLnYxLlN0YXR1c1Jlc3BvbnNlEjsKBUdldE1lEhwubGFuZG9mc3RhbXAudjEuR2V0TWVSZXF1ZXN0GhQubGFuZG9mc3RhbXAudjEuVXNlchJFCgpDaG9vc2VSb2xlEiEubGFuZG9mc3RhbXAudjEuQ2hvb3NlUm9sZVJlcXVlc3QaFC5sYW5kb2ZzdGFtcC52MS5Vc2VyMq8CCgtTaG9wU2VydmljZRJHCglMaXN0U2hvcHMSIC5sYW5kb2ZzdGFtcC52MS5MaXN0U2hvcHNSZXF1ZXN0GhgubGFuZG9mc3RhbXAudjEuU2hvcExpc3QSRQoKQ3JlYXRlU2hvcBIhLmxhbmRvZnN0YW1wLnYxLkNyZWF0ZVNob3BSZXF1ZXN0GhQubGFuZG9mc3RhbXAudjEuU2hvcBJFCgpVcGRhdGVTaG9wEiEubGFuZG9mc3RhbXAudjEuVXBkYXRlU2hvcFJlcXVlc3QaFC5sYW5kb2ZzdGFtcC52MS5TaG9wEkkKCkdldE15U2hvcHMSIS5sYW5kb2ZzdGFtcC52MS5HZXRNeVNob3BzUmVxdWVzdBoYLmxhbmRvZnN0YW1wLnYxLlNob3BMaXN0MuEGCgxTdGFtcFNlcnZpY2USTgoKR2V0TXlDYXJkcxIhLmxhbmRvZnN0YW1wLnYxLkdldE15Q2FyZHNSZXF1ZXN0Gh0ubGFuZG9mc3RhbXAudjEuU3RhbXBDYXJkTGlzdBJGCghKb2luU2hvcBIfLmxhbmRvZnN0YW1wLnYxLkpvaW5TaG9wUmVxdWVzdBoZLmxhbmRvZnN0YW1wLnYxLlN0YW1wQ2FyZBJSCgxHZXRTaG9wQ2FyZHMSIy5sYW5kb2ZzdGFtcC52MS5HZXRTaG9wQ2FyZHNSZXF1ZXN0Gh0ubGFuZG9mc3RhbXAudjEuU3RhbXBDYXJkTGlzdBJKCgpHcmFudFN0YW1wEiEubGFuZG9mc3RhbXAudjEuR3JhbnRTdGFtcFJlcXVlc3QaGS5sYW5kb2ZzdGFtcC52MS5TdGFtcENhcmQSVgoQVXBkYXRlU3RhbXBDb3VudBInLmxhbmRvZnN0YW1wLnYxLlVwZGF0ZVN0YW1wQ291bnRSZXF1ZXN0GhkubGFuZG9mc3RhbXAudjEuU3RhbXBDYXJkEk8KClJlZGVlbUNhcmQSIS5sYW5kb2ZzdGFtcC52MS5SZWRlZW1DYXJkUmVxdWVzdBoeLmxhbmRvZnN0YW1wLnYxLlN0YXR1c1Jlc3BvbnNlElUKEEdldFNob3BDdXN0b21lcnMSJy5sYW5kb2ZzdGFtcC52MS5HZXRTaG9wQ3VzdG9tZXJzUmVxdWVzdBoYLmxhbmRvZnN0YW1wLnYxLlVzZXJMaXN0ElcKEENyZWF0ZVN0YW1wVG9rZW4SJy5sYW5kb2ZzdGFtcC52MS5DcmVhdGVTdGFtcFRva2VuUmVxdWVzdBoaLmxhbmRvZnN0YW1wLnYxLlN0YW1wVG9rZW4SawoTR2V0U3RhbXBUb2tlblN0YXR1cxIqLmxhbmRvZnN0YW1wLnYxLkdldFN0YW1wVG9rZW5TdGF0dXNSZXF1ZXN0GigubGFuZG9mc3RhbXAudjEuU3RhbXBUb2tlblN0YXR1c1Jlc3BvbnNlElMKCkNsYWltU3RhbXASIS5sYW5kb2ZzdGFtcC52MS5DbGFpbVN0YW1wUmVxdWVzdBoiLmxhbmRvZnN0YW1wLnYxLkNsYWltU3RhbXBSZXNwb25zZUIeWhxsYW5kLW9mLXN0YW1wLWJhY2tlbmQvZ2VuL3BiYgZwcm90bzM");
+  fileDesc("Chhwcm90by9zdGVtcGVsa2FydGUucHJvdG8SDmxhbmRvZnN0YW1wLnYxIn4KBFVzZXISCgoCaWQYASABKAkSEAoIdXNlcm5hbWUYAiABKAkSDAoEcm9sZRgDIAEoCRIUCgdzaG9wX2lkGAQgASgJSACIAQESFAoMZGlzcGxheV9uYW1lGAUgASgJEhIKCmF2YXRhcl91cmwYBiABKAlCCgoIX3Nob3BfaWQiiwEKBFNob3ASCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIaChJyZXdhcmRfZGVzY3JpcHRpb24YBCABKAkSFwoPc3RhbXBzX3JlcXVpcmVkGAUgASgFEg0KBWNvbG9yGAYgASgJEhAKCG93bmVyX2lkGAcgASgJIm8KCVN0YW1wQ2FyZBIKCgJpZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJEg8KB3Nob3BfaWQYAyABKAkSDgoGc3RhbXBzGAQgASgFEhAKCHJlZGVlbWVkGAUgASgIEhIKCmNyZWF0ZWRfYXQYBiABKAkiDwoNTG9nb3V0UmVxdWVzdCIOCgxHZXRNZVJlcXVlc3QiIQoRQ2hvb3NlUm9sZVJlcXVlc3QSDAoEcm9sZRgBIAEoCSIsChRVcGRhdGVQcm9maWxlUmVxdWVzdBIUCgxkaXNwbGF5X25hbWUYASABKAkiRQobVXBsb2FkUHJvZmlsZVBpY3R1cmVSZXF1ZXN0EhEKCW1pbWVfdHlwZRgBIAEoCRITCgtkYXRhX2Jhc2U2NBgCIAEoCSIdChtEZWxldGVQcm9maWxlUGljdHVyZVJlcXVlc3QiFgoURGVsZXRlQWNjb3VudFJlcXVlc3QiGAoWR2V0UHJvZmlsZVN0YXRzUmVxdWVzdCJwChRQcm9maWxlU3RhdHNSZXNwb25zZRIUCgxqb2luZWRfc2hvcHMYASABKAUSFAoMYWN0aXZlX2NhcmRzGAIgASgFEhYKDnJlZGVlbWVkX2NhcmRzGAMgASgFEhQKDHRvdGFsX3N0YW1wcxgEIAEoBSISChBMaXN0U2hvcHNSZXF1ZXN0InoKEUNyZWF0ZVNob3BSZXF1ZXN0EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSGgoScmV3YXJkX2Rlc2NyaXB0aW9uGAMgASgJEhcKD3N0YW1wc19yZXF1aXJlZBgEIAEoBRINCgVjb2xvchgFIAEoCSKGAQoRVXBkYXRlU2hvcFJlcXVlc3QSCgoCaWQYASABKAkSDAoEbmFtZRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRIaChJyZXdhcmRfZGVzY3JpcHRpb24YBCABKAkSFwoPc3RhbXBzX3JlcXVpcmVkGAUgASgFEg0KBWNvbG9yGAYgASgJIhMKEUdldE15U2hvcHNSZXF1ZXN0Ii8KCFNob3BMaXN0EiMKBXNob3BzGAEgAygLMhQubGFuZG9mc3RhbXAudjEuU2hvcCITChFHZXRNeUNhcmRzUmVxdWVzdCIiCg9Kb2luU2hvcFJlcXVlc3QSDwoHc2hvcF9pZBgBIAEoCSImChNHZXRTaG9wQ2FyZHNSZXF1ZXN0Eg8KB3Nob3BfaWQYASABKAkiNQoRR3JhbnRTdGFtcFJlcXVlc3QSDwoHc2hvcF9pZBgBIAEoCRIPCgd1c2VyX2lkGAIgASgJIksKF1VwZGF0ZVN0YW1wQ291bnRSZXF1ZXN0Eg8KB3Nob3BfaWQYASABKAkSDwoHdXNlcl9pZBgCIAEoCRIOCgZzdGFtcHMYAyABKAUiJAoRUmVkZWVtQ2FyZFJlcXVlc3QSDwoHY2FyZF9pZBgBIAEoCSIqChdHZXRTaG9wQ3VzdG9tZXJzUmVxdWVzdBIPCgdzaG9wX2lkGAEgASgJIjkKDVN0YW1wQ2FyZExpc3QSKAoFY2FyZHMYASADKAsyGS5sYW5kb2ZzdGFtcC52MS5TdGFtcENhcmQiKgoXQ3JlYXRlU3RhbXBUb2tlblJlcXVlc3QSDwoHc2hvcF9pZBgBIAEoCSItChpHZXRTdGFtcFRva2VuU3RhdHVzUmVxdWVzdBIPCgdzaG9wX2lkGAEgASgJIj4KGFN0YW1wVG9rZW5TdGF0dXNSZXNwb25zZRIOCgZhY3RpdmUYASABKAgSEgoKZXhwaXJlc19hdBgCIAEoCSJACgpTdGFtcFRva2VuEg0KBXRva2VuGAEgASgJEhIKCmV4cGlyZXNfYXQYAiABKAkSDwoHc2hvcF9pZBgDIAEoCSIiChFDbGFpbVN0YW1wUmVxdWVzdBINCgV0b2tlbhgBIAEoCSJhChJDbGFpbVN0YW1wUmVzcG9uc2USEQoJc2hvcF9uYW1lGAEgASgJEg4KBnN0YW1wcxgCIAEoBRIXCg9zdGFtcHNfcmVxdWlyZWQYAyABKAUSDwoHbWVzc2FnZRgEIAEoCSIvCghVc2VyTGlzdBIjCgV1c2VycxgBIAMoCzIULmxhbmRvZnN0YW1wLnYxLlVzZXIiIAoOU3RhdHVzUmVzcG9uc2USDgoGc3RhdHVzGAEgASgJIh4KDUVycm9yUmVzcG9uc2USDQoFZXJyb3IYASABKAkiFwoVR2V0T3BlbkFQSVNwZWNSZXF1ZXN0Ij8KFkdldE9wZW5BUElTcGVjUmVzcG9uc2USDwoHY29udGVudBgBIAEoCRIUCgxjb250ZW50X3R5cGUYAiABKAkiFAoSR2V0RG9jc1BhZ2VSZXF1ZXN0IiMKE0dldERvY3NQYWdlUmVzcG9uc2USDAoEaHRtbBgBIAEoCTLGAQoLRG9jc1NlcnZpY2USXwoOR2V0T3BlbkFQSVNwZWMSJS5sYW5kb2ZzdGFtcC52MS5HZXRPcGVuQVBJU3BlY1JlcXVlc3QaJi5sYW5kb2ZzdGFtcC52MS5HZXRPcGVuQVBJU3BlY1Jlc3BvbnNlElYKC0dldERvY3NQYWdlEiIubGFuZG9mc3RhbXAudjEuR2V0RG9jc1BhZ2VSZXF1ZXN0GiMubGFuZG9mc3RhbXAudjEuR2V0RG9jc1BhZ2VSZXNwb25zZTKVBQoLQXV0aFNlcnZpY2USRwoGTG9nb3V0Eh0ubGFuZG9mc3RhbXAudjEuTG9nb3V0UmVxdWVzdBoeLmxhbmRvZnN0YW1wLnYxLlN0YXR1c1Jlc3BvbnNlEjsKBUdldE1lEhwubGFuZG9mc3RhbXAudjEuR2V0TWVSZXF1ZXN0GhQubGFuZG9mc3RhbXAudjEuVXNlchJFCgpDaG9vc2VSb2xlEiEubGFuZG9mc3RhbXAudjEuQ2hvb3NlUm9sZVJlcXVlc3QaFC5sYW5kb2ZzdGFtcC52MS5Vc2VyEksKDVVwZGF0ZVByb2ZpbGUSJC5sYW5kb2ZzdGFtcC52MS5VcGRhdGVQcm9maWxlUmVxdWVzdBoULmxhbmRvZnN0YW1wLnYxLlVzZXISWQoUVXBsb2FkUHJvZmlsZVBpY3R1cmUSKy5sYW5kb2ZzdGFtcC52MS5VcGxvYWRQcm9maWxlUGljdHVyZVJlcXVlc3QaFC5sYW5kb2ZzdGFtcC52MS5Vc2VyElkKFERlbGV0ZVByb2ZpbGVQaWN0dXJlEisubGFuZG9mc3RhbXAudjEuRGVsZXRlUHJvZmlsZVBpY3R1cmVSZXF1ZXN0GhQubGFuZG9mc3RhbXAudjEuVXNlchJfCg9HZXRQcm9maWxlU3RhdHMSJi5sYW5kb2ZzdGFtcC52MS5HZXRQcm9maWxlU3RhdHNSZXF1ZXN0GiQubGFuZG9mc3RhbXAudjEuUHJvZmlsZVN0YXRzUmVzcG9uc2USVQoNRGVsZXRlQWNjb3VudBIkLmxhbmRvZnN0YW1wLnYxLkRlbGV0ZUFjY291bnRSZXF1ZXN0Gh4ubGFuZG9mc3RhbXAudjEuU3RhdHVzUmVzcG9uc2UyrwIKC1Nob3BTZXJ2aWNlEkcKCUxpc3RTaG9wcxIgLmxhbmRvZnN0YW1wLnYxLkxpc3RTaG9wc1JlcXVlc3QaGC5sYW5kb2ZzdGFtcC52MS5TaG9wTGlzdBJFCgpDcmVhdGVTaG9wEiEubGFuZG9mc3RhbXAudjEuQ3JlYXRlU2hvcFJlcXVlc3QaFC5sYW5kb2ZzdGFtcC52MS5TaG9wEkUKClVwZGF0ZVNob3ASIS5sYW5kb2ZzdGFtcC52MS5VcGRhdGVTaG9wUmVxdWVzdBoULmxhbmRvZnN0YW1wLnYxLlNob3ASSQoKR2V0TXlTaG9wcxIhLmxhbmRvZnN0YW1wLnYxLkdldE15U2hvcHNSZXF1ZXN0GhgubGFuZG9mc3RhbXAudjEuU2hvcExpc3Qy4QYKDFN0YW1wU2VydmljZRJOCgpHZXRNeUNhcmRzEiEubGFuZG9mc3RhbXAudjEuR2V0TXlDYXJkc1JlcXVlc3QaHS5sYW5kb2ZzdGFtcC52MS5TdGFtcENhcmRMaXN0EkYKCEpvaW5TaG9wEh8ubGFuZG9mc3RhbXAudjEuSm9pblNob3BSZXF1ZXN0GhkubGFuZG9mc3RhbXAudjEuU3RhbXBDYXJkElIKDEdldFNob3BDYXJkcxIjLmxhbmRvZnN0YW1wLnYxLkdldFNob3BDYXJkc1JlcXVlc3QaHS5sYW5kb2ZzdGFtcC52MS5TdGFtcENhcmRMaXN0EkoKCkdyYW50U3RhbXASIS5sYW5kb2ZzdGFtcC52MS5HcmFudFN0YW1wUmVxdWVzdBoZLmxhbmRvZnN0YW1wLnYxLlN0YW1wQ2FyZBJWChBVcGRhdGVTdGFtcENvdW50EicubGFuZG9mc3RhbXAudjEuVXBkYXRlU3RhbXBDb3VudFJlcXVlc3QaGS5sYW5kb2ZzdGFtcC52MS5TdGFtcENhcmQSTwoKUmVkZWVtQ2FyZBIhLmxhbmRvZnN0YW1wLnYxLlJlZGVlbUNhcmRSZXF1ZXN0Gh4ubGFuZG9mc3RhbXAudjEuU3RhdHVzUmVzcG9uc2USVQoQR2V0U2hvcEN1c3RvbWVycxInLmxhbmRvZnN0YW1wLnYxLkdldFNob3BDdXN0b21lcnNSZXF1ZXN0GhgubGFuZG9mc3RhbXAudjEuVXNlckxpc3QSVwoQQ3JlYXRlU3RhbXBUb2tlbhInLmxhbmRvZnN0YW1wLnYxLkNyZWF0ZVN0YW1wVG9rZW5SZXF1ZXN0GhoubGFuZG9mc3RhbXAudjEuU3RhbXBUb2tlbhJrChNHZXRTdGFtcFRva2VuU3RhdHVzEioubGFuZG9mc3RhbXAudjEuR2V0U3RhbXBUb2tlblN0YXR1c1JlcXVlc3QaKC5sYW5kb2ZzdGFtcC52MS5TdGFtcFRva2VuU3RhdHVzUmVzcG9uc2USUwoKQ2xhaW1TdGFtcBIhLmxhbmRvZnN0YW1wLnYxLkNsYWltU3RhbXBSZXF1ZXN0GiIubGFuZG9mc3RhbXAudjEuQ2xhaW1TdGFtcFJlc3BvbnNlQh5aHGxhbmQtb2Ytc3RhbXAtYmFja2VuZC9nZW4vcGJiBnByb3RvMw");
 
 /**
  * @generated from message landofstamp.v1.User
@@ -37,6 +37,16 @@ export type User = Message<"landofstamp.v1.User"> & {
    * @generated from field: optional string shop_id = 4;
    */
   shopId?: string;
+
+  /**
+   * @generated from field: string display_name = 5;
+   */
+  displayName: string;
+
+  /**
+   * @generated from field: string avatar_url = 6;
+   */
+  avatarUrl: string;
 };
 
 /**
@@ -181,6 +191,120 @@ export const ChooseRoleRequestSchema: GenMessage<ChooseRoleRequest> = /*@__PURE_
   messageDesc(file_proto_stempelkarte, 5);
 
 /**
+ * @generated from message landofstamp.v1.UpdateProfileRequest
+ */
+export type UpdateProfileRequest = Message<"landofstamp.v1.UpdateProfileRequest"> & {
+  /**
+   * @generated from field: string display_name = 1;
+   */
+  displayName: string;
+};
+
+/**
+ * Describes the message landofstamp.v1.UpdateProfileRequest.
+ * Use `create(UpdateProfileRequestSchema)` to create a new message.
+ */
+export const UpdateProfileRequestSchema: GenMessage<UpdateProfileRequest> = /*@__PURE__*/
+  messageDesc(file_proto_stempelkarte, 6);
+
+/**
+ * @generated from message landofstamp.v1.UploadProfilePictureRequest
+ */
+export type UploadProfilePictureRequest = Message<"landofstamp.v1.UploadProfilePictureRequest"> & {
+  /**
+   * e.g. image/png
+   *
+   * @generated from field: string mime_type = 1;
+   */
+  mimeType: string;
+
+  /**
+   * base64 image bytes (no data-url prefix)
+   *
+   * @generated from field: string data_base64 = 2;
+   */
+  dataBase64: string;
+};
+
+/**
+ * Describes the message landofstamp.v1.UploadProfilePictureRequest.
+ * Use `create(UploadProfilePictureRequestSchema)` to create a new message.
+ */
+export const UploadProfilePictureRequestSchema: GenMessage<UploadProfilePictureRequest> = /*@__PURE__*/
+  messageDesc(file_proto_stempelkarte, 7);
+
+/**
+ * @generated from message landofstamp.v1.DeleteProfilePictureRequest
+ */
+export type DeleteProfilePictureRequest = Message<"landofstamp.v1.DeleteProfilePictureRequest"> & {
+};
+
+/**
+ * Describes the message landofstamp.v1.DeleteProfilePictureRequest.
+ * Use `create(DeleteProfilePictureRequestSchema)` to create a new message.
+ */
+export const DeleteProfilePictureRequestSchema: GenMessage<DeleteProfilePictureRequest> = /*@__PURE__*/
+  messageDesc(file_proto_stempelkarte, 8);
+
+/**
+ * @generated from message landofstamp.v1.DeleteAccountRequest
+ */
+export type DeleteAccountRequest = Message<"landofstamp.v1.DeleteAccountRequest"> & {
+};
+
+/**
+ * Describes the message landofstamp.v1.DeleteAccountRequest.
+ * Use `create(DeleteAccountRequestSchema)` to create a new message.
+ */
+export const DeleteAccountRequestSchema: GenMessage<DeleteAccountRequest> = /*@__PURE__*/
+  messageDesc(file_proto_stempelkarte, 9);
+
+/**
+ * @generated from message landofstamp.v1.GetProfileStatsRequest
+ */
+export type GetProfileStatsRequest = Message<"landofstamp.v1.GetProfileStatsRequest"> & {
+};
+
+/**
+ * Describes the message landofstamp.v1.GetProfileStatsRequest.
+ * Use `create(GetProfileStatsRequestSchema)` to create a new message.
+ */
+export const GetProfileStatsRequestSchema: GenMessage<GetProfileStatsRequest> = /*@__PURE__*/
+  messageDesc(file_proto_stempelkarte, 10);
+
+/**
+ * @generated from message landofstamp.v1.ProfileStatsResponse
+ */
+export type ProfileStatsResponse = Message<"landofstamp.v1.ProfileStatsResponse"> & {
+  /**
+   * @generated from field: int32 joined_shops = 1;
+   */
+  joinedShops: number;
+
+  /**
+   * @generated from field: int32 active_cards = 2;
+   */
+  activeCards: number;
+
+  /**
+   * @generated from field: int32 redeemed_cards = 3;
+   */
+  redeemedCards: number;
+
+  /**
+   * @generated from field: int32 total_stamps = 4;
+   */
+  totalStamps: number;
+};
+
+/**
+ * Describes the message landofstamp.v1.ProfileStatsResponse.
+ * Use `create(ProfileStatsResponseSchema)` to create a new message.
+ */
+export const ProfileStatsResponseSchema: GenMessage<ProfileStatsResponse> = /*@__PURE__*/
+  messageDesc(file_proto_stempelkarte, 11);
+
+/**
  * @generated from message landofstamp.v1.ListShopsRequest
  */
 export type ListShopsRequest = Message<"landofstamp.v1.ListShopsRequest"> & {
@@ -191,7 +315,7 @@ export type ListShopsRequest = Message<"landofstamp.v1.ListShopsRequest"> & {
  * Use `create(ListShopsRequestSchema)` to create a new message.
  */
 export const ListShopsRequestSchema: GenMessage<ListShopsRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 6);
+  messageDesc(file_proto_stempelkarte, 12);
 
 /**
  * @generated from message landofstamp.v1.CreateShopRequest
@@ -228,7 +352,7 @@ export type CreateShopRequest = Message<"landofstamp.v1.CreateShopRequest"> & {
  * Use `create(CreateShopRequestSchema)` to create a new message.
  */
 export const CreateShopRequestSchema: GenMessage<CreateShopRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 7);
+  messageDesc(file_proto_stempelkarte, 13);
 
 /**
  * @generated from message landofstamp.v1.UpdateShopRequest
@@ -270,7 +394,7 @@ export type UpdateShopRequest = Message<"landofstamp.v1.UpdateShopRequest"> & {
  * Use `create(UpdateShopRequestSchema)` to create a new message.
  */
 export const UpdateShopRequestSchema: GenMessage<UpdateShopRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 8);
+  messageDesc(file_proto_stempelkarte, 14);
 
 /**
  * @generated from message landofstamp.v1.GetMyShopsRequest
@@ -283,7 +407,7 @@ export type GetMyShopsRequest = Message<"landofstamp.v1.GetMyShopsRequest"> & {
  * Use `create(GetMyShopsRequestSchema)` to create a new message.
  */
 export const GetMyShopsRequestSchema: GenMessage<GetMyShopsRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 9);
+  messageDesc(file_proto_stempelkarte, 15);
 
 /**
  * @generated from message landofstamp.v1.ShopList
@@ -300,7 +424,7 @@ export type ShopList = Message<"landofstamp.v1.ShopList"> & {
  * Use `create(ShopListSchema)` to create a new message.
  */
 export const ShopListSchema: GenMessage<ShopList> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 10);
+  messageDesc(file_proto_stempelkarte, 16);
 
 /**
  * @generated from message landofstamp.v1.GetMyCardsRequest
@@ -313,7 +437,7 @@ export type GetMyCardsRequest = Message<"landofstamp.v1.GetMyCardsRequest"> & {
  * Use `create(GetMyCardsRequestSchema)` to create a new message.
  */
 export const GetMyCardsRequestSchema: GenMessage<GetMyCardsRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 11);
+  messageDesc(file_proto_stempelkarte, 17);
 
 /**
  * @generated from message landofstamp.v1.JoinShopRequest
@@ -330,7 +454,7 @@ export type JoinShopRequest = Message<"landofstamp.v1.JoinShopRequest"> & {
  * Use `create(JoinShopRequestSchema)` to create a new message.
  */
 export const JoinShopRequestSchema: GenMessage<JoinShopRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 12);
+  messageDesc(file_proto_stempelkarte, 18);
 
 /**
  * @generated from message landofstamp.v1.GetShopCardsRequest
@@ -347,7 +471,7 @@ export type GetShopCardsRequest = Message<"landofstamp.v1.GetShopCardsRequest"> 
  * Use `create(GetShopCardsRequestSchema)` to create a new message.
  */
 export const GetShopCardsRequestSchema: GenMessage<GetShopCardsRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 13);
+  messageDesc(file_proto_stempelkarte, 19);
 
 /**
  * @generated from message landofstamp.v1.GrantStampRequest
@@ -369,7 +493,7 @@ export type GrantStampRequest = Message<"landofstamp.v1.GrantStampRequest"> & {
  * Use `create(GrantStampRequestSchema)` to create a new message.
  */
 export const GrantStampRequestSchema: GenMessage<GrantStampRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 14);
+  messageDesc(file_proto_stempelkarte, 20);
 
 /**
  * @generated from message landofstamp.v1.UpdateStampCountRequest
@@ -396,7 +520,7 @@ export type UpdateStampCountRequest = Message<"landofstamp.v1.UpdateStampCountRe
  * Use `create(UpdateStampCountRequestSchema)` to create a new message.
  */
 export const UpdateStampCountRequestSchema: GenMessage<UpdateStampCountRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 15);
+  messageDesc(file_proto_stempelkarte, 21);
 
 /**
  * @generated from message landofstamp.v1.RedeemCardRequest
@@ -413,7 +537,7 @@ export type RedeemCardRequest = Message<"landofstamp.v1.RedeemCardRequest"> & {
  * Use `create(RedeemCardRequestSchema)` to create a new message.
  */
 export const RedeemCardRequestSchema: GenMessage<RedeemCardRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 16);
+  messageDesc(file_proto_stempelkarte, 22);
 
 /**
  * @generated from message landofstamp.v1.GetShopCustomersRequest
@@ -430,7 +554,7 @@ export type GetShopCustomersRequest = Message<"landofstamp.v1.GetShopCustomersRe
  * Use `create(GetShopCustomersRequestSchema)` to create a new message.
  */
 export const GetShopCustomersRequestSchema: GenMessage<GetShopCustomersRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 17);
+  messageDesc(file_proto_stempelkarte, 23);
 
 /**
  * @generated from message landofstamp.v1.StampCardList
@@ -447,7 +571,7 @@ export type StampCardList = Message<"landofstamp.v1.StampCardList"> & {
  * Use `create(StampCardListSchema)` to create a new message.
  */
 export const StampCardListSchema: GenMessage<StampCardList> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 18);
+  messageDesc(file_proto_stempelkarte, 24);
 
 /**
  * @generated from message landofstamp.v1.CreateStampTokenRequest
@@ -464,7 +588,7 @@ export type CreateStampTokenRequest = Message<"landofstamp.v1.CreateStampTokenRe
  * Use `create(CreateStampTokenRequestSchema)` to create a new message.
  */
 export const CreateStampTokenRequestSchema: GenMessage<CreateStampTokenRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 19);
+  messageDesc(file_proto_stempelkarte, 25);
 
 /**
  * @generated from message landofstamp.v1.GetStampTokenStatusRequest
@@ -481,7 +605,7 @@ export type GetStampTokenStatusRequest = Message<"landofstamp.v1.GetStampTokenSt
  * Use `create(GetStampTokenStatusRequestSchema)` to create a new message.
  */
 export const GetStampTokenStatusRequestSchema: GenMessage<GetStampTokenStatusRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 20);
+  messageDesc(file_proto_stempelkarte, 26);
 
 /**
  * @generated from message landofstamp.v1.StampTokenStatusResponse
@@ -503,7 +627,7 @@ export type StampTokenStatusResponse = Message<"landofstamp.v1.StampTokenStatusR
  * Use `create(StampTokenStatusResponseSchema)` to create a new message.
  */
 export const StampTokenStatusResponseSchema: GenMessage<StampTokenStatusResponse> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 21);
+  messageDesc(file_proto_stempelkarte, 27);
 
 /**
  * @generated from message landofstamp.v1.StampToken
@@ -530,7 +654,7 @@ export type StampToken = Message<"landofstamp.v1.StampToken"> & {
  * Use `create(StampTokenSchema)` to create a new message.
  */
 export const StampTokenSchema: GenMessage<StampToken> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 22);
+  messageDesc(file_proto_stempelkarte, 28);
 
 /**
  * @generated from message landofstamp.v1.ClaimStampRequest
@@ -547,7 +671,7 @@ export type ClaimStampRequest = Message<"landofstamp.v1.ClaimStampRequest"> & {
  * Use `create(ClaimStampRequestSchema)` to create a new message.
  */
 export const ClaimStampRequestSchema: GenMessage<ClaimStampRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 23);
+  messageDesc(file_proto_stempelkarte, 29);
 
 /**
  * @generated from message landofstamp.v1.ClaimStampResponse
@@ -579,7 +703,7 @@ export type ClaimStampResponse = Message<"landofstamp.v1.ClaimStampResponse"> & 
  * Use `create(ClaimStampResponseSchema)` to create a new message.
  */
 export const ClaimStampResponseSchema: GenMessage<ClaimStampResponse> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 24);
+  messageDesc(file_proto_stempelkarte, 30);
 
 /**
  * @generated from message landofstamp.v1.UserList
@@ -596,7 +720,7 @@ export type UserList = Message<"landofstamp.v1.UserList"> & {
  * Use `create(UserListSchema)` to create a new message.
  */
 export const UserListSchema: GenMessage<UserList> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 25);
+  messageDesc(file_proto_stempelkarte, 31);
 
 /**
  * @generated from message landofstamp.v1.StatusResponse
@@ -613,7 +737,7 @@ export type StatusResponse = Message<"landofstamp.v1.StatusResponse"> & {
  * Use `create(StatusResponseSchema)` to create a new message.
  */
 export const StatusResponseSchema: GenMessage<StatusResponse> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 26);
+  messageDesc(file_proto_stempelkarte, 32);
 
 /**
  * @generated from message landofstamp.v1.ErrorResponse
@@ -630,7 +754,7 @@ export type ErrorResponse = Message<"landofstamp.v1.ErrorResponse"> & {
  * Use `create(ErrorResponseSchema)` to create a new message.
  */
 export const ErrorResponseSchema: GenMessage<ErrorResponse> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 27);
+  messageDesc(file_proto_stempelkarte, 33);
 
 /**
  * @generated from message landofstamp.v1.GetOpenAPISpecRequest
@@ -643,7 +767,7 @@ export type GetOpenAPISpecRequest = Message<"landofstamp.v1.GetOpenAPISpecReques
  * Use `create(GetOpenAPISpecRequestSchema)` to create a new message.
  */
 export const GetOpenAPISpecRequestSchema: GenMessage<GetOpenAPISpecRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 28);
+  messageDesc(file_proto_stempelkarte, 34);
 
 /**
  * @generated from message landofstamp.v1.GetOpenAPISpecResponse
@@ -669,7 +793,7 @@ export type GetOpenAPISpecResponse = Message<"landofstamp.v1.GetOpenAPISpecRespo
  * Use `create(GetOpenAPISpecResponseSchema)` to create a new message.
  */
 export const GetOpenAPISpecResponseSchema: GenMessage<GetOpenAPISpecResponse> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 29);
+  messageDesc(file_proto_stempelkarte, 35);
 
 /**
  * @generated from message landofstamp.v1.GetDocsPageRequest
@@ -682,7 +806,7 @@ export type GetDocsPageRequest = Message<"landofstamp.v1.GetDocsPageRequest"> & 
  * Use `create(GetDocsPageRequestSchema)` to create a new message.
  */
 export const GetDocsPageRequestSchema: GenMessage<GetDocsPageRequest> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 30);
+  messageDesc(file_proto_stempelkarte, 36);
 
 /**
  * @generated from message landofstamp.v1.GetDocsPageResponse
@@ -701,7 +825,7 @@ export type GetDocsPageResponse = Message<"landofstamp.v1.GetDocsPageResponse"> 
  * Use `create(GetDocsPageResponseSchema)` to create a new message.
  */
 export const GetDocsPageResponseSchema: GenMessage<GetDocsPageResponse> = /*@__PURE__*/
-  messageDesc(file_proto_stempelkarte, 31);
+  messageDesc(file_proto_stempelkarte, 37);
 
 /**
  * @generated from service landofstamp.v1.DocsService
@@ -753,6 +877,46 @@ export const AuthService: GenService<{
     methodKind: "unary";
     input: typeof ChooseRoleRequestSchema;
     output: typeof UserSchema;
+  },
+  /**
+   * @generated from rpc landofstamp.v1.AuthService.UpdateProfile
+   */
+  updateProfile: {
+    methodKind: "unary";
+    input: typeof UpdateProfileRequestSchema;
+    output: typeof UserSchema;
+  },
+  /**
+   * @generated from rpc landofstamp.v1.AuthService.UploadProfilePicture
+   */
+  uploadProfilePicture: {
+    methodKind: "unary";
+    input: typeof UploadProfilePictureRequestSchema;
+    output: typeof UserSchema;
+  },
+  /**
+   * @generated from rpc landofstamp.v1.AuthService.DeleteProfilePicture
+   */
+  deleteProfilePicture: {
+    methodKind: "unary";
+    input: typeof DeleteProfilePictureRequestSchema;
+    output: typeof UserSchema;
+  },
+  /**
+   * @generated from rpc landofstamp.v1.AuthService.GetProfileStats
+   */
+  getProfileStats: {
+    methodKind: "unary";
+    input: typeof GetProfileStatsRequestSchema;
+    output: typeof ProfileStatsResponseSchema;
+  },
+  /**
+   * @generated from rpc landofstamp.v1.AuthService.DeleteAccount
+   */
+  deleteAccount: {
+    methodKind: "unary";
+    input: typeof DeleteAccountRequestSchema;
+    output: typeof StatusResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_proto_stempelkarte, 1);

@@ -50,6 +50,21 @@ const (
 	AuthServiceGetMeProcedure = "/landofstamp.v1.AuthService/GetMe"
 	// AuthServiceChooseRoleProcedure is the fully-qualified name of the AuthService's ChooseRole RPC.
 	AuthServiceChooseRoleProcedure = "/landofstamp.v1.AuthService/ChooseRole"
+	// AuthServiceUpdateProfileProcedure is the fully-qualified name of the AuthService's UpdateProfile
+	// RPC.
+	AuthServiceUpdateProfileProcedure = "/landofstamp.v1.AuthService/UpdateProfile"
+	// AuthServiceUploadProfilePictureProcedure is the fully-qualified name of the AuthService's
+	// UploadProfilePicture RPC.
+	AuthServiceUploadProfilePictureProcedure = "/landofstamp.v1.AuthService/UploadProfilePicture"
+	// AuthServiceDeleteProfilePictureProcedure is the fully-qualified name of the AuthService's
+	// DeleteProfilePicture RPC.
+	AuthServiceDeleteProfilePictureProcedure = "/landofstamp.v1.AuthService/DeleteProfilePicture"
+	// AuthServiceGetProfileStatsProcedure is the fully-qualified name of the AuthService's
+	// GetProfileStats RPC.
+	AuthServiceGetProfileStatsProcedure = "/landofstamp.v1.AuthService/GetProfileStats"
+	// AuthServiceDeleteAccountProcedure is the fully-qualified name of the AuthService's DeleteAccount
+	// RPC.
+	AuthServiceDeleteAccountProcedure = "/landofstamp.v1.AuthService/DeleteAccount"
 	// ShopServiceListShopsProcedure is the fully-qualified name of the ShopService's ListShops RPC.
 	ShopServiceListShopsProcedure = "/landofstamp.v1.ShopService/ListShops"
 	// ShopServiceCreateShopProcedure is the fully-qualified name of the ShopService's CreateShop RPC.
@@ -186,6 +201,11 @@ type AuthServiceClient interface {
 	Logout(context.Context, *connect.Request[pb.LogoutRequest]) (*connect.Response[pb.StatusResponse], error)
 	GetMe(context.Context, *connect.Request[pb.GetMeRequest]) (*connect.Response[pb.User], error)
 	ChooseRole(context.Context, *connect.Request[pb.ChooseRoleRequest]) (*connect.Response[pb.User], error)
+	UpdateProfile(context.Context, *connect.Request[pb.UpdateProfileRequest]) (*connect.Response[pb.User], error)
+	UploadProfilePicture(context.Context, *connect.Request[pb.UploadProfilePictureRequest]) (*connect.Response[pb.User], error)
+	DeleteProfilePicture(context.Context, *connect.Request[pb.DeleteProfilePictureRequest]) (*connect.Response[pb.User], error)
+	GetProfileStats(context.Context, *connect.Request[pb.GetProfileStatsRequest]) (*connect.Response[pb.ProfileStatsResponse], error)
+	DeleteAccount(context.Context, *connect.Request[pb.DeleteAccountRequest]) (*connect.Response[pb.StatusResponse], error)
 }
 
 // NewAuthServiceClient constructs a client for the landofstamp.v1.AuthService service. By default,
@@ -217,14 +237,49 @@ func NewAuthServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(authServiceMethods.ByName("ChooseRole")),
 			connect.WithClientOptions(opts...),
 		),
+		updateProfile: connect.NewClient[pb.UpdateProfileRequest, pb.User](
+			httpClient,
+			baseURL+AuthServiceUpdateProfileProcedure,
+			connect.WithSchema(authServiceMethods.ByName("UpdateProfile")),
+			connect.WithClientOptions(opts...),
+		),
+		uploadProfilePicture: connect.NewClient[pb.UploadProfilePictureRequest, pb.User](
+			httpClient,
+			baseURL+AuthServiceUploadProfilePictureProcedure,
+			connect.WithSchema(authServiceMethods.ByName("UploadProfilePicture")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteProfilePicture: connect.NewClient[pb.DeleteProfilePictureRequest, pb.User](
+			httpClient,
+			baseURL+AuthServiceDeleteProfilePictureProcedure,
+			connect.WithSchema(authServiceMethods.ByName("DeleteProfilePicture")),
+			connect.WithClientOptions(opts...),
+		),
+		getProfileStats: connect.NewClient[pb.GetProfileStatsRequest, pb.ProfileStatsResponse](
+			httpClient,
+			baseURL+AuthServiceGetProfileStatsProcedure,
+			connect.WithSchema(authServiceMethods.ByName("GetProfileStats")),
+			connect.WithClientOptions(opts...),
+		),
+		deleteAccount: connect.NewClient[pb.DeleteAccountRequest, pb.StatusResponse](
+			httpClient,
+			baseURL+AuthServiceDeleteAccountProcedure,
+			connect.WithSchema(authServiceMethods.ByName("DeleteAccount")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // authServiceClient implements AuthServiceClient.
 type authServiceClient struct {
-	logout     *connect.Client[pb.LogoutRequest, pb.StatusResponse]
-	getMe      *connect.Client[pb.GetMeRequest, pb.User]
-	chooseRole *connect.Client[pb.ChooseRoleRequest, pb.User]
+	logout               *connect.Client[pb.LogoutRequest, pb.StatusResponse]
+	getMe                *connect.Client[pb.GetMeRequest, pb.User]
+	chooseRole           *connect.Client[pb.ChooseRoleRequest, pb.User]
+	updateProfile        *connect.Client[pb.UpdateProfileRequest, pb.User]
+	uploadProfilePicture *connect.Client[pb.UploadProfilePictureRequest, pb.User]
+	deleteProfilePicture *connect.Client[pb.DeleteProfilePictureRequest, pb.User]
+	getProfileStats      *connect.Client[pb.GetProfileStatsRequest, pb.ProfileStatsResponse]
+	deleteAccount        *connect.Client[pb.DeleteAccountRequest, pb.StatusResponse]
 }
 
 // Logout calls landofstamp.v1.AuthService.Logout.
@@ -242,11 +297,41 @@ func (c *authServiceClient) ChooseRole(ctx context.Context, req *connect.Request
 	return c.chooseRole.CallUnary(ctx, req)
 }
 
+// UpdateProfile calls landofstamp.v1.AuthService.UpdateProfile.
+func (c *authServiceClient) UpdateProfile(ctx context.Context, req *connect.Request[pb.UpdateProfileRequest]) (*connect.Response[pb.User], error) {
+	return c.updateProfile.CallUnary(ctx, req)
+}
+
+// UploadProfilePicture calls landofstamp.v1.AuthService.UploadProfilePicture.
+func (c *authServiceClient) UploadProfilePicture(ctx context.Context, req *connect.Request[pb.UploadProfilePictureRequest]) (*connect.Response[pb.User], error) {
+	return c.uploadProfilePicture.CallUnary(ctx, req)
+}
+
+// DeleteProfilePicture calls landofstamp.v1.AuthService.DeleteProfilePicture.
+func (c *authServiceClient) DeleteProfilePicture(ctx context.Context, req *connect.Request[pb.DeleteProfilePictureRequest]) (*connect.Response[pb.User], error) {
+	return c.deleteProfilePicture.CallUnary(ctx, req)
+}
+
+// GetProfileStats calls landofstamp.v1.AuthService.GetProfileStats.
+func (c *authServiceClient) GetProfileStats(ctx context.Context, req *connect.Request[pb.GetProfileStatsRequest]) (*connect.Response[pb.ProfileStatsResponse], error) {
+	return c.getProfileStats.CallUnary(ctx, req)
+}
+
+// DeleteAccount calls landofstamp.v1.AuthService.DeleteAccount.
+func (c *authServiceClient) DeleteAccount(ctx context.Context, req *connect.Request[pb.DeleteAccountRequest]) (*connect.Response[pb.StatusResponse], error) {
+	return c.deleteAccount.CallUnary(ctx, req)
+}
+
 // AuthServiceHandler is an implementation of the landofstamp.v1.AuthService service.
 type AuthServiceHandler interface {
 	Logout(context.Context, *connect.Request[pb.LogoutRequest]) (*connect.Response[pb.StatusResponse], error)
 	GetMe(context.Context, *connect.Request[pb.GetMeRequest]) (*connect.Response[pb.User], error)
 	ChooseRole(context.Context, *connect.Request[pb.ChooseRoleRequest]) (*connect.Response[pb.User], error)
+	UpdateProfile(context.Context, *connect.Request[pb.UpdateProfileRequest]) (*connect.Response[pb.User], error)
+	UploadProfilePicture(context.Context, *connect.Request[pb.UploadProfilePictureRequest]) (*connect.Response[pb.User], error)
+	DeleteProfilePicture(context.Context, *connect.Request[pb.DeleteProfilePictureRequest]) (*connect.Response[pb.User], error)
+	GetProfileStats(context.Context, *connect.Request[pb.GetProfileStatsRequest]) (*connect.Response[pb.ProfileStatsResponse], error)
+	DeleteAccount(context.Context, *connect.Request[pb.DeleteAccountRequest]) (*connect.Response[pb.StatusResponse], error)
 }
 
 // NewAuthServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -274,6 +359,36 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(authServiceMethods.ByName("ChooseRole")),
 		connect.WithHandlerOptions(opts...),
 	)
+	authServiceUpdateProfileHandler := connect.NewUnaryHandler(
+		AuthServiceUpdateProfileProcedure,
+		svc.UpdateProfile,
+		connect.WithSchema(authServiceMethods.ByName("UpdateProfile")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceUploadProfilePictureHandler := connect.NewUnaryHandler(
+		AuthServiceUploadProfilePictureProcedure,
+		svc.UploadProfilePicture,
+		connect.WithSchema(authServiceMethods.ByName("UploadProfilePicture")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceDeleteProfilePictureHandler := connect.NewUnaryHandler(
+		AuthServiceDeleteProfilePictureProcedure,
+		svc.DeleteProfilePicture,
+		connect.WithSchema(authServiceMethods.ByName("DeleteProfilePicture")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceGetProfileStatsHandler := connect.NewUnaryHandler(
+		AuthServiceGetProfileStatsProcedure,
+		svc.GetProfileStats,
+		connect.WithSchema(authServiceMethods.ByName("GetProfileStats")),
+		connect.WithHandlerOptions(opts...),
+	)
+	authServiceDeleteAccountHandler := connect.NewUnaryHandler(
+		AuthServiceDeleteAccountProcedure,
+		svc.DeleteAccount,
+		connect.WithSchema(authServiceMethods.ByName("DeleteAccount")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/landofstamp.v1.AuthService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case AuthServiceLogoutProcedure:
@@ -282,6 +397,16 @@ func NewAuthServiceHandler(svc AuthServiceHandler, opts ...connect.HandlerOption
 			authServiceGetMeHandler.ServeHTTP(w, r)
 		case AuthServiceChooseRoleProcedure:
 			authServiceChooseRoleHandler.ServeHTTP(w, r)
+		case AuthServiceUpdateProfileProcedure:
+			authServiceUpdateProfileHandler.ServeHTTP(w, r)
+		case AuthServiceUploadProfilePictureProcedure:
+			authServiceUploadProfilePictureHandler.ServeHTTP(w, r)
+		case AuthServiceDeleteProfilePictureProcedure:
+			authServiceDeleteProfilePictureHandler.ServeHTTP(w, r)
+		case AuthServiceGetProfileStatsProcedure:
+			authServiceGetProfileStatsHandler.ServeHTTP(w, r)
+		case AuthServiceDeleteAccountProcedure:
+			authServiceDeleteAccountHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -301,6 +426,26 @@ func (UnimplementedAuthServiceHandler) GetMe(context.Context, *connect.Request[p
 
 func (UnimplementedAuthServiceHandler) ChooseRole(context.Context, *connect.Request[pb.ChooseRoleRequest]) (*connect.Response[pb.User], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("landofstamp.v1.AuthService.ChooseRole is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) UpdateProfile(context.Context, *connect.Request[pb.UpdateProfileRequest]) (*connect.Response[pb.User], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("landofstamp.v1.AuthService.UpdateProfile is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) UploadProfilePicture(context.Context, *connect.Request[pb.UploadProfilePictureRequest]) (*connect.Response[pb.User], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("landofstamp.v1.AuthService.UploadProfilePicture is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) DeleteProfilePicture(context.Context, *connect.Request[pb.DeleteProfilePictureRequest]) (*connect.Response[pb.User], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("landofstamp.v1.AuthService.DeleteProfilePicture is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) GetProfileStats(context.Context, *connect.Request[pb.GetProfileStatsRequest]) (*connect.Response[pb.ProfileStatsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("landofstamp.v1.AuthService.GetProfileStats is not implemented"))
+}
+
+func (UnimplementedAuthServiceHandler) DeleteAccount(context.Context, *connect.Request[pb.DeleteAccountRequest]) (*connect.Response[pb.StatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("landofstamp.v1.AuthService.DeleteAccount is not implemented"))
 }
 
 // ShopServiceClient is a client for the landofstamp.v1.ShopService service.

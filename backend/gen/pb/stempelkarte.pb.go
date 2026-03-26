@@ -27,6 +27,8 @@ type User struct {
 	Username      string                 `protobuf:"bytes,2,opt,name=username,proto3" json:"username,omitempty"`
 	Role          string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"` // "user" | "admin"
 	ShopId        *string                `protobuf:"bytes,4,opt,name=shop_id,json=shopId,proto3,oneof" json:"shop_id,omitempty"`
+	DisplayName   string                 `protobuf:"bytes,5,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	AvatarUrl     string                 `protobuf:"bytes,6,opt,name=avatar_url,json=avatarUrl,proto3" json:"avatar_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -85,6 +87,20 @@ func (x *User) GetRole() string {
 func (x *User) GetShopId() string {
 	if x != nil && x.ShopId != nil {
 		return *x.ShopId
+	}
+	return ""
+}
+
+func (x *User) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *User) GetAvatarUrl() string {
+	if x != nil {
+		return x.AvatarUrl
 	}
 	return ""
 }
@@ -381,6 +397,278 @@ func (x *ChooseRoleRequest) GetRole() string {
 	return ""
 }
 
+type UpdateProfileRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DisplayName   string                 `protobuf:"bytes,1,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateProfileRequest) Reset() {
+	*x = UpdateProfileRequest{}
+	mi := &file_proto_stempelkarte_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateProfileRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateProfileRequest) ProtoMessage() {}
+
+func (x *UpdateProfileRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_stempelkarte_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateProfileRequest.ProtoReflect.Descriptor instead.
+func (*UpdateProfileRequest) Descriptor() ([]byte, []int) {
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *UpdateProfileRequest) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+type UploadProfilePictureRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MimeType      string                 `protobuf:"bytes,1,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`       // e.g. image/png
+	DataBase64    string                 `protobuf:"bytes,2,opt,name=data_base64,json=dataBase64,proto3" json:"data_base64,omitempty"` // base64 image bytes (no data-url prefix)
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UploadProfilePictureRequest) Reset() {
+	*x = UploadProfilePictureRequest{}
+	mi := &file_proto_stempelkarte_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UploadProfilePictureRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UploadProfilePictureRequest) ProtoMessage() {}
+
+func (x *UploadProfilePictureRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_stempelkarte_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UploadProfilePictureRequest.ProtoReflect.Descriptor instead.
+func (*UploadProfilePictureRequest) Descriptor() ([]byte, []int) {
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *UploadProfilePictureRequest) GetMimeType() string {
+	if x != nil {
+		return x.MimeType
+	}
+	return ""
+}
+
+func (x *UploadProfilePictureRequest) GetDataBase64() string {
+	if x != nil {
+		return x.DataBase64
+	}
+	return ""
+}
+
+type DeleteProfilePictureRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteProfilePictureRequest) Reset() {
+	*x = DeleteProfilePictureRequest{}
+	mi := &file_proto_stempelkarte_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteProfilePictureRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteProfilePictureRequest) ProtoMessage() {}
+
+func (x *DeleteProfilePictureRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_stempelkarte_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteProfilePictureRequest.ProtoReflect.Descriptor instead.
+func (*DeleteProfilePictureRequest) Descriptor() ([]byte, []int) {
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{8}
+}
+
+type DeleteAccountRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DeleteAccountRequest) Reset() {
+	*x = DeleteAccountRequest{}
+	mi := &file_proto_stempelkarte_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DeleteAccountRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteAccountRequest) ProtoMessage() {}
+
+func (x *DeleteAccountRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_stempelkarte_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteAccountRequest.ProtoReflect.Descriptor instead.
+func (*DeleteAccountRequest) Descriptor() ([]byte, []int) {
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{9}
+}
+
+type GetProfileStatsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetProfileStatsRequest) Reset() {
+	*x = GetProfileStatsRequest{}
+	mi := &file_proto_stempelkarte_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetProfileStatsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetProfileStatsRequest) ProtoMessage() {}
+
+func (x *GetProfileStatsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_stempelkarte_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetProfileStatsRequest.ProtoReflect.Descriptor instead.
+func (*GetProfileStatsRequest) Descriptor() ([]byte, []int) {
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{10}
+}
+
+type ProfileStatsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	JoinedShops   int32                  `protobuf:"varint,1,opt,name=joined_shops,json=joinedShops,proto3" json:"joined_shops,omitempty"`
+	ActiveCards   int32                  `protobuf:"varint,2,opt,name=active_cards,json=activeCards,proto3" json:"active_cards,omitempty"`
+	RedeemedCards int32                  `protobuf:"varint,3,opt,name=redeemed_cards,json=redeemedCards,proto3" json:"redeemed_cards,omitempty"`
+	TotalStamps   int32                  `protobuf:"varint,4,opt,name=total_stamps,json=totalStamps,proto3" json:"total_stamps,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProfileStatsResponse) Reset() {
+	*x = ProfileStatsResponse{}
+	mi := &file_proto_stempelkarte_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProfileStatsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProfileStatsResponse) ProtoMessage() {}
+
+func (x *ProfileStatsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_stempelkarte_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProfileStatsResponse.ProtoReflect.Descriptor instead.
+func (*ProfileStatsResponse) Descriptor() ([]byte, []int) {
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ProfileStatsResponse) GetJoinedShops() int32 {
+	if x != nil {
+		return x.JoinedShops
+	}
+	return 0
+}
+
+func (x *ProfileStatsResponse) GetActiveCards() int32 {
+	if x != nil {
+		return x.ActiveCards
+	}
+	return 0
+}
+
+func (x *ProfileStatsResponse) GetRedeemedCards() int32 {
+	if x != nil {
+		return x.RedeemedCards
+	}
+	return 0
+}
+
+func (x *ProfileStatsResponse) GetTotalStamps() int32 {
+	if x != nil {
+		return x.TotalStamps
+	}
+	return 0
+}
+
 type ListShopsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -389,7 +677,7 @@ type ListShopsRequest struct {
 
 func (x *ListShopsRequest) Reset() {
 	*x = ListShopsRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[6]
+	mi := &file_proto_stempelkarte_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -401,7 +689,7 @@ func (x *ListShopsRequest) String() string {
 func (*ListShopsRequest) ProtoMessage() {}
 
 func (x *ListShopsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[6]
+	mi := &file_proto_stempelkarte_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -414,7 +702,7 @@ func (x *ListShopsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListShopsRequest.ProtoReflect.Descriptor instead.
 func (*ListShopsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{6}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{12}
 }
 
 type CreateShopRequest struct {
@@ -430,7 +718,7 @@ type CreateShopRequest struct {
 
 func (x *CreateShopRequest) Reset() {
 	*x = CreateShopRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[7]
+	mi := &file_proto_stempelkarte_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -442,7 +730,7 @@ func (x *CreateShopRequest) String() string {
 func (*CreateShopRequest) ProtoMessage() {}
 
 func (x *CreateShopRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[7]
+	mi := &file_proto_stempelkarte_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -455,7 +743,7 @@ func (x *CreateShopRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateShopRequest.ProtoReflect.Descriptor instead.
 func (*CreateShopRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{7}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *CreateShopRequest) GetName() string {
@@ -507,7 +795,7 @@ type UpdateShopRequest struct {
 
 func (x *UpdateShopRequest) Reset() {
 	*x = UpdateShopRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[8]
+	mi := &file_proto_stempelkarte_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -519,7 +807,7 @@ func (x *UpdateShopRequest) String() string {
 func (*UpdateShopRequest) ProtoMessage() {}
 
 func (x *UpdateShopRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[8]
+	mi := &file_proto_stempelkarte_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -532,7 +820,7 @@ func (x *UpdateShopRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateShopRequest.ProtoReflect.Descriptor instead.
 func (*UpdateShopRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{8}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *UpdateShopRequest) GetId() string {
@@ -585,7 +873,7 @@ type GetMyShopsRequest struct {
 
 func (x *GetMyShopsRequest) Reset() {
 	*x = GetMyShopsRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[9]
+	mi := &file_proto_stempelkarte_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -597,7 +885,7 @@ func (x *GetMyShopsRequest) String() string {
 func (*GetMyShopsRequest) ProtoMessage() {}
 
 func (x *GetMyShopsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[9]
+	mi := &file_proto_stempelkarte_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -610,7 +898,7 @@ func (x *GetMyShopsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMyShopsRequest.ProtoReflect.Descriptor instead.
 func (*GetMyShopsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{9}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{15}
 }
 
 type ShopList struct {
@@ -622,7 +910,7 @@ type ShopList struct {
 
 func (x *ShopList) Reset() {
 	*x = ShopList{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[10]
+	mi := &file_proto_stempelkarte_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -634,7 +922,7 @@ func (x *ShopList) String() string {
 func (*ShopList) ProtoMessage() {}
 
 func (x *ShopList) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[10]
+	mi := &file_proto_stempelkarte_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -647,7 +935,7 @@ func (x *ShopList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ShopList.ProtoReflect.Descriptor instead.
 func (*ShopList) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{10}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ShopList) GetShops() []*Shop {
@@ -665,7 +953,7 @@ type GetMyCardsRequest struct {
 
 func (x *GetMyCardsRequest) Reset() {
 	*x = GetMyCardsRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[11]
+	mi := &file_proto_stempelkarte_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -677,7 +965,7 @@ func (x *GetMyCardsRequest) String() string {
 func (*GetMyCardsRequest) ProtoMessage() {}
 
 func (x *GetMyCardsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[11]
+	mi := &file_proto_stempelkarte_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -690,7 +978,7 @@ func (x *GetMyCardsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetMyCardsRequest.ProtoReflect.Descriptor instead.
 func (*GetMyCardsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{11}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{17}
 }
 
 type JoinShopRequest struct {
@@ -702,7 +990,7 @@ type JoinShopRequest struct {
 
 func (x *JoinShopRequest) Reset() {
 	*x = JoinShopRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[12]
+	mi := &file_proto_stempelkarte_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -714,7 +1002,7 @@ func (x *JoinShopRequest) String() string {
 func (*JoinShopRequest) ProtoMessage() {}
 
 func (x *JoinShopRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[12]
+	mi := &file_proto_stempelkarte_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -727,7 +1015,7 @@ func (x *JoinShopRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use JoinShopRequest.ProtoReflect.Descriptor instead.
 func (*JoinShopRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{12}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *JoinShopRequest) GetShopId() string {
@@ -746,7 +1034,7 @@ type GetShopCardsRequest struct {
 
 func (x *GetShopCardsRequest) Reset() {
 	*x = GetShopCardsRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[13]
+	mi := &file_proto_stempelkarte_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -758,7 +1046,7 @@ func (x *GetShopCardsRequest) String() string {
 func (*GetShopCardsRequest) ProtoMessage() {}
 
 func (x *GetShopCardsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[13]
+	mi := &file_proto_stempelkarte_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -771,7 +1059,7 @@ func (x *GetShopCardsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetShopCardsRequest.ProtoReflect.Descriptor instead.
 func (*GetShopCardsRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{13}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *GetShopCardsRequest) GetShopId() string {
@@ -791,7 +1079,7 @@ type GrantStampRequest struct {
 
 func (x *GrantStampRequest) Reset() {
 	*x = GrantStampRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[14]
+	mi := &file_proto_stempelkarte_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -803,7 +1091,7 @@ func (x *GrantStampRequest) String() string {
 func (*GrantStampRequest) ProtoMessage() {}
 
 func (x *GrantStampRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[14]
+	mi := &file_proto_stempelkarte_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -816,7 +1104,7 @@ func (x *GrantStampRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GrantStampRequest.ProtoReflect.Descriptor instead.
 func (*GrantStampRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{14}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *GrantStampRequest) GetShopId() string {
@@ -844,7 +1132,7 @@ type UpdateStampCountRequest struct {
 
 func (x *UpdateStampCountRequest) Reset() {
 	*x = UpdateStampCountRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[15]
+	mi := &file_proto_stempelkarte_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -856,7 +1144,7 @@ func (x *UpdateStampCountRequest) String() string {
 func (*UpdateStampCountRequest) ProtoMessage() {}
 
 func (x *UpdateStampCountRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[15]
+	mi := &file_proto_stempelkarte_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -869,7 +1157,7 @@ func (x *UpdateStampCountRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateStampCountRequest.ProtoReflect.Descriptor instead.
 func (*UpdateStampCountRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{15}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *UpdateStampCountRequest) GetShopId() string {
@@ -902,7 +1190,7 @@ type RedeemCardRequest struct {
 
 func (x *RedeemCardRequest) Reset() {
 	*x = RedeemCardRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[16]
+	mi := &file_proto_stempelkarte_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -914,7 +1202,7 @@ func (x *RedeemCardRequest) String() string {
 func (*RedeemCardRequest) ProtoMessage() {}
 
 func (x *RedeemCardRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[16]
+	mi := &file_proto_stempelkarte_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -927,7 +1215,7 @@ func (x *RedeemCardRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RedeemCardRequest.ProtoReflect.Descriptor instead.
 func (*RedeemCardRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{16}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *RedeemCardRequest) GetCardId() string {
@@ -946,7 +1234,7 @@ type GetShopCustomersRequest struct {
 
 func (x *GetShopCustomersRequest) Reset() {
 	*x = GetShopCustomersRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[17]
+	mi := &file_proto_stempelkarte_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -958,7 +1246,7 @@ func (x *GetShopCustomersRequest) String() string {
 func (*GetShopCustomersRequest) ProtoMessage() {}
 
 func (x *GetShopCustomersRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[17]
+	mi := &file_proto_stempelkarte_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -971,7 +1259,7 @@ func (x *GetShopCustomersRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetShopCustomersRequest.ProtoReflect.Descriptor instead.
 func (*GetShopCustomersRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{17}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *GetShopCustomersRequest) GetShopId() string {
@@ -990,7 +1278,7 @@ type StampCardList struct {
 
 func (x *StampCardList) Reset() {
 	*x = StampCardList{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[18]
+	mi := &file_proto_stempelkarte_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1002,7 +1290,7 @@ func (x *StampCardList) String() string {
 func (*StampCardList) ProtoMessage() {}
 
 func (x *StampCardList) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[18]
+	mi := &file_proto_stempelkarte_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1015,7 +1303,7 @@ func (x *StampCardList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StampCardList.ProtoReflect.Descriptor instead.
 func (*StampCardList) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{18}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *StampCardList) GetCards() []*StampCard {
@@ -1034,7 +1322,7 @@ type CreateStampTokenRequest struct {
 
 func (x *CreateStampTokenRequest) Reset() {
 	*x = CreateStampTokenRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[19]
+	mi := &file_proto_stempelkarte_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1046,7 +1334,7 @@ func (x *CreateStampTokenRequest) String() string {
 func (*CreateStampTokenRequest) ProtoMessage() {}
 
 func (x *CreateStampTokenRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[19]
+	mi := &file_proto_stempelkarte_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1059,7 +1347,7 @@ func (x *CreateStampTokenRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateStampTokenRequest.ProtoReflect.Descriptor instead.
 func (*CreateStampTokenRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{19}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *CreateStampTokenRequest) GetShopId() string {
@@ -1078,7 +1366,7 @@ type GetStampTokenStatusRequest struct {
 
 func (x *GetStampTokenStatusRequest) Reset() {
 	*x = GetStampTokenStatusRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[20]
+	mi := &file_proto_stempelkarte_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1090,7 +1378,7 @@ func (x *GetStampTokenStatusRequest) String() string {
 func (*GetStampTokenStatusRequest) ProtoMessage() {}
 
 func (x *GetStampTokenStatusRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[20]
+	mi := &file_proto_stempelkarte_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1103,7 +1391,7 @@ func (x *GetStampTokenStatusRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetStampTokenStatusRequest.ProtoReflect.Descriptor instead.
 func (*GetStampTokenStatusRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{20}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *GetStampTokenStatusRequest) GetShopId() string {
@@ -1123,7 +1411,7 @@ type StampTokenStatusResponse struct {
 
 func (x *StampTokenStatusResponse) Reset() {
 	*x = StampTokenStatusResponse{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[21]
+	mi := &file_proto_stempelkarte_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1135,7 +1423,7 @@ func (x *StampTokenStatusResponse) String() string {
 func (*StampTokenStatusResponse) ProtoMessage() {}
 
 func (x *StampTokenStatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[21]
+	mi := &file_proto_stempelkarte_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1148,7 +1436,7 @@ func (x *StampTokenStatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StampTokenStatusResponse.ProtoReflect.Descriptor instead.
 func (*StampTokenStatusResponse) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{21}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *StampTokenStatusResponse) GetActive() bool {
@@ -1176,7 +1464,7 @@ type StampToken struct {
 
 func (x *StampToken) Reset() {
 	*x = StampToken{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[22]
+	mi := &file_proto_stempelkarte_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1188,7 +1476,7 @@ func (x *StampToken) String() string {
 func (*StampToken) ProtoMessage() {}
 
 func (x *StampToken) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[22]
+	mi := &file_proto_stempelkarte_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1201,7 +1489,7 @@ func (x *StampToken) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StampToken.ProtoReflect.Descriptor instead.
 func (*StampToken) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{22}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *StampToken) GetToken() string {
@@ -1234,7 +1522,7 @@ type ClaimStampRequest struct {
 
 func (x *ClaimStampRequest) Reset() {
 	*x = ClaimStampRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[23]
+	mi := &file_proto_stempelkarte_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1246,7 +1534,7 @@ func (x *ClaimStampRequest) String() string {
 func (*ClaimStampRequest) ProtoMessage() {}
 
 func (x *ClaimStampRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[23]
+	mi := &file_proto_stempelkarte_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1259,7 +1547,7 @@ func (x *ClaimStampRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimStampRequest.ProtoReflect.Descriptor instead.
 func (*ClaimStampRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{23}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ClaimStampRequest) GetToken() string {
@@ -1281,7 +1569,7 @@ type ClaimStampResponse struct {
 
 func (x *ClaimStampResponse) Reset() {
 	*x = ClaimStampResponse{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[24]
+	mi := &file_proto_stempelkarte_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1293,7 +1581,7 @@ func (x *ClaimStampResponse) String() string {
 func (*ClaimStampResponse) ProtoMessage() {}
 
 func (x *ClaimStampResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[24]
+	mi := &file_proto_stempelkarte_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1306,7 +1594,7 @@ func (x *ClaimStampResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClaimStampResponse.ProtoReflect.Descriptor instead.
 func (*ClaimStampResponse) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{24}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ClaimStampResponse) GetShopName() string {
@@ -1346,7 +1634,7 @@ type UserList struct {
 
 func (x *UserList) Reset() {
 	*x = UserList{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[25]
+	mi := &file_proto_stempelkarte_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1358,7 +1646,7 @@ func (x *UserList) String() string {
 func (*UserList) ProtoMessage() {}
 
 func (x *UserList) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[25]
+	mi := &file_proto_stempelkarte_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1371,7 +1659,7 @@ func (x *UserList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UserList.ProtoReflect.Descriptor instead.
 func (*UserList) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{25}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *UserList) GetUsers() []*User {
@@ -1390,7 +1678,7 @@ type StatusResponse struct {
 
 func (x *StatusResponse) Reset() {
 	*x = StatusResponse{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[26]
+	mi := &file_proto_stempelkarte_proto_msgTypes[32]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1402,7 +1690,7 @@ func (x *StatusResponse) String() string {
 func (*StatusResponse) ProtoMessage() {}
 
 func (x *StatusResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[26]
+	mi := &file_proto_stempelkarte_proto_msgTypes[32]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1415,7 +1703,7 @@ func (x *StatusResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusResponse.ProtoReflect.Descriptor instead.
 func (*StatusResponse) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{26}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{32}
 }
 
 func (x *StatusResponse) GetStatus() string {
@@ -1434,7 +1722,7 @@ type ErrorResponse struct {
 
 func (x *ErrorResponse) Reset() {
 	*x = ErrorResponse{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[27]
+	mi := &file_proto_stempelkarte_proto_msgTypes[33]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1446,7 +1734,7 @@ func (x *ErrorResponse) String() string {
 func (*ErrorResponse) ProtoMessage() {}
 
 func (x *ErrorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[27]
+	mi := &file_proto_stempelkarte_proto_msgTypes[33]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1459,7 +1747,7 @@ func (x *ErrorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorResponse.ProtoReflect.Descriptor instead.
 func (*ErrorResponse) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{27}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{33}
 }
 
 func (x *ErrorResponse) GetError() string {
@@ -1477,7 +1765,7 @@ type GetOpenAPISpecRequest struct {
 
 func (x *GetOpenAPISpecRequest) Reset() {
 	*x = GetOpenAPISpecRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[28]
+	mi := &file_proto_stempelkarte_proto_msgTypes[34]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1489,7 +1777,7 @@ func (x *GetOpenAPISpecRequest) String() string {
 func (*GetOpenAPISpecRequest) ProtoMessage() {}
 
 func (x *GetOpenAPISpecRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[28]
+	mi := &file_proto_stempelkarte_proto_msgTypes[34]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1502,7 +1790,7 @@ func (x *GetOpenAPISpecRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOpenAPISpecRequest.ProtoReflect.Descriptor instead.
 func (*GetOpenAPISpecRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{28}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{34}
 }
 
 type GetOpenAPISpecResponse struct {
@@ -1515,7 +1803,7 @@ type GetOpenAPISpecResponse struct {
 
 func (x *GetOpenAPISpecResponse) Reset() {
 	*x = GetOpenAPISpecResponse{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[29]
+	mi := &file_proto_stempelkarte_proto_msgTypes[35]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1527,7 +1815,7 @@ func (x *GetOpenAPISpecResponse) String() string {
 func (*GetOpenAPISpecResponse) ProtoMessage() {}
 
 func (x *GetOpenAPISpecResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[29]
+	mi := &file_proto_stempelkarte_proto_msgTypes[35]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1540,7 +1828,7 @@ func (x *GetOpenAPISpecResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetOpenAPISpecResponse.ProtoReflect.Descriptor instead.
 func (*GetOpenAPISpecResponse) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{29}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{35}
 }
 
 func (x *GetOpenAPISpecResponse) GetContent() string {
@@ -1565,7 +1853,7 @@ type GetDocsPageRequest struct {
 
 func (x *GetDocsPageRequest) Reset() {
 	*x = GetDocsPageRequest{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[30]
+	mi := &file_proto_stempelkarte_proto_msgTypes[36]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1577,7 +1865,7 @@ func (x *GetDocsPageRequest) String() string {
 func (*GetDocsPageRequest) ProtoMessage() {}
 
 func (x *GetDocsPageRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[30]
+	mi := &file_proto_stempelkarte_proto_msgTypes[36]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1590,7 +1878,7 @@ func (x *GetDocsPageRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDocsPageRequest.ProtoReflect.Descriptor instead.
 func (*GetDocsPageRequest) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{30}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{36}
 }
 
 type GetDocsPageResponse struct {
@@ -1602,7 +1890,7 @@ type GetDocsPageResponse struct {
 
 func (x *GetDocsPageResponse) Reset() {
 	*x = GetDocsPageResponse{}
-	mi := &file_proto_stempelkarte_proto_msgTypes[31]
+	mi := &file_proto_stempelkarte_proto_msgTypes[37]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1614,7 +1902,7 @@ func (x *GetDocsPageResponse) String() string {
 func (*GetDocsPageResponse) ProtoMessage() {}
 
 func (x *GetDocsPageResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_stempelkarte_proto_msgTypes[31]
+	mi := &file_proto_stempelkarte_proto_msgTypes[37]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1627,7 +1915,7 @@ func (x *GetDocsPageResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetDocsPageResponse.ProtoReflect.Descriptor instead.
 func (*GetDocsPageResponse) Descriptor() ([]byte, []int) {
-	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{31}
+	return file_proto_stempelkarte_proto_rawDescGZIP(), []int{37}
 }
 
 func (x *GetDocsPageResponse) GetHtml() string {
@@ -1641,12 +1929,15 @@ var File_proto_stempelkarte_proto protoreflect.FileDescriptor
 
 const file_proto_stempelkarte_proto_rawDesc = "" +
 	"\n" +
-	"\x18proto/stempelkarte.proto\x12\x0elandofstamp.v1\"p\n" +
+	"\x18proto/stempelkarte.proto\x12\x0elandofstamp.v1\"\xb2\x01\n" +
 	"\x04User\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\busername\x18\x02 \x01(\tR\busername\x12\x12\n" +
 	"\x04role\x18\x03 \x01(\tR\x04role\x12\x1c\n" +
-	"\ashop_id\x18\x04 \x01(\tH\x00R\x06shopId\x88\x01\x01B\n" +
+	"\ashop_id\x18\x04 \x01(\tH\x00R\x06shopId\x88\x01\x01\x12!\n" +
+	"\fdisplay_name\x18\x05 \x01(\tR\vdisplayName\x12\x1d\n" +
+	"\n" +
+	"avatar_url\x18\x06 \x01(\tR\tavatarUrlB\n" +
 	"\n" +
 	"\b_shop_id\"\xd5\x01\n" +
 	"\x04Shop\x12\x0e\n" +
@@ -1668,7 +1959,21 @@ const file_proto_stempelkarte_proto_rawDesc = "" +
 	"\rLogoutRequest\"\x0e\n" +
 	"\fGetMeRequest\"'\n" +
 	"\x11ChooseRoleRequest\x12\x12\n" +
-	"\x04role\x18\x01 \x01(\tR\x04role\"\x12\n" +
+	"\x04role\x18\x01 \x01(\tR\x04role\"9\n" +
+	"\x14UpdateProfileRequest\x12!\n" +
+	"\fdisplay_name\x18\x01 \x01(\tR\vdisplayName\"[\n" +
+	"\x1bUploadProfilePictureRequest\x12\x1b\n" +
+	"\tmime_type\x18\x01 \x01(\tR\bmimeType\x12\x1f\n" +
+	"\vdata_base64\x18\x02 \x01(\tR\n" +
+	"dataBase64\"\x1d\n" +
+	"\x1bDeleteProfilePictureRequest\"\x16\n" +
+	"\x14DeleteAccountRequest\"\x18\n" +
+	"\x16GetProfileStatsRequest\"\xa6\x01\n" +
+	"\x14ProfileStatsResponse\x12!\n" +
+	"\fjoined_shops\x18\x01 \x01(\x05R\vjoinedShops\x12!\n" +
+	"\factive_cards\x18\x02 \x01(\x05R\vactiveCards\x12%\n" +
+	"\x0eredeemed_cards\x18\x03 \x01(\x05R\rredeemedCards\x12!\n" +
+	"\ftotal_stamps\x18\x04 \x01(\x05R\vtotalStamps\"\x12\n" +
 	"\x10ListShopsRequest\"\xb7\x01\n" +
 	"\x11CreateShopRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12 \n" +
@@ -1740,12 +2045,17 @@ const file_proto_stempelkarte_proto_rawDesc = "" +
 	"\x04html\x18\x01 \x01(\tR\x04html2\xc6\x01\n" +
 	"\vDocsService\x12_\n" +
 	"\x0eGetOpenAPISpec\x12%.landofstamp.v1.GetOpenAPISpecRequest\x1a&.landofstamp.v1.GetOpenAPISpecResponse\x12V\n" +
-	"\vGetDocsPage\x12\".landofstamp.v1.GetDocsPageRequest\x1a#.landofstamp.v1.GetDocsPageResponse2\xda\x01\n" +
+	"\vGetDocsPage\x12\".landofstamp.v1.GetDocsPageRequest\x1a#.landofstamp.v1.GetDocsPageResponse2\x95\x05\n" +
 	"\vAuthService\x12G\n" +
 	"\x06Logout\x12\x1d.landofstamp.v1.LogoutRequest\x1a\x1e.landofstamp.v1.StatusResponse\x12;\n" +
 	"\x05GetMe\x12\x1c.landofstamp.v1.GetMeRequest\x1a\x14.landofstamp.v1.User\x12E\n" +
 	"\n" +
-	"ChooseRole\x12!.landofstamp.v1.ChooseRoleRequest\x1a\x14.landofstamp.v1.User2\xaf\x02\n" +
+	"ChooseRole\x12!.landofstamp.v1.ChooseRoleRequest\x1a\x14.landofstamp.v1.User\x12K\n" +
+	"\rUpdateProfile\x12$.landofstamp.v1.UpdateProfileRequest\x1a\x14.landofstamp.v1.User\x12Y\n" +
+	"\x14UploadProfilePicture\x12+.landofstamp.v1.UploadProfilePictureRequest\x1a\x14.landofstamp.v1.User\x12Y\n" +
+	"\x14DeleteProfilePicture\x12+.landofstamp.v1.DeleteProfilePictureRequest\x1a\x14.landofstamp.v1.User\x12_\n" +
+	"\x0fGetProfileStats\x12&.landofstamp.v1.GetProfileStatsRequest\x1a$.landofstamp.v1.ProfileStatsResponse\x12U\n" +
+	"\rDeleteAccount\x12$.landofstamp.v1.DeleteAccountRequest\x1a\x1e.landofstamp.v1.StatusResponse2\xaf\x02\n" +
 	"\vShopService\x12G\n" +
 	"\tListShops\x12 .landofstamp.v1.ListShopsRequest\x1a\x18.landofstamp.v1.ShopList\x12E\n" +
 	"\n" +
@@ -1782,85 +2092,101 @@ func file_proto_stempelkarte_proto_rawDescGZIP() []byte {
 	return file_proto_stempelkarte_proto_rawDescData
 }
 
-var file_proto_stempelkarte_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
+var file_proto_stempelkarte_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
 var file_proto_stempelkarte_proto_goTypes = []any{
-	(*User)(nil),                       // 0: landofstamp.v1.User
-	(*Shop)(nil),                       // 1: landofstamp.v1.Shop
-	(*StampCard)(nil),                  // 2: landofstamp.v1.StampCard
-	(*LogoutRequest)(nil),              // 3: landofstamp.v1.LogoutRequest
-	(*GetMeRequest)(nil),               // 4: landofstamp.v1.GetMeRequest
-	(*ChooseRoleRequest)(nil),          // 5: landofstamp.v1.ChooseRoleRequest
-	(*ListShopsRequest)(nil),           // 6: landofstamp.v1.ListShopsRequest
-	(*CreateShopRequest)(nil),          // 7: landofstamp.v1.CreateShopRequest
-	(*UpdateShopRequest)(nil),          // 8: landofstamp.v1.UpdateShopRequest
-	(*GetMyShopsRequest)(nil),          // 9: landofstamp.v1.GetMyShopsRequest
-	(*ShopList)(nil),                   // 10: landofstamp.v1.ShopList
-	(*GetMyCardsRequest)(nil),          // 11: landofstamp.v1.GetMyCardsRequest
-	(*JoinShopRequest)(nil),            // 12: landofstamp.v1.JoinShopRequest
-	(*GetShopCardsRequest)(nil),        // 13: landofstamp.v1.GetShopCardsRequest
-	(*GrantStampRequest)(nil),          // 14: landofstamp.v1.GrantStampRequest
-	(*UpdateStampCountRequest)(nil),    // 15: landofstamp.v1.UpdateStampCountRequest
-	(*RedeemCardRequest)(nil),          // 16: landofstamp.v1.RedeemCardRequest
-	(*GetShopCustomersRequest)(nil),    // 17: landofstamp.v1.GetShopCustomersRequest
-	(*StampCardList)(nil),              // 18: landofstamp.v1.StampCardList
-	(*CreateStampTokenRequest)(nil),    // 19: landofstamp.v1.CreateStampTokenRequest
-	(*GetStampTokenStatusRequest)(nil), // 20: landofstamp.v1.GetStampTokenStatusRequest
-	(*StampTokenStatusResponse)(nil),   // 21: landofstamp.v1.StampTokenStatusResponse
-	(*StampToken)(nil),                 // 22: landofstamp.v1.StampToken
-	(*ClaimStampRequest)(nil),          // 23: landofstamp.v1.ClaimStampRequest
-	(*ClaimStampResponse)(nil),         // 24: landofstamp.v1.ClaimStampResponse
-	(*UserList)(nil),                   // 25: landofstamp.v1.UserList
-	(*StatusResponse)(nil),             // 26: landofstamp.v1.StatusResponse
-	(*ErrorResponse)(nil),              // 27: landofstamp.v1.ErrorResponse
-	(*GetOpenAPISpecRequest)(nil),      // 28: landofstamp.v1.GetOpenAPISpecRequest
-	(*GetOpenAPISpecResponse)(nil),     // 29: landofstamp.v1.GetOpenAPISpecResponse
-	(*GetDocsPageRequest)(nil),         // 30: landofstamp.v1.GetDocsPageRequest
-	(*GetDocsPageResponse)(nil),        // 31: landofstamp.v1.GetDocsPageResponse
+	(*User)(nil),                        // 0: landofstamp.v1.User
+	(*Shop)(nil),                        // 1: landofstamp.v1.Shop
+	(*StampCard)(nil),                   // 2: landofstamp.v1.StampCard
+	(*LogoutRequest)(nil),               // 3: landofstamp.v1.LogoutRequest
+	(*GetMeRequest)(nil),                // 4: landofstamp.v1.GetMeRequest
+	(*ChooseRoleRequest)(nil),           // 5: landofstamp.v1.ChooseRoleRequest
+	(*UpdateProfileRequest)(nil),        // 6: landofstamp.v1.UpdateProfileRequest
+	(*UploadProfilePictureRequest)(nil), // 7: landofstamp.v1.UploadProfilePictureRequest
+	(*DeleteProfilePictureRequest)(nil), // 8: landofstamp.v1.DeleteProfilePictureRequest
+	(*DeleteAccountRequest)(nil),        // 9: landofstamp.v1.DeleteAccountRequest
+	(*GetProfileStatsRequest)(nil),      // 10: landofstamp.v1.GetProfileStatsRequest
+	(*ProfileStatsResponse)(nil),        // 11: landofstamp.v1.ProfileStatsResponse
+	(*ListShopsRequest)(nil),            // 12: landofstamp.v1.ListShopsRequest
+	(*CreateShopRequest)(nil),           // 13: landofstamp.v1.CreateShopRequest
+	(*UpdateShopRequest)(nil),           // 14: landofstamp.v1.UpdateShopRequest
+	(*GetMyShopsRequest)(nil),           // 15: landofstamp.v1.GetMyShopsRequest
+	(*ShopList)(nil),                    // 16: landofstamp.v1.ShopList
+	(*GetMyCardsRequest)(nil),           // 17: landofstamp.v1.GetMyCardsRequest
+	(*JoinShopRequest)(nil),             // 18: landofstamp.v1.JoinShopRequest
+	(*GetShopCardsRequest)(nil),         // 19: landofstamp.v1.GetShopCardsRequest
+	(*GrantStampRequest)(nil),           // 20: landofstamp.v1.GrantStampRequest
+	(*UpdateStampCountRequest)(nil),     // 21: landofstamp.v1.UpdateStampCountRequest
+	(*RedeemCardRequest)(nil),           // 22: landofstamp.v1.RedeemCardRequest
+	(*GetShopCustomersRequest)(nil),     // 23: landofstamp.v1.GetShopCustomersRequest
+	(*StampCardList)(nil),               // 24: landofstamp.v1.StampCardList
+	(*CreateStampTokenRequest)(nil),     // 25: landofstamp.v1.CreateStampTokenRequest
+	(*GetStampTokenStatusRequest)(nil),  // 26: landofstamp.v1.GetStampTokenStatusRequest
+	(*StampTokenStatusResponse)(nil),    // 27: landofstamp.v1.StampTokenStatusResponse
+	(*StampToken)(nil),                  // 28: landofstamp.v1.StampToken
+	(*ClaimStampRequest)(nil),           // 29: landofstamp.v1.ClaimStampRequest
+	(*ClaimStampResponse)(nil),          // 30: landofstamp.v1.ClaimStampResponse
+	(*UserList)(nil),                    // 31: landofstamp.v1.UserList
+	(*StatusResponse)(nil),              // 32: landofstamp.v1.StatusResponse
+	(*ErrorResponse)(nil),               // 33: landofstamp.v1.ErrorResponse
+	(*GetOpenAPISpecRequest)(nil),       // 34: landofstamp.v1.GetOpenAPISpecRequest
+	(*GetOpenAPISpecResponse)(nil),      // 35: landofstamp.v1.GetOpenAPISpecResponse
+	(*GetDocsPageRequest)(nil),          // 36: landofstamp.v1.GetDocsPageRequest
+	(*GetDocsPageResponse)(nil),         // 37: landofstamp.v1.GetDocsPageResponse
 }
 var file_proto_stempelkarte_proto_depIdxs = []int32{
 	1,  // 0: landofstamp.v1.ShopList.shops:type_name -> landofstamp.v1.Shop
 	2,  // 1: landofstamp.v1.StampCardList.cards:type_name -> landofstamp.v1.StampCard
 	0,  // 2: landofstamp.v1.UserList.users:type_name -> landofstamp.v1.User
-	28, // 3: landofstamp.v1.DocsService.GetOpenAPISpec:input_type -> landofstamp.v1.GetOpenAPISpecRequest
-	30, // 4: landofstamp.v1.DocsService.GetDocsPage:input_type -> landofstamp.v1.GetDocsPageRequest
+	34, // 3: landofstamp.v1.DocsService.GetOpenAPISpec:input_type -> landofstamp.v1.GetOpenAPISpecRequest
+	36, // 4: landofstamp.v1.DocsService.GetDocsPage:input_type -> landofstamp.v1.GetDocsPageRequest
 	3,  // 5: landofstamp.v1.AuthService.Logout:input_type -> landofstamp.v1.LogoutRequest
 	4,  // 6: landofstamp.v1.AuthService.GetMe:input_type -> landofstamp.v1.GetMeRequest
 	5,  // 7: landofstamp.v1.AuthService.ChooseRole:input_type -> landofstamp.v1.ChooseRoleRequest
-	6,  // 8: landofstamp.v1.ShopService.ListShops:input_type -> landofstamp.v1.ListShopsRequest
-	7,  // 9: landofstamp.v1.ShopService.CreateShop:input_type -> landofstamp.v1.CreateShopRequest
-	8,  // 10: landofstamp.v1.ShopService.UpdateShop:input_type -> landofstamp.v1.UpdateShopRequest
-	9,  // 11: landofstamp.v1.ShopService.GetMyShops:input_type -> landofstamp.v1.GetMyShopsRequest
-	11, // 12: landofstamp.v1.StampService.GetMyCards:input_type -> landofstamp.v1.GetMyCardsRequest
-	12, // 13: landofstamp.v1.StampService.JoinShop:input_type -> landofstamp.v1.JoinShopRequest
-	13, // 14: landofstamp.v1.StampService.GetShopCards:input_type -> landofstamp.v1.GetShopCardsRequest
-	14, // 15: landofstamp.v1.StampService.GrantStamp:input_type -> landofstamp.v1.GrantStampRequest
-	15, // 16: landofstamp.v1.StampService.UpdateStampCount:input_type -> landofstamp.v1.UpdateStampCountRequest
-	16, // 17: landofstamp.v1.StampService.RedeemCard:input_type -> landofstamp.v1.RedeemCardRequest
-	17, // 18: landofstamp.v1.StampService.GetShopCustomers:input_type -> landofstamp.v1.GetShopCustomersRequest
-	19, // 19: landofstamp.v1.StampService.CreateStampToken:input_type -> landofstamp.v1.CreateStampTokenRequest
-	20, // 20: landofstamp.v1.StampService.GetStampTokenStatus:input_type -> landofstamp.v1.GetStampTokenStatusRequest
-	23, // 21: landofstamp.v1.StampService.ClaimStamp:input_type -> landofstamp.v1.ClaimStampRequest
-	29, // 22: landofstamp.v1.DocsService.GetOpenAPISpec:output_type -> landofstamp.v1.GetOpenAPISpecResponse
-	31, // 23: landofstamp.v1.DocsService.GetDocsPage:output_type -> landofstamp.v1.GetDocsPageResponse
-	26, // 24: landofstamp.v1.AuthService.Logout:output_type -> landofstamp.v1.StatusResponse
-	0,  // 25: landofstamp.v1.AuthService.GetMe:output_type -> landofstamp.v1.User
-	0,  // 26: landofstamp.v1.AuthService.ChooseRole:output_type -> landofstamp.v1.User
-	10, // 27: landofstamp.v1.ShopService.ListShops:output_type -> landofstamp.v1.ShopList
-	1,  // 28: landofstamp.v1.ShopService.CreateShop:output_type -> landofstamp.v1.Shop
-	1,  // 29: landofstamp.v1.ShopService.UpdateShop:output_type -> landofstamp.v1.Shop
-	10, // 30: landofstamp.v1.ShopService.GetMyShops:output_type -> landofstamp.v1.ShopList
-	18, // 31: landofstamp.v1.StampService.GetMyCards:output_type -> landofstamp.v1.StampCardList
-	2,  // 32: landofstamp.v1.StampService.JoinShop:output_type -> landofstamp.v1.StampCard
-	18, // 33: landofstamp.v1.StampService.GetShopCards:output_type -> landofstamp.v1.StampCardList
-	2,  // 34: landofstamp.v1.StampService.GrantStamp:output_type -> landofstamp.v1.StampCard
-	2,  // 35: landofstamp.v1.StampService.UpdateStampCount:output_type -> landofstamp.v1.StampCard
-	26, // 36: landofstamp.v1.StampService.RedeemCard:output_type -> landofstamp.v1.StatusResponse
-	25, // 37: landofstamp.v1.StampService.GetShopCustomers:output_type -> landofstamp.v1.UserList
-	22, // 38: landofstamp.v1.StampService.CreateStampToken:output_type -> landofstamp.v1.StampToken
-	21, // 39: landofstamp.v1.StampService.GetStampTokenStatus:output_type -> landofstamp.v1.StampTokenStatusResponse
-	24, // 40: landofstamp.v1.StampService.ClaimStamp:output_type -> landofstamp.v1.ClaimStampResponse
-	22, // [22:41] is the sub-list for method output_type
-	3,  // [3:22] is the sub-list for method input_type
+	6,  // 8: landofstamp.v1.AuthService.UpdateProfile:input_type -> landofstamp.v1.UpdateProfileRequest
+	7,  // 9: landofstamp.v1.AuthService.UploadProfilePicture:input_type -> landofstamp.v1.UploadProfilePictureRequest
+	8,  // 10: landofstamp.v1.AuthService.DeleteProfilePicture:input_type -> landofstamp.v1.DeleteProfilePictureRequest
+	10, // 11: landofstamp.v1.AuthService.GetProfileStats:input_type -> landofstamp.v1.GetProfileStatsRequest
+	9,  // 12: landofstamp.v1.AuthService.DeleteAccount:input_type -> landofstamp.v1.DeleteAccountRequest
+	12, // 13: landofstamp.v1.ShopService.ListShops:input_type -> landofstamp.v1.ListShopsRequest
+	13, // 14: landofstamp.v1.ShopService.CreateShop:input_type -> landofstamp.v1.CreateShopRequest
+	14, // 15: landofstamp.v1.ShopService.UpdateShop:input_type -> landofstamp.v1.UpdateShopRequest
+	15, // 16: landofstamp.v1.ShopService.GetMyShops:input_type -> landofstamp.v1.GetMyShopsRequest
+	17, // 17: landofstamp.v1.StampService.GetMyCards:input_type -> landofstamp.v1.GetMyCardsRequest
+	18, // 18: landofstamp.v1.StampService.JoinShop:input_type -> landofstamp.v1.JoinShopRequest
+	19, // 19: landofstamp.v1.StampService.GetShopCards:input_type -> landofstamp.v1.GetShopCardsRequest
+	20, // 20: landofstamp.v1.StampService.GrantStamp:input_type -> landofstamp.v1.GrantStampRequest
+	21, // 21: landofstamp.v1.StampService.UpdateStampCount:input_type -> landofstamp.v1.UpdateStampCountRequest
+	22, // 22: landofstamp.v1.StampService.RedeemCard:input_type -> landofstamp.v1.RedeemCardRequest
+	23, // 23: landofstamp.v1.StampService.GetShopCustomers:input_type -> landofstamp.v1.GetShopCustomersRequest
+	25, // 24: landofstamp.v1.StampService.CreateStampToken:input_type -> landofstamp.v1.CreateStampTokenRequest
+	26, // 25: landofstamp.v1.StampService.GetStampTokenStatus:input_type -> landofstamp.v1.GetStampTokenStatusRequest
+	29, // 26: landofstamp.v1.StampService.ClaimStamp:input_type -> landofstamp.v1.ClaimStampRequest
+	35, // 27: landofstamp.v1.DocsService.GetOpenAPISpec:output_type -> landofstamp.v1.GetOpenAPISpecResponse
+	37, // 28: landofstamp.v1.DocsService.GetDocsPage:output_type -> landofstamp.v1.GetDocsPageResponse
+	32, // 29: landofstamp.v1.AuthService.Logout:output_type -> landofstamp.v1.StatusResponse
+	0,  // 30: landofstamp.v1.AuthService.GetMe:output_type -> landofstamp.v1.User
+	0,  // 31: landofstamp.v1.AuthService.ChooseRole:output_type -> landofstamp.v1.User
+	0,  // 32: landofstamp.v1.AuthService.UpdateProfile:output_type -> landofstamp.v1.User
+	0,  // 33: landofstamp.v1.AuthService.UploadProfilePicture:output_type -> landofstamp.v1.User
+	0,  // 34: landofstamp.v1.AuthService.DeleteProfilePicture:output_type -> landofstamp.v1.User
+	11, // 35: landofstamp.v1.AuthService.GetProfileStats:output_type -> landofstamp.v1.ProfileStatsResponse
+	32, // 36: landofstamp.v1.AuthService.DeleteAccount:output_type -> landofstamp.v1.StatusResponse
+	16, // 37: landofstamp.v1.ShopService.ListShops:output_type -> landofstamp.v1.ShopList
+	1,  // 38: landofstamp.v1.ShopService.CreateShop:output_type -> landofstamp.v1.Shop
+	1,  // 39: landofstamp.v1.ShopService.UpdateShop:output_type -> landofstamp.v1.Shop
+	16, // 40: landofstamp.v1.ShopService.GetMyShops:output_type -> landofstamp.v1.ShopList
+	24, // 41: landofstamp.v1.StampService.GetMyCards:output_type -> landofstamp.v1.StampCardList
+	2,  // 42: landofstamp.v1.StampService.JoinShop:output_type -> landofstamp.v1.StampCard
+	24, // 43: landofstamp.v1.StampService.GetShopCards:output_type -> landofstamp.v1.StampCardList
+	2,  // 44: landofstamp.v1.StampService.GrantStamp:output_type -> landofstamp.v1.StampCard
+	2,  // 45: landofstamp.v1.StampService.UpdateStampCount:output_type -> landofstamp.v1.StampCard
+	32, // 46: landofstamp.v1.StampService.RedeemCard:output_type -> landofstamp.v1.StatusResponse
+	31, // 47: landofstamp.v1.StampService.GetShopCustomers:output_type -> landofstamp.v1.UserList
+	28, // 48: landofstamp.v1.StampService.CreateStampToken:output_type -> landofstamp.v1.StampToken
+	27, // 49: landofstamp.v1.StampService.GetStampTokenStatus:output_type -> landofstamp.v1.StampTokenStatusResponse
+	30, // 50: landofstamp.v1.StampService.ClaimStamp:output_type -> landofstamp.v1.ClaimStampResponse
+	27, // [27:51] is the sub-list for method output_type
+	3,  // [3:27] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name
@@ -1878,7 +2204,7 @@ func file_proto_stempelkarte_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_stempelkarte_proto_rawDesc), len(file_proto_stempelkarte_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   32,
+			NumMessages:   38,
 			NumExtensions: 0,
 			NumServices:   4,
 		},

@@ -16,6 +16,8 @@ import (
 type User struct {
 	gorm.Model
 	Username      string    `gorm:"uniqueIndex;type:text;not null"`
+	DisplayName   string    `gorm:"column:display_name;type:text;not null;default:''"`
+	AvatarURL     string    `gorm:"column:avatar_url;type:text;not null;default:''"`
 	PasswordHash  string    `gorm:"type:text;not null;default:''"`
 	Role          string    `gorm:"type:text;not null;check:role IN ('user','admin')"`
 	OAuthProvider string    `gorm:"column:oauth_provider;type:text;not null;default:''"`
@@ -83,10 +85,16 @@ func (*StampTokenClaim) TableName() string { return "stamp_token_claims" }
 
 // ToProto converts a User to its protobuf representation.
 func (u *User) ToProto() *pb.User {
+	displayName := u.DisplayName
+	if displayName == "" {
+		displayName = u.Username
+	}
 	return &pb.User{
-		Id:       u.UUID.String(),
-		Username: u.Username,
-		Role:     u.Role,
+		Id:          u.UUID.String(),
+		Username:    u.Username,
+		Role:        u.Role,
+		DisplayName: displayName,
+		AvatarUrl:   u.AvatarURL,
 	}
 }
 

@@ -1,10 +1,11 @@
 import { createContext, useState, useEffect, type ReactNode } from 'react';
-import { apiLogout, apiGetMe, clearSession } from '../lib/api';
+import { apiDeleteAccount, apiLogout, apiGetMe, clearSession } from '../lib/api';
 import { toast } from 'sonner';
 
 interface AuthContextType {
   user: User | null;
   logout: () => void;
+  deleteAccount: () => Promise<void>;
   refreshUser: (user: User) => void;
   isAuthenticated: boolean;
 }
@@ -53,8 +54,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = (u: User) => setUser(u);
 
+  const deleteAccount = async () => {
+    await apiDeleteAccount();
+    setUser(null);
+    clearSession();
+  };
+
   return (
-    <AuthContext.Provider value={{ user, logout, refreshUser, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, logout, deleteAccount, refreshUser, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );

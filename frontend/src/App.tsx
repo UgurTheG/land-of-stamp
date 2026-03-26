@@ -16,6 +16,7 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const ClaimPage = lazy(() => import('./pages/ClaimPage'));
 const OAuthCallbackPage = lazy(() => import('./pages/OAuthCallbackPage'));
 const ChooseRolePage = lazy(() => import('./pages/ChooseRolePage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 
 function AppShell() {
   const { theme } = useTheme();
@@ -44,6 +45,14 @@ function AppShell() {
               element={
                 <ProtectedRoute>
                   <ChooseRolePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
                 </ProtectedRoute>
               }
             />

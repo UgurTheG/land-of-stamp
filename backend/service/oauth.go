@@ -262,6 +262,7 @@ func upsertOAuthUser(ctx context.Context, provider, oauthID, username string) (*
 		user = db.User{
 			UUID:          uuid.New(),
 			Username:      candidateName,
+			DisplayName:   candidateName,
 			PasswordHash:  "", // no password for OAuth users
 			Role:          constants.RoleUser,
 			RoleChosen:    false,

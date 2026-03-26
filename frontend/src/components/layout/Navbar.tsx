@@ -2,7 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router';
 import { useAuth } from '../../hooks/useAuth';
 import { useLocale } from '../../hooks/useLocale';
 import { useTheme } from '../../hooks/useTheme';
-import { Stamp, LogOut, LayoutDashboard, Home, Menu, X, Sun, Moon } from 'lucide-react';
+import { Stamp, LogOut, LayoutDashboard, Home, Menu, X, Sun, Moon, UserCircle2 } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -57,6 +57,11 @@ export default function Navbar() {
             {isAuthenticated && user?.role === 'admin' && (
               <Link to="/admin" className={navLinkClass('/admin')}>
                 {m.common.dashboard}
+              </Link>
+            )}
+            {isAuthenticated && (
+              <Link to="/profile" className={navLinkClass('/profile')}>
+                {m.common.profile}
               </Link>
             )}
 
@@ -150,6 +155,16 @@ export default function Navbar() {
                 >
                   <LayoutDashboard className="w-4 h-4" />
                   {m.common.dashboard}
+                </Link>
+              )}
+              {isAuthenticated && (
+                <Link
+                  to="/profile"
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 text-indigo-200 hover:text-white py-2"
+                >
+                  <UserCircle2 className="w-4 h-4" />
+                  {m.common.profile}
                 </Link>
               )}
               {isAuthenticated ? (

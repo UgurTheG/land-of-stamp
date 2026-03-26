@@ -7,6 +7,11 @@ import {
   LogoutRequestSchema,
   GetMeRequestSchema,
   ChooseRoleRequestSchema,
+  UpdateProfileRequestSchema,
+  UploadProfilePictureRequestSchema,
+  DeleteProfilePictureRequestSchema,
+  DeleteAccountRequestSchema,
+  GetProfileStatsRequestSchema,
   ListShopsRequestSchema,
   CreateShopRequestSchema,
   UpdateShopRequestSchema,
@@ -24,7 +29,7 @@ import {
 } from '../gen/proto/stempelkarte_pb';
 
 // Re-export entity types so existing imports keep working.
-export type { User, Shop, StampCard, StampToken, ClaimStampResponse } from '../gen/proto/stempelkarte_pb';
+export type { User, Shop, StampCard, StampToken, ClaimStampResponse, ProfileStatsResponse } from '../gen/proto/stempelkarte_pb';
 import type { User } from '../gen/proto/stempelkarte_pb';
 
 export interface StampTokenStatus {
@@ -73,6 +78,27 @@ export async function apiGetMe(): Promise<User> {
 
 export async function apiChooseRole(role: 'user' | 'admin'): Promise<User> {
   return authClient.chooseRole(create(ChooseRoleRequestSchema, { role }));
+}
+
+export async function apiUpdateProfile(displayName: string): Promise<User> {
+  return authClient.updateProfile(create(UpdateProfileRequestSchema, { displayName }));
+}
+
+export async function apiUploadProfilePicture(mimeType: string, dataBase64: string): Promise<User> {
+  return authClient.uploadProfilePicture(create(UploadProfilePictureRequestSchema, { mimeType, dataBase64 }));
+}
+
+export async function apiDeleteProfilePicture(): Promise<User> {
+  return authClient.deleteProfilePicture(create(DeleteProfilePictureRequestSchema, {}));
+}
+
+export async function apiGetProfileStats() {
+  return authClient.getProfileStats(create(GetProfileStatsRequestSchema, {}));
+}
+
+export async function apiDeleteAccount(): Promise<void> {
+  await authClient.deleteAccount(create(DeleteAccountRequestSchema, {}));
+  clearSession();
 }
 
 // ── Shops ──────────────────────────────────────────────
